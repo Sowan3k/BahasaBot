@@ -1,0 +1,7 @@
+{
+  "env": {
+    "NEXTAUTH_URL": "@nextauth_url",
+    "NEXTAUTH_SECRET": "@nextauth_secret",
+    "NEXT_PUBLIC_API_URL": "@api_url"
+  }
+}
