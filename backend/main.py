@@ -15,7 +15,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from backend.routers import auth
+from backend.routers import auth, chatbot
 from backend.utils.cache import close_redis, init_redis
 from backend.utils.logger import get_logger, setup_logging
 
@@ -41,9 +41,19 @@ ALLOWED_ORIGINS = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "http://local
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Startup: connect Redis. Shutdown: close Redis."""
+    """Startup: connect Redis, seed RAG corpus. Shutdown: close Redis."""
     logger.info("BahasaBot starting", env=APP_ENV, origins=ALLOWED_ORIGINS)
     await init_redis()
+
+    # Seed the Malay language corpus into pgvector on first startup
+    try:
+        from backend.db.database import AsyncSessionLocal
+        from backend.services.rag_service import ingest_corpus_if_empty
+        async with AsyncSessionLocal() as db:
+            await ingest_corpus_if_empty(db)
+    except Exception as exc:
+        logger.error("RAG corpus seeding failed — app will continue without it", error=str(exc))
+
     yield
     await close_redis()
     logger.info("BahasaBot shutting down")
@@ -106,6 +116,7 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
 # ── Routes ────────────────────────────────────────────────────────────────────
 
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
+app.include_router(chatbot.router, prefix="/api/chatbot", tags=["chatbot"])
 
 
 @app.get("/health", tags=["health"])

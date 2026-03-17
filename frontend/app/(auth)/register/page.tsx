@@ -16,6 +16,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { TokenResponse } from "@/lib/types";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+async function storeSession(data: TokenResponse): Promise<boolean> {
+  const result = await signIn("jwt", {
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token,
+    userId: data.user.id,
+    name: data.user.name,
+    email: data.user.email,
+    proficiencyLevel: data.user.proficiency_level,
+    provider: data.user.provider,
+    createdAt: String(data.user.created_at),
+    redirect: false,
+  });
+  return !result?.error;
+}
+
 // ── Zod schema ─────────────────────────────────────────────────────────────
 
 const registerSchema = z
@@ -53,17 +70,20 @@ export default function RegisterPage() {
     setServerError(null);
 
     try {
-      await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/api/auth/register`,
-        {
-          name: data.name,
-          email: data.email,
-          password: data.password,
-        }
+      const { data: tokenData } = await axios.post<TokenResponse>(
+        `${API_URL}/api/auth/register`,
+        { name: data.name, email: data.email, password: data.password }
       );
 
-      // Registration successful — redirect to login with a success indicator
-      router.push("/login?registered=1");
+      // Auto-login immediately after registration
+      const ok = await storeSession(tokenData);
+      if (!ok) {
+        setServerError("Account created but sign-in failed. Please go to Login.");
+        return;
+      }
+
+      router.push("/dashboard");
+      router.refresh();
     } catch (err: unknown) {
       if (axios.isAxiosError(err) && err.response?.status === 409) {
         setServerError("An account with this email already exists.");
@@ -85,25 +105,13 @@ export default function RegisterPage() {
     setGoogleLoading(true);
 
     try {
-      // Exchange Google ID token for our own JWT tokens (creates account if needed)
       const { data } = await axios.post<TokenResponse>(
-        `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/api/auth/google`,
+        `${API_URL}/api/auth/google`,
         { id_token: credentialResponse.credential }
       );
 
-      // Store tokens in the NextAuth httpOnly session cookie
-      const result = await signIn("google-jwt", {
-        accessToken: data.access_token,
-        refreshToken: data.refresh_token,
-        userId: data.user.id,
-        name: data.user.name,
-        email: data.user.email,
-        proficiencyLevel: data.user.proficiency_level,
-        createdAt: String(data.user.created_at),
-        redirect: false,
-      });
-
-      if (result?.error) {
+      const ok = await storeSession(data);
+      if (!ok) {
         setServerError("Google sign-up failed. Please try again.");
         return;
       }

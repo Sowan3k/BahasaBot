@@ -43,7 +43,9 @@ class User(Base):
         server_default="email",
     )
     proficiency_level: Mapped[str] = mapped_column(
-        Enum("A1", "A2", "B1", "B2", name="proficiency_level_enum"),
+        # native_enum=False → stores as VARCHAR, not a PostgreSQL ENUM type.
+        # This matches the VARCHAR column created in the Alembic migration and schema.sql.
+        Enum("A1", "A2", "B1", "B2", name="proficiency_level_enum", native_enum=False),
         nullable=False,
         default="A1",
         server_default="A1",

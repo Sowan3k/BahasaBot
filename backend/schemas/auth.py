@@ -50,6 +50,7 @@ class UserResponse(BaseModel):
     email: str
     name: str
     proficiency_level: Literal["A1", "A2", "B1", "B2"]
+    provider: Literal["email", "google"]
     created_at: datetime
 
     @field_validator("id", mode="before")

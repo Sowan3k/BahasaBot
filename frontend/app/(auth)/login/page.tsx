@@ -16,6 +16,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { TokenResponse } from "@/lib/types";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
 // ── Zod schema ─────────────────────────────────────────────────────────────
 
 const loginSchema = z.object({
@@ -25,12 +27,29 @@ const loginSchema = z.object({
 
 type LoginForm = z.infer<typeof loginSchema>;
 
+// ── Shared helper: store tokens in NextAuth session ─────────────────────────
+
+async function storeSession(data: TokenResponse): Promise<boolean> {
+  const result = await signIn("jwt", {
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token,
+    userId: data.user.id,
+    name: data.user.name,
+    email: data.user.email,
+    proficiencyLevel: data.user.proficiency_level,
+    provider: data.user.provider,
+    createdAt: String(data.user.created_at),
+    redirect: false,
+  });
+  return !result?.error;
+}
+
 // ── Component ──────────────────────────────────────────────────────────────
 
 export default function LoginPage() {
   const router = useRouter();
   const [authError, setAuthError] = useState<string | null>(null);
-  const [googleLoading, setGoogleLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const {
     register,
@@ -45,19 +64,36 @@ export default function LoginPage() {
   async function onSubmit(data: LoginForm) {
     setAuthError(null);
 
-    const result = await signIn("credentials", {
-      email: data.email,
-      password: data.password,
-      redirect: false,
-    });
+    try {
+      const { data: tokenData } = await axios.post<TokenResponse>(
+        `${API_URL}/api/auth/login`,
+        { email: data.email, password: data.password }
+      );
 
-    if (result?.error) {
-      setAuthError("Invalid email or password. Please try again.");
-      return;
+      const ok = await storeSession(tokenData);
+      if (!ok) {
+        setAuthError("Sign in failed. Please try again.");
+        return;
+      }
+
+      router.push("/dashboard");
+      router.refresh();
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        const detail: string = err.response?.data?.detail ?? "";
+        if (detail === "google_signin_required") {
+          setAuthError(
+            "This account was created with Google. Please use Sign in with Google below."
+          );
+        } else if (err.response?.status === 401) {
+          setAuthError("Invalid email or password. Please try again.");
+        } else {
+          setAuthError("Something went wrong. Please try again.");
+        }
+      } else {
+        setAuthError("Something went wrong. Please try again.");
+      }
     }
-
-    router.push("/dashboard");
-    router.refresh();
   }
 
   // ── Google sign-in ───────────────────────────────────────────────────────
@@ -69,28 +105,16 @@ export default function LoginPage() {
     }
 
     setAuthError(null);
-    setGoogleLoading(true);
+    setLoading(true);
 
     try {
-      // Exchange Google ID token for our own JWT tokens
       const { data } = await axios.post<TokenResponse>(
-        `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/api/auth/google`,
+        `${API_URL}/api/auth/google`,
         { id_token: credentialResponse.credential }
       );
 
-      // Hand the JWT tokens to NextAuth so they're stored in the httpOnly session cookie
-      const result = await signIn("google-jwt", {
-        accessToken: data.access_token,
-        refreshToken: data.refresh_token,
-        userId: data.user.id,
-        name: data.user.name,
-        email: data.user.email,
-        proficiencyLevel: data.user.proficiency_level,
-        createdAt: String(data.user.created_at),
-        redirect: false,
-      });
-
-      if (result?.error) {
+      const ok = await storeSession(data);
+      if (!ok) {
         setAuthError("Google sign-in failed. Please try again.");
         return;
       }
@@ -100,7 +124,7 @@ export default function LoginPage() {
     } catch {
       setAuthError("Google sign-in failed. Please try again.");
     } finally {
-      setGoogleLoading(false);
+      setLoading(false);
     }
   }
 
@@ -154,7 +178,7 @@ export default function LoginPage() {
             <p className="text-sm text-destructive text-center">{authError}</p>
           )}
 
-          <Button type="submit" className="w-full" disabled={isSubmitting || googleLoading}>
+          <Button type="submit" className="w-full" disabled={isSubmitting || loading}>
             {isSubmitting ? "Signing in…" : "Sign in"}
           </Button>
         </form>
