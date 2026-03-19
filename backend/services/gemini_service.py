@@ -18,8 +18,9 @@ from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "models/embedding-001")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")       # course/quiz generation
+CHATBOT_MODEL = os.getenv("CHATBOT_GEMINI_MODEL", "gemini-2.5-flash")  # chatbot streaming model
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "models/gemini-embedding-001")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
 
 # Embedding dimension for Google's embedding-001 model
@@ -34,12 +35,20 @@ FALLBACK_MESSAGE = (
 # ── Internal helpers ───────────────────────────────────────────────────────────
 
 
-def _chat_llm(streaming: bool = False) -> ChatGoogleGenerativeAI:
-    """Return a configured ChatGoogleGenerativeAI instance."""
+def _chat_llm() -> ChatGoogleGenerativeAI:
+    """Return a ChatGoogleGenerativeAI instance for text generation (courses, quizzes)."""
     return ChatGoogleGenerativeAI(
         model=GEMINI_MODEL,
         google_api_key=GOOGLE_API_KEY,
-        streaming=streaming,
+        temperature=0.7,
+    )
+
+
+def _chatbot_llm() -> ChatGoogleGenerativeAI:
+    """Return a ChatGoogleGenerativeAI instance for the chatbot (streaming)."""
+    return ChatGoogleGenerativeAI(
+        model=CHATBOT_MODEL,
+        google_api_key=GOOGLE_API_KEY,
         temperature=0.7,
     )
 
@@ -71,7 +80,7 @@ async def _invoke_with_retry(
     Low-level LLM invocation with exponential backoff retry.
     Raises RuntimeError if all attempts fail.
     """
-    llm = _chat_llm(streaming=False)
+    llm = _chat_llm()
     last_exc: Exception | None = None
 
     for attempt in range(max_retries):
@@ -86,6 +95,7 @@ async def _invoke_with_retry(
                 attempt=attempt + 1,
                 max_retries=max_retries,
                 error=str(exc),
+                error_type=type(exc).__name__,
                 retry_in_seconds=wait,
             )
             if attempt < max_retries - 1:
@@ -162,17 +172,28 @@ async def stream_text(
     system_prompt: str | None = None,
 ) -> AsyncIterator[str]:
     """
-    Stream text generation from Gemini. Yields string chunks as they arrive.
+    Stream text generation from Gemini using the chatbot model. Yields string chunks as they arrive.
 
+    Uses _chatbot_llm() (CHATBOT_GEMINI_MODEL env var) — separate from course/quiz generation.
+    Handles both plain-string and list-of-blocks content formats from newer Gemini models.
     Falls back to yielding FALLBACK_MESSAGE as a single chunk on error.
-    Use this for the chatbot endpoint where streaming is required.
     """
-    llm = _chat_llm(streaming=True)
+    llm = _chatbot_llm()
     messages = _build_messages(prompt, system_prompt)
     try:
         async for chunk in llm.astream(messages):
-            if chunk.content:
-                yield str(chunk.content)
+            content = chunk.content
+            # Newer Gemini models may return content as a list of typed blocks
+            if isinstance(content, list):
+                for block in content:
+                    if isinstance(block, dict) and block.get("type") == "text":
+                        text = block.get("text", "")
+                        if text:
+                            yield text
+                    elif isinstance(block, str) and block:
+                        yield block
+            elif isinstance(content, str) and content:
+                yield content
     except Exception as exc:
         logger.error("stream_text failed", error=str(exc))
         yield FALLBACK_MESSAGE
@@ -189,8 +210,11 @@ async def get_embeddings(text: str, max_retries: int = 3) -> list[float]:
 
     for attempt in range(max_retries):
         try:
-            # GoogleGenerativeAIEmbeddings.embed_query is synchronous
-            vector: list[float] = await asyncio.to_thread(model.embed_query, text)
+            # GoogleGenerativeAIEmbeddings.embed_query is synchronous.
+            # output_dimensionality=EMBEDDING_DIM truncates to 768 to match the DB column (vector(768)).
+            vector: list[float] = await asyncio.to_thread(
+                model.embed_query, text, output_dimensionality=EMBEDDING_DIM
+            )
             return vector
         except Exception as exc:
             wait = 2**attempt

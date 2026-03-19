@@ -2,6 +2,8 @@
   "env": {
     "NEXTAUTH_URL": "@nextauth_url",
     "NEXTAUTH_SECRET": "@nextauth_secret",
-    "NEXT_PUBLIC_API_URL": "@api_url"
+    "NEXT_PUBLIC_API_URL": "@api_url",
+    "NEXT_PUBLIC_SENTRY_DSN": "@sentry_dsn",
+    "SENTRY_AUTH_TOKEN": "@sentry_auth_token"
   }
 }

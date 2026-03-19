@@ -2,7 +2,6 @@
 BahasaBot — FastAPI Application Entry Point
 
 Initializes the app, CORS, lifespan, all routers, and global error handling.
-Rate limiter and Sentry are added in Phase 8 (production hardening).
 """
 
 import os
@@ -10,12 +9,16 @@ import time
 import uuid
 from contextlib import asynccontextmanager
 
+import sentry_sdk
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
-from backend.routers import auth, chatbot
+from backend.middleware.rate_limiter import limiter
+from backend.routers import auth, chatbot, courses, dashboard, quiz
 from backend.utils.cache import close_redis, init_redis
 from backend.utils.logger import get_logger, setup_logging
 
@@ -36,6 +39,22 @@ logger = get_logger(__name__)
 APP_ENV = os.getenv("APP_ENV", "development")
 ALLOWED_ORIGINS = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")]
 
+# ── Sentry ─────────────────────────────────────────────────────────────────────
+
+_sentry_dsn = os.getenv("SENTRY_DSN", "")
+if _sentry_dsn:
+    sentry_sdk.init(
+        dsn=_sentry_dsn,
+        environment=APP_ENV,
+        # Capture 100% of transactions in production; tune down after launch
+        traces_sample_rate=1.0 if APP_ENV == "production" else 0.0,
+        # Do not send personally identifiable information in request bodies
+        send_default_pii=False,
+    )
+    logger.info("Sentry initialised", environment=APP_ENV)
+else:
+    logger.info("Sentry DSN not set — error reporting disabled")
+
 
 # ── Lifespan ──────────────────────────────────────────────────────────────────
 
@@ -43,6 +62,14 @@ ALLOWED_ORIGINS = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "http://local
 async def lifespan(app: FastAPI):
     """Startup: connect Redis, seed RAG corpus. Shutdown: close Redis."""
     logger.info("BahasaBot starting", env=APP_ENV, origins=ALLOWED_ORIGINS)
+
+    # Warn immediately if the Gemini API key is missing — the app starts but AI features won't work
+    if not os.getenv("GOOGLE_API_KEY"):
+        logger.error(
+            "GOOGLE_API_KEY is not set — AI features (chatbot, course generation) will fail. "
+            "Add GOOGLE_API_KEY=<your-key> to backend/.env"
+        )
+
     await init_redis()
 
     # Seed the Malay language corpus into pgvector on first startup
@@ -69,6 +96,11 @@ app = FastAPI(
     redoc_url="/redoc" if APP_ENV != "production" else None,
     lifespan=lifespan,
 )
+
+# ── Rate limiting ──────────────────────────────────────────────────────────────
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
 
@@ -117,6 +149,9 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
 
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(chatbot.router, prefix="/api/chatbot", tags=["chatbot"])
+app.include_router(courses.router, prefix="/api/courses", tags=["courses"])
+app.include_router(quiz.router, prefix="/api/quiz", tags=["quiz"])
+app.include_router(dashboard.router, prefix="/api/dashboard", tags=["dashboard"])
 
 
 @app.get("/health", tags=["health"])

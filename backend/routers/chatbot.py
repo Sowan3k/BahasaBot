@@ -9,13 +9,14 @@ Endpoints:
 
 import json
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sse_starlette.sse import EventSourceResponse
 
 from backend.db.database import get_db
 from backend.middleware.auth_middleware import get_current_user
+from backend.middleware.rate_limiter import CHATBOT_LIMIT, limiter
 from backend.models.chatbot import ChatMessage, ChatSession
 from backend.models.user import User
 from backend.schemas.chatbot import (
@@ -37,7 +38,9 @@ router = APIRouter()
 
 
 @router.post("/message")
+@limiter.limit(CHATBOT_LIMIT)
 async def send_message(
+    request: Request,
     body: SendMessageRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),

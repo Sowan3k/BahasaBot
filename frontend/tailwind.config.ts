@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import typography from "@tailwindcss/typography";
 
 const config: Config = {
   darkMode: ["class"],
@@ -10,6 +11,10 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
+        heading: ["var(--font-heading)", "Georgia", "serif"],
+      },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
@@ -50,9 +55,25 @@ const config: Config = {
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
       },
+      // Wire prose colours into shadcn CSS variable tokens for light/dark mode
+      typography: {
+        DEFAULT: {
+          css: {
+            a: { color: "hsl(var(--primary))" },
+            h1: { color: "hsl(var(--foreground))" },
+            h2: { color: "hsl(var(--foreground))" },
+            h3: { color: "hsl(var(--foreground))" },
+            h4: { color: "hsl(var(--foreground))" },
+            strong: { color: "hsl(var(--foreground))" },
+            // Remove backtick wrapping added by default typography styles
+            "code::before": { content: '""' },
+            "code::after": { content: '""' },
+          },
+        },
+      },
     },
   },
-  plugins: [],
+  plugins: [typography],
 };
 
 export default config;

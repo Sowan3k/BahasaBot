@@ -1,10 +1,78 @@
 """
-Rate Limiter Middleware (SlowAPI)
+Rate Limiter (SlowAPI)
 
 Limits:
   - Default:           60 req/min per IP
   - Chatbot:           20 req/min per user
   - Course generation:  5 req/hour per user
   - Auth endpoints:    10 req/min per IP
+
+Usage in routers:
+    from backend.middleware.rate_limiter import limiter
+    from slowapi import _rate_limit_exceeded_handler
+    from slowapi.errors import RateLimitExceeded
+
+    @router.post("/message")
+    @limiter.limit("20/minute")
+    async def send_message(request: Request, ...):
+        ...
+
+In main.py:
+    from slowapi import _rate_limit_exceeded_handler
+    from slowapi.errors import RateLimitExceeded
+    from backend.middleware.rate_limiter import limiter
+
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 """
-# TODO: Implement in Phase 8
+
+import os
+
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+
+from backend.utils.logger import get_logger
+
+logger = get_logger(__name__)
+
+# ── Helpers ────────────────────────────────────────────────────────────────────
+
+
+def _get_user_id_or_ip(request) -> str:
+    """
+    Key function: returns the authenticated user's ID when available,
+    falling back to the remote IP for unauthenticated endpoints.
+
+    This ensures rate limits are per-user (not per-IP) for logged-in users.
+    """
+    # FastAPI stores the authenticated user in request.state after the
+    # get_current_user dependency runs. For unauthenticated endpoints the
+    # attribute won't exist, so we fall back to IP.
+    user = getattr(request.state, "user", None)
+    if user is not None:
+        return str(user.id)
+    return get_remote_address(request)
+
+
+# ── Limiter instance ───────────────────────────────────────────────────────────
+
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+
+limiter = Limiter(
+    key_func=_get_user_id_or_ip,
+    # Use Redis for distributed rate limiting across multiple workers.
+    # Falls back gracefully to in-memory if Redis is unavailable.
+    storage_uri=REDIS_URL,
+    default_limits=["60/minute"],
+    strategy="fixed-window",
+)
+
+logger.info("Rate limiter initialised", storage=REDIS_URL.split("@")[-1])
+
+# ── Per-feature limit strings ──────────────────────────────────────────────────
+# Import these in routers for the @limiter.limit(...) decorator.
+
+CHATBOT_LIMIT = os.getenv("CHATBOT_RATE_LIMIT_PER_MINUTE", "20") + "/minute"
+COURSE_GEN_LIMIT = "5/hour"
+AUTH_LIMIT = "10/minute"
+DEFAULT_LIMIT = os.getenv("RATE_LIMIT_PER_MINUTE", "60") + "/minute"

@@ -1,6 +1,7 @@
-// Adaptive quiz results page
-// Shows score, weak point improvement, CEFR level change banner if applicable
-// TODO: Implement in Phase 6
-export default function AdaptiveQuizResultsPage() {
-  return <div>Adaptive Quiz Results — TODO</div>;
+// Adaptive quiz results are shown inline on the quiz page after submission.
+// This route redirects back there so deep-linked /results URLs still work.
+import { redirect } from "next/navigation";
+
+export default function AdaptiveQuizResultsRedirect() {
+  redirect("/quiz/adaptive");
 }
