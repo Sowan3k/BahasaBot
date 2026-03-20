@@ -7,6 +7,7 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SessionProvider } from "next-auth/react";
 import { useState } from "react";
+import { ThemeContext, useThemeState } from "@/lib/use-theme";
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
 
@@ -24,11 +25,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
       })
   );
 
+  const themeValue = useThemeState();
+
   return (
-    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-      <SessionProvider>
-        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-      </SessionProvider>
-    </GoogleOAuthProvider>
+    <ThemeContext.Provider value={themeValue}>
+      <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+        <SessionProvider>
+          <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+        </SessionProvider>
+      </GoogleOAuthProvider>
+    </ThemeContext.Provider>
   );
 }

@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-03-19
+## Last Updated: 2026-03-20
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -17,7 +17,15 @@ _Update this file at the end of every session_
 - frontend/app/(dashboard)/quiz/adaptive/results/page.tsx — completeness unknown
 - frontend/app/(dashboard)/quiz/module/[moduleId]/results/page.tsx — completeness unknown
 
-## What Was Done Last Session (Auth Debug)
+## What Was Done Last Session (UI Overhaul)
+- **Dark mode system** — class-based Tailwind dark mode (`darkMode: ["class"]`). Added `frontend/lib/use-theme.ts` (ThemeContext + useTheme + useThemeState hooks), wired ThemeContext.Provider in `frontend/components/providers.tsx`, and added a no-FOUC inline `<script>` in `frontend/app/layout.tsx` that reads localStorage/system pref before React hydrates. Preference persisted in localStorage.
+- **ThemeToggle pill** — new `frontend/components/ui/theme-toggle.tsx`. Sliding Moon/Sun pill wired to `useTheme()`. Integrated into AppSidebar footer (expanded = full pill, collapsed = scaled-down pill).
+- **Auth page redesign** — `frontend/app/(auth)/login/page.tsx` and `register/page.tsx` fully rewritten with `frontend/components/ui/auth-card.tsx` shell: Three.js GLSL shader full-screen background (`ShaderAnimation`), framer-motion 3D card tilt, traveling border beam animation, glass card surface (`bg-black/50 backdrop-blur-xl`). All auth logic (react-hook-form, Zod, Google OAuth) preserved.
+- **GlowingEffect dashboard cards** — new `frontend/components/ui/glowing-effect.tsx` (mouse-following conic gradient border via `motion/react`). Applied to all cards in `frontend/app/(dashboard)/dashboard/page.tsx` and `frontend/components/dashboard/StatsCards.tsx`.
+- **Chatbot dark mode fix** — `frontend/app/chatbot/page.tsx`: Waves background color now reactive to theme (`#0d1a11` dark / `#f5f3ed` light). Welcome tile and starter buttons updated to use CSS variable tokens (`bg-card/70`, `border-primary/20`, `hover:bg-primary/10`).
+- **New packages installed** — `motion` (for GlowingEffect's `animate`), `simplex-noise` (for Waves component).
+
+## What Was Done Previous Session (Auth Debug)
 - **Bug fix: Session maxAge** — `frontend/lib/auth.ts`: changed `maxAge` from `10 * 60` (10 min) to `7 * 24 * 60 * 60` (7 days, matching `REFRESH_TOKEN_EXPIRE_DAYS`). Users were being spontaneously signed out every 10 minutes.
 - **Bug fix: Token refresh** — `frontend/lib/auth.ts`: added `refreshAccessToken()` and refresh logic in `jwt` callback. Access token (10 min TTL) is now silently refreshed ~60 s before expiry using `POST /api/auth/refresh`. Previously there was no refresh mechanism at all.
 - **Bug fix: RefreshTokenExpired handling** — `frontend/lib/api.ts`: request interceptor now checks `session.error === "RefreshTokenExpired"` and calls `signOut()` before any API call, preventing confusing 401 loops when the refresh token itself expires (after 7 days).

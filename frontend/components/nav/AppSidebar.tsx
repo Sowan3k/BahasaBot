@@ -10,6 +10,7 @@ import { useState } from "react";
 import { ChevronLeft, ChevronRight, LogOut } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard" },
@@ -116,6 +117,9 @@ export function AppSidebar() {
                   {session.user.name}
                 </p>
               )}
+              <div className="px-3 py-1">
+                <ThemeToggle />
+              </div>
               <Button
                 variant="ghost"
                 size="sm"
@@ -126,13 +130,16 @@ export function AppSidebar() {
               </Button>
             </>
           ) : (
-            <button
-              onClick={() => signOut({ callbackUrl: "/login" })}
-              title="Sign out"
-              className="flex items-center justify-center w-8 h-8 rounded-md text-muted-foreground hover:text-destructive hover:bg-muted transition-colors"
-            >
-              <LogOut size={16} />
-            </button>
+            <>
+              <ThemeToggle className="scale-75 origin-left" />
+              <button
+                onClick={() => signOut({ callbackUrl: "/login" })}
+                title="Sign out"
+                className="flex items-center justify-center w-8 h-8 rounded-md text-muted-foreground hover:text-destructive hover:bg-muted transition-colors"
+              >
+                <LogOut size={16} />
+              </button>
+            </>
           )}
         </div>
       </aside>

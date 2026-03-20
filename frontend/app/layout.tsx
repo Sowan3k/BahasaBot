@@ -33,7 +33,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={cn("font-sans", inter.variable, lora.variable)}>
+    <html lang="en" className={cn("font-sans", inter.variable, lora.variable)} suppressHydrationWarning>
+      <head>
+        {/* Inline script — runs before hydration to apply saved/system theme with no flash */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var t=localStorage.getItem('theme')||(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');if(t==='dark')document.documentElement.classList.add('dark');})();`,
+          }}
+        />
+      </head>
       <body>
         <Providers>{children}</Providers>
       </body>

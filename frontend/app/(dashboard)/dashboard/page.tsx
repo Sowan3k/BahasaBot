@@ -19,6 +19,7 @@ import QuizHistoryTable from "@/components/dashboard/QuizHistoryTable";
 import StatsCards from "@/components/dashboard/StatsCards";
 import VocabularyTable from "@/components/dashboard/VocabularyTable";
 import WeakPointsChart from "@/components/dashboard/WeakPointsChart";
+import { GlowingEffect } from "@/components/ui/glowing-effect";
 
 // ── Simple inline grammar table ───────────────────────────────────────────────
 
@@ -254,48 +255,60 @@ export default function DashboardPage() {
               <StatsCards stats={summary.stats} />
 
               {/* CEFR progress */}
-              <div className="rounded-lg border bg-card p-5">
-                <CEFRProgressBar level={summary.stats.proficiency_level} />
+              <div className="relative rounded-[1.25rem] border-[0.75px] border-border p-2">
+                <GlowingEffect spread={40} glow={true} disabled={false} proximity={64} inactiveZone={0.01} borderWidth={3} />
+                <div className="relative overflow-hidden rounded-xl border-[0.75px] border-border bg-background p-5 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
+                  <CEFRProgressBar level={summary.stats.proficiency_level} />
+                </div>
               </div>
 
               {/* Weak points + recent quiz history side by side on wider screens */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="rounded-lg border bg-card p-5 space-y-3">
-                  <h3 className="font-semibold">Weak Points</h3>
-                  {summary.top_weak_points.length > 0 ? (
-                    <WeakPointsChart weakPoints={summary.top_weak_points} />
-                  ) : (
-                    <p className="text-sm text-muted-foreground">
-                      No weak points yet — complete some quizzes to see results here.
-                    </p>
-                  )}
+                <div className="relative rounded-[1.25rem] border-[0.75px] border-border p-2">
+                  <GlowingEffect spread={40} glow={true} disabled={false} proximity={64} inactiveZone={0.01} borderWidth={3} />
+                  <div className="relative overflow-hidden rounded-xl border-[0.75px] border-border bg-background p-5 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)] space-y-3">
+                    <h3 className="font-semibold">Weak Points</h3>
+                    {summary.top_weak_points.length > 0 ? (
+                      <WeakPointsChart weakPoints={summary.top_weak_points} />
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        No weak points yet — complete some quizzes to see results here.
+                      </p>
+                    )}
+                  </div>
                 </div>
 
-                <div className="rounded-lg border bg-card p-5 space-y-3">
-                  <h3 className="font-semibold">Recent Quiz Attempts</h3>
-                  <QuizHistoryTable
-                    items={summary.recent_quiz_history}
-                    total={summary.stats.quizzes_taken}
-                  />
+                <div className="relative rounded-[1.25rem] border-[0.75px] border-border p-2">
+                  <GlowingEffect spread={40} glow={true} disabled={false} proximity={64} inactiveZone={0.01} borderWidth={3} />
+                  <div className="relative overflow-hidden rounded-xl border-[0.75px] border-border bg-background p-5 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)] space-y-3">
+                    <h3 className="font-semibold">Recent Quiz Attempts</h3>
+                    <QuizHistoryTable
+                      items={summary.recent_quiz_history}
+                      total={summary.stats.quizzes_taken}
+                    />
+                  </div>
                 </div>
               </div>
 
               {/* Recent vocabulary preview */}
               {summary.recent_vocabulary.length > 0 && (
-                <div className="rounded-lg border bg-card p-5 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold">Recently Learned Vocabulary</h3>
-                    <button
-                      onClick={() => setActiveTab("vocabulary")}
-                      className="text-sm text-primary hover:underline"
-                    >
-                      View all {summary.stats.vocabulary_count} →
-                    </button>
+                <div className="relative rounded-[1.25rem] border-[0.75px] border-border p-2">
+                  <GlowingEffect spread={40} glow={true} disabled={false} proximity={64} inactiveZone={0.01} borderWidth={3} />
+                  <div className="relative overflow-hidden rounded-xl border-[0.75px] border-border bg-background p-5 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)] space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold">Recently Learned Vocabulary</h3>
+                      <button
+                        onClick={() => setActiveTab("vocabulary")}
+                        className="text-sm text-primary hover:underline"
+                      >
+                        View all {summary.stats.vocabulary_count} →
+                      </button>
+                    </div>
+                    <VocabularyTable
+                      items={summary.recent_vocabulary}
+                      total={summary.recent_vocabulary.length}
+                    />
                   </div>
-                  <VocabularyTable
-                    items={summary.recent_vocabulary}
-                    total={summary.recent_vocabulary.length}
-                  />
                 </div>
               )}
             </>

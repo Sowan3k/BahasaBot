@@ -18,6 +18,8 @@ import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import ChatMessage from "@/components/chatbot/ChatMessage";
+import { Waves } from "@/components/ui/waves";
+import { useTheme } from "@/lib/use-theme";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -36,6 +38,7 @@ export default function ChatbotPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
+  const { theme } = useTheme();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -203,10 +206,10 @@ export default function ChatbotPage() {
 
   return (
     // flex-1 min-h-0 fills the flex-col parent from the layout without overflowing
-    <div className="flex flex-col flex-1 min-h-0 bg-background">
+    <div className="flex flex-col flex-1 min-h-0 bg-background relative">
 
       {/* ── Header ── */}
-      <header className="flex items-center justify-between px-4 py-3 bg-card border-b shrink-0">
+      <header className="flex items-center justify-between px-4 py-3 bg-card border-b shrink-0 relative z-10">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold text-xs select-none">
             BB
@@ -225,8 +228,15 @@ export default function ChatbotPage() {
         </button>
       </header>
 
+      {/* ── Waves background — always visible ── */}
+      <Waves
+        strokeColor="#4a7c59"
+        backgroundColor={theme === "dark" ? "#0d1a11" : "#f5f3ed"}
+        pointerSize={0.5}
+      />
+
       {/* ── Message list ── */}
-      <main className="flex-1 overflow-y-auto min-h-0 px-4 py-4">
+      <main className="flex-1 overflow-y-auto min-h-0 px-4 py-4 relative z-10">
         {messages.length === 0 ? (
           <EmptyState />
         ) : (
@@ -252,7 +262,7 @@ export default function ChatbotPage() {
       </main>
 
       {/* ── Input area ── */}
-      <footer className="bg-card border-t px-4 py-3 shrink-0">
+      <footer className="bg-card border-t px-4 py-3 shrink-0 relative z-10">
         <div className="flex items-end gap-2 max-w-3xl mx-auto">
           <textarea
             ref={inputRef}
@@ -306,18 +316,21 @@ function EmptyState() {
 
   return (
     <div className="flex flex-col items-center justify-center h-full text-center py-12">
-      <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mb-4">
-        <span className="text-3xl">🇲🇾</span>
-      </div>
-      <h2 className="text-lg font-semibold mb-1">Selamat datang! Welcome!</h2>
-      <p className="text-sm text-muted-foreground mb-6 max-w-sm">
-        I&apos;m BahasaBot, your personal Bahasa Melayu tutor. Ask me anything
-        about Malay language, grammar, or culture.
-      </p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-md">
-        {starters.map((s) => (
-          <StarterButton key={s} text={s} />
-        ))}
+      {/* Glass card keeps content readable over the wave animation */}
+      <div className="rounded-2xl px-8 py-8 backdrop-blur-sm bg-card/70 border border-primary/20 shadow-sm max-w-lg w-full mx-4">
+        <div className="w-16 h-16 rounded-full bg-primary/15 flex items-center justify-center mb-4 mx-auto">
+          <span className="text-3xl">🇲🇾</span>
+        </div>
+        <h2 className="text-lg font-semibold mb-1">Selamat datang! Welcome!</h2>
+        <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
+          I&apos;m BahasaBot, your personal Bahasa Melayu tutor. Ask me anything
+          about Malay language, grammar, or culture.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
+          {starters.map((s) => (
+            <StarterButton key={s} text={s} />
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -332,8 +345,8 @@ function StarterButton({ text }: { text: string }) {
     <button
       onClick={click}
       className="text-left text-xs px-3 py-2 rounded-lg border bg-card
-                 text-muted-foreground hover:border-emerald-400 hover:text-emerald-700
-                 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
+                 text-muted-foreground hover:border-primary hover:text-primary
+                 hover:bg-primary/10 transition-colors"
     >
       {text}
     </button>
