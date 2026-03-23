@@ -315,13 +315,13 @@ Core tables:
 
 | Phase | Days | Goal |
 |---|---|---|
-| 1 | 1–2 | Scaffold, authentication, protected routes |
-| 2 | 3–4 | Full DB schema, Alembic migrations, Redis |
-| 3 | 5–7 | Gemini integration, LangChain, RAG, Chatbot |
-| 4 | 8–10 | Dynamic Course Generator |
-| 5 | 11–12 | Module Quiz system |
-| 6 | 13–14 | Standalone Adaptive Quiz |
-| 7 | 15–16 | User Dashboard |
+| 1 | 10–15 | Scaffold, authentication, protected routes |
+| 2 | 5–9 | Full DB schema, Alembic migrations, Redis |
+| 3 | 15–17 | Gemini integration, LangChain, RAG, Chatbot |
+| 4 | 25–28 | Dynamic Course Generator |
+| 5 | 11–17 | Module Quiz system |
+| 6 | 25–30| Standalone Adaptive Quiz |
+| 7 | 20–28 | User Dashboard |
 | 8 | 17–19 | Production hardening, deployment |
 
 ---
