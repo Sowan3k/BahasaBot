@@ -35,12 +35,12 @@ export function VocabPill({ malay, english }: VocabPillProps) {
         onFocus={() => setShowTooltip(true)}
         onBlur={() => setShowTooltip(false)}
         className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-sm font-medium
-                   bg-emerald-100 text-emerald-800 border border-emerald-300
-                   hover:bg-emerald-200 transition-colors cursor-help"
+                   bg-accent/20 text-amber-800 border border-accent/40
+                   hover:bg-accent/30 dark:text-amber-300 dark:border-accent/30 transition-colors cursor-help"
         aria-label={`${malay} means ${english}`}
       >
         {malay}
-        <span className="text-xs text-emerald-500">▾</span>
+        <span className="text-xs text-accent">▾</span>
       </button>
 
       {showTooltip && (

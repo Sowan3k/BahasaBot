@@ -127,8 +127,8 @@ export default function AdaptiveQuizPage() {
       <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
         {/* Score card */}
         <div className="rounded-xl border p-6 text-center space-y-3 bg-card">
-          <div className="text-5xl font-bold">{result.score_percent}%</div>
-          <p className="text-muted-foreground text-sm">
+          <div className="text-5xl font-bold tabular-nums font-heading">{result.score_percent}%</div>
+          <p className="text-muted-foreground text-sm leading-relaxed">
             {result.correct_count} / {result.total_questions} correct
           </p>
 
@@ -170,7 +170,7 @@ export default function AdaptiveQuizPage() {
 
         {/* Per-question breakdown */}
         <div className="space-y-3">
-          <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">
+          <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
             Question Breakdown
           </h2>
           {result.question_results.map((qr, idx) => (
@@ -192,7 +192,7 @@ export default function AdaptiveQuizPage() {
                 >
                   {qr.is_correct ? "✓" : "✗"}
                 </span>
-                <p className="text-sm font-medium">
+                <p className="text-sm font-medium leading-relaxed">
                   Q{idx + 1}. {qr.question}
                 </p>
               </div>
@@ -244,11 +244,11 @@ export default function AdaptiveQuizPage() {
 
       {/* Quiz header */}
       <div className="space-y-1">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
           Adaptive Practice
         </p>
-        <h1 className="text-2xl font-bold">Bahasa Melayu Quiz</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="text-3xl font-bold tracking-tight">Bahasa Melayu Quiz</h1>
+        <p className="text-sm text-muted-foreground leading-relaxed">
           {quiz.question_count} questions personalised to your weak points · Scoring updates your CEFR level
         </p>
       </div>
@@ -341,7 +341,7 @@ function StandaloneQuestionCard({
     <div className="rounded-lg border bg-card p-5 space-y-4">
       {/* Question header */}
       <div className="flex items-start justify-between gap-3">
-        <p className="font-medium text-sm flex-1">
+        <p className="font-medium text-base flex-1">
           <span className="text-muted-foreground mr-2">Q{index + 1}.</span>
           {question.question}
         </p>
@@ -372,7 +372,7 @@ function StandaloneQuestionCard({
                 onChange={() => onChange(opt)}
                 className="accent-primary"
               />
-              <span className="text-sm">{opt}</span>
+              <span className="text-base">{opt}</span>
             </label>
           ))}
         </div>

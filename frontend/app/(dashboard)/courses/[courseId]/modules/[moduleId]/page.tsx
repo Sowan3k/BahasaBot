@@ -82,11 +82,11 @@ export default function ModuleDetailPage({
 
       {/* Module header */}
       <div className="space-y-2">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
           Module {module.order_index}
         </p>
-        <h1 className="text-2xl font-bold">{module.title}</h1>
-        <p className="text-muted-foreground">{module.description}</p>
+        <h1 className="text-2xl font-bold tracking-tight">{module.title}</h1>
+        <p className="text-muted-foreground leading-relaxed">{module.description}</p>
       </div>
 
       {/* Progress */}
@@ -129,7 +129,7 @@ export default function ModuleDetailPage({
 
       {/* Classes list */}
       <div className="space-y-2">
-        <h2 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+        <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-widest">
           Classes
         </h2>
         <ul className="space-y-2">
@@ -149,7 +149,7 @@ export default function ModuleDetailPage({
                   {cls.is_completed ? "✓" : idx + 1}
                 </span>
                 <span
-                  className={`text-sm font-medium ${
+                  className={`text-base font-medium ${
                     cls.is_completed ? "text-muted-foreground line-through" : ""
                   }`}
                 >

@@ -26,7 +26,7 @@ function VocabularySection({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="font-semibold text-base">Vocabulary</h2>
+        <h2 className="text-lg font-semibold tracking-tight">Vocabulary</h2>
         <span className="text-xs text-muted-foreground">{items.length} words</span>
       </div>
       <div className="grid gap-2 sm:grid-cols-2">
@@ -36,12 +36,12 @@ function VocabularySection({
             className="rounded-lg border bg-card p-4 border-l-4 border-l-primary/60 space-y-1.5"
           >
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-primary">{item.word}</span>
+              <span className="font-semibold text-base text-primary">{item.word}</span>
               {isCompleted && (
                 <span className="text-xs text-green-500 font-medium">✓ saved</span>
               )}
             </div>
-            <p className="text-sm text-muted-foreground">{item.meaning}</p>
+            <p className="text-sm text-muted-foreground leading-relaxed">{item.meaning}</p>
             {item.example && (
               <p className="text-xs text-muted-foreground/80 italic border-t border-border/50 pt-1.5">
                 {item.example}
@@ -60,12 +60,12 @@ function ExamplesSection({ items }: { items: ExampleSentence[] }) {
   if (!items.length) return null;
   return (
     <div className="space-y-3">
-      <h2 className="font-semibold text-base">Example Sentences</h2>
+      <h2 className="text-lg font-semibold tracking-tight">Example Sentences</h2>
       <div className="space-y-2">
         {items.map((item, i) => (
           <div key={i} className="rounded-lg border bg-card px-4 py-3 space-y-1">
-            <p className="font-medium text-sm">{item.bm}</p>
-            <div className="flex items-start gap-1.5 text-sm text-muted-foreground">
+            <p className="font-medium text-base">{item.bm}</p>
+            <div className="flex items-start gap-1.5 text-sm text-muted-foreground leading-relaxed">
               <span className="text-xs text-muted-foreground/50 mt-0.5 flex-shrink-0">▸</span>
               <p>{item.en}</p>
             </div>
@@ -190,11 +190,11 @@ export default function ClassPage({
             </div>
           </div>
         )}
-        <h1 className="text-2xl font-bold leading-snug">{cls.title}</h1>
+        <h1 className="text-2xl font-bold tracking-tight leading-snug">{cls.title}</h1>
       </div>
 
       {/* Lesson content — prose classes now styled by @tailwindcss/typography */}
-      <div className="prose prose-sm max-w-none dark:prose-invert rounded-lg border bg-card p-6">
+      <div className="prose prose-base max-w-none dark:prose-invert rounded-lg border bg-card p-6 leading-relaxed">
         <ReactMarkdown>{cls.content}</ReactMarkdown>
       </div>
 

@@ -242,11 +242,11 @@ export default function ChatbotPage() {
       {/* ── Header ── */}
       <header className="flex items-center justify-between px-4 py-3 bg-card border-b shrink-0 relative z-10">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold text-xs select-none">
+          <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-xs select-none">
             BB
           </div>
           <div>
-            <p className="text-sm font-semibold leading-tight">AI Tutor</p>
+            <p className="text-sm font-semibold tracking-tight leading-tight">AI Tutor</p>
             <p className="text-xs text-muted-foreground leading-tight">Bahasa Melayu</p>
           </div>
         </div>
@@ -303,17 +303,17 @@ export default function ChatbotPage() {
             placeholder="Ask anything about Bahasa Melayu…"
             rows={1}
             disabled={isStreaming}
-            className="flex-1 resize-none rounded-xl border px-4 py-3 text-sm bg-background
+            className="flex-1 resize-none rounded-xl border px-4 py-3 text-base bg-background
                        text-foreground placeholder:text-muted-foreground focus:outline-none
-                       focus:ring-2 focus:ring-emerald-500 focus:border-transparent
+                       focus:ring-2 focus:ring-ring focus:border-transparent
                        disabled:opacity-50 max-h-32 overflow-y-auto leading-relaxed"
             style={{ minHeight: "48px" }}
           />
           <button
             onClick={sendMessage}
             disabled={isStreaming || !input.trim()}
-            className="flex-shrink-0 w-11 h-11 rounded-xl bg-emerald-600 text-white flex items-center
-                       justify-center hover:bg-emerald-700 active:scale-95 transition-all
+            className="flex-shrink-0 w-11 h-11 rounded-xl bg-primary text-primary-foreground flex items-center
+                       justify-center hover:bg-primary/90 active:scale-95 transition-all
                        disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
             aria-label="Send message"
           >
@@ -352,8 +352,8 @@ function EmptyState() {
         <div className="w-16 h-16 rounded-full bg-primary/15 flex items-center justify-center mb-4 mx-auto">
           <span className="text-3xl">🇲🇾</span>
         </div>
-        <h2 className="text-lg font-semibold mb-1">Selamat datang! Welcome!</h2>
-        <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
+        <h2 className="text-xl font-semibold tracking-tight mb-1">Selamat datang! Welcome!</h2>
+        <p className="text-sm text-muted-foreground leading-relaxed mb-6 max-w-sm mx-auto">
           I&apos;m BahasaBot, your personal Bahasa Melayu tutor. Ask me anything
           about Malay language, grammar, or culture.
         </p>
@@ -375,9 +375,9 @@ function StarterButton({ text }: { text: string }) {
   return (
     <button
       onClick={click}
-      className="text-left text-xs px-3 py-2 rounded-lg border bg-card
+      className="text-left text-sm px-3 py-2 rounded-lg border bg-card
                  text-muted-foreground hover:border-primary hover:text-primary
-                 hover:bg-primary/10 transition-colors"
+                 hover:bg-primary/10 transition-colors leading-snug"
     >
       {text}
     </button>

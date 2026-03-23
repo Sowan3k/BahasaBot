@@ -11,6 +11,11 @@ from contextlib import asynccontextmanager
 
 import sentry_sdk
 from dotenv import load_dotenv
+
+# load_dotenv() must run before any module that reads env vars at import time
+# (e.g. rate_limiter reads REDIS_URL, database reads DATABASE_URL).
+load_dotenv()
+
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -30,8 +35,6 @@ import backend.models.document  # noqa: F401
 import backend.models.progress  # noqa: F401
 import backend.models.quiz      # noqa: F401
 import backend.models.user      # noqa: F401
-
-load_dotenv()
 
 setup_logging()
 logger = get_logger(__name__)

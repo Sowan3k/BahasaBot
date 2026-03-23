@@ -53,11 +53,11 @@ function CourseCard({ course }: { course: CourseSummary }) {
         className="block p-5 space-y-3 flex-1"
       >
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-1">
+          <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-1">
             {course.topic}
           </p>
-          <h3 className="font-semibold leading-snug line-clamp-2">{course.title}</h3>
-          <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{course.description}</p>
+          <h3 className="font-semibold text-base leading-snug line-clamp-2">{course.title}</h3>
+          <p className="text-sm text-muted-foreground mt-1 leading-relaxed line-clamp-2">{course.description}</p>
         </div>
 
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
@@ -129,8 +129,8 @@ export default function CoursesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">My Courses</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <h1 className="text-3xl font-bold tracking-tight">My Courses</h1>
+          <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
             AI-generated Malay language courses personalised to your topics
           </p>
         </div>

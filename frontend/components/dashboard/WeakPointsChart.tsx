@@ -21,7 +21,7 @@ interface Props {
 function scoreColor(score: number): string {
   if (score < 0.3) return "#ef4444"; // red-500
   if (score < 0.6) return "#f97316"; // orange-500
-  return "#eab308";                  // yellow-500
+  return "#f9a620";                  // marigold
 }
 
 interface ChartDatum {
@@ -96,7 +96,7 @@ export default function WeakPointsChart({ weakPoints }: Props) {
           Needs work (30–60%)
         </span>
         <span className="flex items-center gap-1">
-          <span className="inline-block w-3 h-3 rounded-sm bg-yellow-500" />
+          <span className="inline-block w-3 h-3 rounded-sm" style={{ backgroundColor: "#f9a620" }} />
           Improving (60–80%)
         </span>
       </div>

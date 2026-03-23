@@ -1,11 +1,15 @@
-import { Inter, Lora } from "next/font/google";
+import { Inter, Space_Grotesk } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { Providers } from "@/components/providers";
 import type { Metadata } from "next";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
-const lora = Lora({ subsets: ["latin"], variable: "--font-heading", weight: ["400", "600", "700"] });
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-heading",
+  weight: ["400", "500", "600", "700"],
+});
 
 export const metadata: Metadata = {
   title: "BahasaBot — Learn Bahasa Melayu",
@@ -33,7 +37,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={cn("font-sans", inter.variable, lora.variable)} suppressHydrationWarning>
+    <html lang="en" className={cn("font-sans", inter.variable, spaceGrotesk.variable)} suppressHydrationWarning>
       <head>
         {/* Inline script — runs before hydration to apply saved/system theme with no flash */}
         <script

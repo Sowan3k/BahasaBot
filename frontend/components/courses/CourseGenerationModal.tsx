@@ -55,8 +55,11 @@ export function CourseGenerationModal({ onClose }: CourseGenerationModalProps) {
       clearInterval(stepInterval);
       if (axios.isAxiosError(err)) {
         const detail: string = err.response?.data?.detail ?? "";
-        if (err.response?.status === 422) {
+        const status = err.response?.status;
+        if (status === 422) {
           setError(detail || "Topic rejected. Please choose an appropriate educational topic.");
+        } else if (status === 429) {
+          setError("You've reached the course generation limit (5 per hour). Please try again later.");
         } else {
           // Shows the real error in development (backend returns it when APP_ENV=development)
           setError(detail || "Course generation failed. Please try again.");

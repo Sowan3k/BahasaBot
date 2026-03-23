@@ -197,8 +197,8 @@ export default function DashboardPage() {
     <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">
+        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+        <p className="text-muted-foreground mt-1 leading-relaxed">
           Your Bahasa Melayu learning progress at a glance.
         </p>
       </div>
@@ -216,7 +216,7 @@ export default function DashboardPage() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px ${
+            className={`px-4 py-2 text-sm font-medium tracking-wide border-b-2 transition-colors -mb-px ${
               activeTab === tab.id
                 ? "border-primary text-primary"
                 : "border-transparent text-muted-foreground hover:text-foreground"
@@ -267,7 +267,7 @@ export default function DashboardPage() {
                 <div className="relative rounded-[1.25rem] border-[0.75px] border-border p-2">
                   <GlowingEffect spread={40} glow={true} disabled={false} proximity={64} inactiveZone={0.01} borderWidth={3} />
                   <div className="relative overflow-hidden rounded-xl border-[0.75px] border-border bg-background p-5 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)] space-y-3">
-                    <h3 className="font-semibold">Weak Points</h3>
+                    <h3 className="font-semibold text-base tracking-tight">Weak Points</h3>
                     {summary.top_weak_points.length > 0 ? (
                       <WeakPointsChart weakPoints={summary.top_weak_points} />
                     ) : (
@@ -281,7 +281,7 @@ export default function DashboardPage() {
                 <div className="relative rounded-[1.25rem] border-[0.75px] border-border p-2">
                   <GlowingEffect spread={40} glow={true} disabled={false} proximity={64} inactiveZone={0.01} borderWidth={3} />
                   <div className="relative overflow-hidden rounded-xl border-[0.75px] border-border bg-background p-5 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)] space-y-3">
-                    <h3 className="font-semibold">Recent Quiz Attempts</h3>
+                    <h3 className="font-semibold text-base tracking-tight">Recent Quiz Attempts</h3>
                     <QuizHistoryTable
                       items={summary.recent_quiz_history}
                       total={summary.stats.quizzes_taken}
@@ -296,7 +296,7 @@ export default function DashboardPage() {
                   <GlowingEffect spread={40} glow={true} disabled={false} proximity={64} inactiveZone={0.01} borderWidth={3} />
                   <div className="relative overflow-hidden rounded-xl border-[0.75px] border-border bg-background p-5 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)] space-y-3">
                     <div className="flex items-center justify-between">
-                      <h3 className="font-semibold">Recently Learned Vocabulary</h3>
+                      <h3 className="font-semibold text-base tracking-tight">Recently Learned Vocabulary</h3>
                       <button
                         onClick={() => setActiveTab("vocabulary")}
                         className="text-sm text-primary hover:underline"
@@ -319,7 +319,7 @@ export default function DashboardPage() {
       {/* ── Vocabulary tab ─────────────────────────────────────────────────── */}
       {activeTab === "vocabulary" && (
         <div className="space-y-4">
-          <h2 className="font-semibold text-lg">All Vocabulary</h2>
+          <h2 className="text-xl font-semibold tracking-tight">All Vocabulary</h2>
           <VocabularyTable
             items={vocabData?.items ?? []}
             total={vocabData?.total ?? 0}
@@ -334,7 +334,7 @@ export default function DashboardPage() {
       {/* ── Grammar tab ────────────────────────────────────────────────────── */}
       {activeTab === "grammar" && (
         <div className="space-y-4">
-          <h2 className="font-semibold text-lg">All Grammar Rules</h2>
+          <h2 className="text-xl font-semibold tracking-tight">All Grammar Rules</h2>
           <GrammarTable
             items={grammarData?.items ?? []}
             total={grammarData?.total ?? 0}
@@ -349,7 +349,7 @@ export default function DashboardPage() {
       {/* ── Quiz history tab ───────────────────────────────────────────────── */}
       {activeTab === "quiz-history" && (
         <div className="space-y-4">
-          <h2 className="font-semibold text-lg">Quiz History</h2>
+          <h2 className="text-xl font-semibold tracking-tight">Quiz History</h2>
           <QuizHistoryTable
             items={quizData?.items ?? []}
             total={quizData?.total ?? 0}

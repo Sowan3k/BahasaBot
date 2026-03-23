@@ -28,12 +28,16 @@ In main.py:
 
 import os
 
+from jose import JWTError, jwt
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
+
+_SECRET_KEY = os.getenv("SECRET_KEY", "")
+_ALGORITHM = os.getenv("ALGORITHM", "HS256")
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -43,14 +47,20 @@ def _get_user_id_or_ip(request) -> str:
     Key function: returns the authenticated user's ID when available,
     falling back to the remote IP for unauthenticated endpoints.
 
-    This ensures rate limits are per-user (not per-IP) for logged-in users.
+    Decodes the JWT from the Authorization header directly (without hitting
+    the database) so rate limits are per-user before dependency injection runs.
     """
-    # FastAPI stores the authenticated user in request.state after the
-    # get_current_user dependency runs. For unauthenticated endpoints the
-    # attribute won't exist, so we fall back to IP.
-    user = getattr(request.state, "user", None)
-    if user is not None:
-        return str(user.id)
+    # Try to extract user ID from Bearer JWT
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header[7:]
+        try:
+            payload = jwt.decode(token, _SECRET_KEY, algorithms=[_ALGORITHM])
+            user_id = payload.get("sub")
+            if user_id:
+                return str(user_id)
+        except JWTError:
+            pass  # Invalid token — fall through to IP
     return get_remote_address(request)
 
 

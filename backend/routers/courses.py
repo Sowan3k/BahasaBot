@@ -53,8 +53,8 @@ logger = get_logger(__name__)
 @router.post("/generate", response_model=CourseGenerateResponse, status_code=status.HTTP_201_CREATED)
 @limiter.limit(COURSE_GEN_LIMIT)
 async def generate_course_endpoint(
-    http_request: Request,
-    request: CourseGenerateRequest,
+    request: Request,
+    body: CourseGenerateRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> CourseGenerateResponse:
@@ -66,7 +66,7 @@ async def generate_course_endpoint(
     - Persists course to PostgreSQL and returns the new course_id
     """
     # Content filter — server-side validation (never trust frontend alone)
-    is_ok, reason = await is_topic_appropriate(request.topic)
+    is_ok, reason = await is_topic_appropriate(body.topic)
     if not is_ok:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -75,7 +75,7 @@ async def generate_course_endpoint(
 
     try:
         course = await generate_course(
-            topic=request.topic,
+            topic=body.topic,
             user_id=current_user.id,
             db=db,
             level=current_user.proficiency_level or "A1",

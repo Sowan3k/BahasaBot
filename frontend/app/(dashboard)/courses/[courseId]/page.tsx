@@ -41,11 +41,11 @@ function ModuleCard({ module, courseId }: { module: Module; courseId: string }) 
     <div className="rounded-lg border bg-card p-5 space-y-3">
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-1">
+          <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-1">
             Module {module.order_index}
           </p>
-          <h3 className="font-semibold">{module.title}</h3>
-          <p className="text-sm text-muted-foreground mt-0.5">{module.description}</p>
+          <h3 className="font-semibold text-base tracking-tight">{module.title}</h3>
+          <p className="text-sm text-muted-foreground mt-0.5 leading-relaxed">{module.description}</p>
         </div>
         {module.is_completed && (
           <span className="ml-3 mt-0.5 text-green-500 text-lg flex-shrink-0">✓</span>
@@ -157,11 +157,11 @@ export default function CourseDetailPage({
 
       {/* Course header */}
       <div className="space-y-3">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
           {course.topic}
         </p>
-        <h1 className="text-2xl font-bold leading-snug">{course.title}</h1>
-        <p className="text-muted-foreground">{course.description}</p>
+        <h1 className="text-3xl font-bold tracking-tight leading-tight">{course.title}</h1>
+        <p className="text-muted-foreground leading-relaxed">{course.description}</p>
 
         {/* Overall progress */}
         <div className="space-y-1 pt-1">
@@ -183,7 +183,7 @@ export default function CourseDetailPage({
       {/* Learning objectives */}
       {course.objectives.length > 0 && (
         <div className="rounded-lg border bg-card p-5 space-y-2">
-          <h2 className="font-semibold text-sm">Learning Objectives</h2>
+          <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Learning Objectives</h2>
           <ul className="space-y-1">
             {course.objectives.map((obj, i) => (
               <li key={i} className="flex gap-2 text-sm text-muted-foreground">
@@ -197,7 +197,7 @@ export default function CourseDetailPage({
 
       {/* Modules */}
       <div className="space-y-4">
-        <h2 className="font-semibold">Modules</h2>
+        <h2 className="text-lg font-semibold tracking-tight">Modules</h2>
         {course.modules.map((module) => (
           <ModuleCard key={module.id} module={module} courseId={courseId} />
         ))}

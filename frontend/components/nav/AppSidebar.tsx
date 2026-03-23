@@ -93,9 +93,9 @@ export function AppSidebar() {
               <Link
                 key={href}
                 href={href}
-                className={`block px-3 py-2 rounded-md text-sm transition-colors ${
+                className={`block px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                   active
-                    ? "bg-primary text-primary-foreground font-medium"
+                    ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 }`}
               >
@@ -111,7 +111,7 @@ export function AppSidebar() {
             <>
               {session?.user?.name && (
                 <p
-                  className="px-3 py-1 text-xs text-muted-foreground truncate"
+                  className="px-3 py-1 text-xs font-medium text-muted-foreground truncate"
                   title={session.user.email ?? ""}
                 >
                   {session.user.name}

@@ -122,14 +122,14 @@ const mdComponents: Components = {
   },
   code({ children }) {
     return (
-      <code className="px-1 py-0.5 rounded text-xs font-mono bg-emerald-50 text-emerald-800 border border-emerald-200">
+      <code className="px-1 py-0.5 rounded text-xs font-mono bg-primary/10 text-primary border border-primary/20">
         {children}
       </code>
     );
   },
   blockquote({ children }) {
     return (
-      <blockquote className="border-l-4 border-emerald-300 pl-3 italic text-gray-500 my-2">
+      <blockquote className="border-l-4 border-border pl-3 italic text-muted-foreground my-2">
         {children}
       </blockquote>
     );
@@ -166,22 +166,22 @@ export default function ChatMessage({
         className={`rounded-2xl px-4 py-3 shadow-sm
           ${isUser
             ? "max-w-sm bg-blue-600 text-white rounded-br-sm"
-            : "max-w-2xl bg-white text-gray-800 border border-gray-200 rounded-bl-sm"
+            : "max-w-2xl bg-card text-card-foreground border border-border rounded-bl-sm"
           }`}
       >
         {isUser ? (
           /* User messages: plain text, no markdown parsing */
-          <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+          <p className="text-base leading-relaxed whitespace-pre-wrap break-words">
             {content}
           </p>
         ) : (
           /* Assistant messages: full markdown + vocab pills */
-          <div className="text-sm">
+          <div className="text-base leading-relaxed">
             <ReactMarkdown components={mdComponents}>
               {processedContent}
             </ReactMarkdown>
             {isStreaming && (
-              <span className="inline-block w-1.5 h-4 bg-emerald-500 ml-0.5 animate-pulse rounded-sm" />
+              <span className="inline-block w-1.5 h-4 bg-primary ml-0.5 animate-pulse rounded-sm" />
             )}
           </div>
         )}

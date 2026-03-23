@@ -21,8 +21,8 @@ export default function CEFRProgressBar({ level }: Props) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold">CEFR Proficiency Level</h3>
-        <span className="text-sm text-muted-foreground">
+        <h3 className="font-semibold text-base tracking-tight">CEFR Proficiency Level</h3>
+        <span className="text-sm font-medium text-muted-foreground">
           {level} — {LEVEL_LABELS[level]}
         </span>
       </div>
@@ -34,7 +34,7 @@ export default function CEFRProgressBar({ level }: Props) {
             <div
               className={`h-2.5 rounded-full transition-colors ${
                 i <= currentIndex
-                  ? "bg-primary"
+                  ? "bg-accent"
                   : "bg-muted"
               }`}
             />
@@ -50,7 +50,7 @@ export default function CEFRProgressBar({ level }: Props) {
       </div>
 
       {/* Description */}
-      <p className="text-sm text-muted-foreground">
+      <p className="text-sm text-muted-foreground leading-relaxed">
         {level === "B2"
           ? "You have reached the highest tracked level. Keep practising!"
           : `Next level: ${LEVELS[currentIndex + 1]} — ${LEVEL_LABELS[LEVELS[currentIndex + 1]]}. Take the adaptive quiz to improve.`}

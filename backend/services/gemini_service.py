@@ -9,6 +9,7 @@ Includes: exponential backoff retry (3x), fallback messages on failure.
 import asyncio
 import json
 import os
+import re
 from typing import AsyncIterator
 
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -72,12 +73,24 @@ def _build_messages(
     return messages
 
 
+def _parse_retry_delay(exc: Exception) -> float:
+    """
+    Extract the suggested retry delay (in seconds) from a Gemini 429 error message.
+    Returns the parsed delay, or None if not found.
+    """
+    match = re.search(r"retry in (\d+\.?\d*)s", str(exc), re.IGNORECASE)
+    if match:
+        return float(match.group(1))
+    return None
+
+
 async def _invoke_with_retry(
     messages: list[SystemMessage | HumanMessage],
     max_retries: int = 3,
 ) -> str:
     """
     Low-level LLM invocation with exponential backoff retry.
+    Handles 429 ResourceExhausted by waiting the API-suggested delay.
     Raises RuntimeError if all attempts fail.
     """
     llm = _chat_llm()
@@ -86,18 +99,39 @@ async def _invoke_with_retry(
     for attempt in range(max_retries):
         try:
             response = await llm.ainvoke(messages)
-            return str(response.content)
+            content = response.content
+            # Newer Gemini models may return content as a list of typed blocks
+            if isinstance(content, list):
+                text_parts = []
+                for block in content:
+                    if isinstance(block, dict) and block.get("type") == "text":
+                        text_parts.append(block.get("text", ""))
+                    elif isinstance(block, str):
+                        text_parts.append(block)
+                return "".join(text_parts)
+            return str(content)
         except Exception as exc:
             last_exc = exc
-            wait = 2**attempt  # 1s, 2s, 4s
-            logger.warning(
-                "Gemini invocation failed",
-                attempt=attempt + 1,
-                max_retries=max_retries,
-                error=str(exc),
-                error_type=type(exc).__name__,
-                retry_in_seconds=wait,
-            )
+            # For 429 rate-limit errors, use the API-suggested retry delay
+            retry_delay = _parse_retry_delay(exc)
+            if retry_delay is not None:
+                wait = retry_delay + 2  # add 2s buffer
+                logger.warning(
+                    "Gemini rate limit hit (429) — waiting for API-suggested delay",
+                    attempt=attempt + 1,
+                    max_retries=max_retries,
+                    retry_in_seconds=wait,
+                )
+            else:
+                wait = 2**attempt  # 1s, 2s, 4s
+                logger.warning(
+                    "Gemini invocation failed",
+                    attempt=attempt + 1,
+                    max_retries=max_retries,
+                    error=str(exc)[:200],
+                    error_type=type(exc).__name__,
+                    retry_in_seconds=wait,
+                )
             if attempt < max_retries - 1:
                 await asyncio.sleep(wait)
 
@@ -153,11 +187,13 @@ async def generate_json(
                 cleaned = cleaned.rsplit("```", 1)[0].strip()
             return json.loads(cleaned)
         except (json.JSONDecodeError, RuntimeError) as exc:
-            wait = 2**attempt
+            # If this looks like a 429, use the API-suggested delay instead of exponential backoff
+            retry_delay = _parse_retry_delay(exc)
+            wait = (retry_delay + 2) if retry_delay is not None else 2**attempt
             logger.warning(
                 "generate_json failed",
                 attempt=attempt + 1,
-                error=str(exc),
+                error=str(exc)[:200],
                 retry_in_seconds=wait,
             )
             if attempt < max_retries - 1:

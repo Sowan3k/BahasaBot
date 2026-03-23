@@ -16,9 +16,9 @@ import asyncio
 import uuid
 from uuid import UUID
 
-# Limit concurrent Gemini content-generation calls to avoid free-tier rate limits.
-# 6 classes × 2 calls each = 12 simultaneous calls without this guard.
-_CONTENT_SEMAPHORE = asyncio.Semaphore(3)
+# Limit concurrent Gemini content-generation calls to respect free-tier rate limits.
+# gemini-2.5-flash free tier: 5 RPM. Keep concurrency low to avoid 429s.
+_CONTENT_SEMAPHORE = asyncio.Semaphore(2)
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
