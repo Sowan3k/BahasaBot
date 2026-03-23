@@ -55,6 +55,35 @@ export default function ChatbotPage() {
     }
   }, [status, router]);
 
+  // Restore previous chat from sessionStorage when navigating back to this page
+  useEffect(() => {
+    const savedMessages = sessionStorage.getItem("chatbot_messages");
+    const savedSessionId = sessionStorage.getItem("chatbot_session_id");
+    if (savedMessages) {
+      try {
+        setMessages(JSON.parse(savedMessages));
+      } catch {
+        // Corrupted storage — ignore and start fresh
+        sessionStorage.removeItem("chatbot_messages");
+      }
+    }
+    if (savedSessionId) setSessionId(savedSessionId);
+  }, []);
+
+  // Persist messages to sessionStorage whenever they change
+  useEffect(() => {
+    if (messages.length > 0) {
+      sessionStorage.setItem("chatbot_messages", JSON.stringify(messages));
+    }
+  }, [messages]);
+
+  // Persist sessionId to sessionStorage whenever it changes
+  useEffect(() => {
+    if (sessionId) {
+      sessionStorage.setItem("chatbot_session_id", sessionId);
+    }
+  }, [sessionId]);
+
   // Auto-scroll to bottom when messages change
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -193,6 +222,8 @@ export default function ChatbotPage() {
     setSessionId(null);
     setMessages([]);
     setError(null);
+    sessionStorage.removeItem("chatbot_messages");
+    sessionStorage.removeItem("chatbot_session_id");
     inputRef.current?.focus();
   }
 

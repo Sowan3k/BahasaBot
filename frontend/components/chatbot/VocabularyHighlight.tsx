@@ -22,13 +22,14 @@ interface VocabPillProps {
   english: string;
 }
 
-function VocabPill({ malay, english }: VocabPillProps) {
+export function VocabPill({ malay, english }: VocabPillProps) {
   const [showTooltip, setShowTooltip] = useState(false);
 
   return (
     <span className="relative inline-block mx-0.5">
       <button
         type="button"
+        title="Hover to see translation"
         onMouseEnter={() => setShowTooltip(true)}
         onMouseLeave={() => setShowTooltip(false)}
         onFocus={() => setShowTooltip(true)}
