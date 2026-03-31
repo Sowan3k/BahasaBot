@@ -1,16 +1,17 @@
 "use client";
 
-// Shared layout for all dashboard/course/quiz pages.
-// Sidebar navigation is provided by the AppSidebar component (supports collapse toggle).
+// Single shared layout for ALL authenticated pages (dashboard, courses, quiz, chatbot).
+// The sidebar is rendered ONCE here — never in individual pages.
+// main is flex-col so flex-1 children (like the chatbot page) can fill the available height.
 
 import { AppSidebar } from "@/components/nav/AppSidebar";
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default function MainLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex h-screen overflow-hidden bg-background">
       <AppSidebar />
-      {/* Page content — overflow-auto lets each page scroll independently */}
-      <main className="flex-1 overflow-auto">
+      {/* flex-col allows flex-1 children (chatbot) to fill height; overflow-y-auto scrolls regular pages */}
+      <main className="flex-1 min-w-0 overflow-y-auto flex flex-col pt-14 md:pt-0">
         {children}
       </main>
     </div>

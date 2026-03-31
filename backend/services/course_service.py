@@ -622,21 +622,28 @@ async def mark_class_complete(
             )
         )
 
-        # Save vocabulary encountered in this class
+        # Save vocabulary encountered in this class (skip duplicates)
         if cls.vocabulary_json:
             for item in cls.vocabulary_json:
                 word = item.get("word", "").strip()
                 meaning = item.get("meaning", "").strip()
                 if word and meaning:
-                    db.add(
-                        VocabularyLearned(
-                            user_id=user_id,
-                            word=word,
-                            meaning=meaning,
-                            source_type="course",
-                            source_id=cls.id,
+                    existing = await db.execute(
+                        select(VocabularyLearned.id).where(
+                            VocabularyLearned.user_id == user_id,
+                            VocabularyLearned.word.ilike(word),
                         )
                     )
+                    if existing.scalar_one_or_none() is None:
+                        db.add(
+                            VocabularyLearned(
+                                user_id=user_id,
+                                word=word,
+                                meaning=meaning,
+                                source_type="course",
+                                source_id=cls.id,
+                            )
+                        )
 
         await db.commit()
 

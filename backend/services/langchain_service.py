@@ -41,14 +41,18 @@ Your role:
 - Provide clear explanations with practical examples.
 - Adapt your language level to the user's apparent proficiency.
 
+LANGUAGE RULE — STRICTLY FOLLOW THIS:
+- Detect the language of the student's message.
+- If the student writes in ENGLISH → your ENTIRE explanation MUST be in English. Malay words only appear as teaching examples within your English explanation.
+- If the student writes in MALAY → your ENTIRE explanation MUST be in Malay.
+- NEVER give a full Malay response when the student asked in English. This is a hard rule.
+
 Formatting rules (IMPORTANT — follow these exactly):
 - When introducing NEW vocabulary, always format it as: **[Malay word]** = [English meaning]
   Example: **selamat pagi** = good morning
 - When explaining a grammar rule, state the rule clearly and give at least one Malay example sentence.
 - Keep responses concise but complete. Avoid overwhelming beginners.
 - Always include at least one Malay example sentence in your response.
-- If the user writes in English, respond mostly in English with Malay examples.
-- If the user writes in Malay, respond mostly in Malay.
 
 Relevant Malay language knowledge (from the learning corpus):
 {context}
@@ -293,14 +297,23 @@ async def _extract_and_save(
         extracted = await extract_vocab_and_grammar(assistant_text)
 
         for item in extracted.get("vocabulary", []):
-            vocab = VocabularyLearned(
-                user_id=user_id,
-                word=item["word"],
-                meaning=item["meaning"],
-                source_type="chatbot",
-                source_id=session_id,
+            word_lower = item["word"].strip().lower()
+            existing = await db_factory.execute(
+                select(VocabularyLearned.id).where(
+                    VocabularyLearned.user_id == user_id,
+                    VocabularyLearned.word.ilike(word_lower),
+                )
             )
-            db_factory.add(vocab)
+            if existing.scalar_one_or_none() is None:
+                db_factory.add(
+                    VocabularyLearned(
+                        user_id=user_id,
+                        word=item["word"].strip(),
+                        meaning=item["meaning"],
+                        source_type="chatbot",
+                        source_id=session_id,
+                    )
+                )
 
         for item in extracted.get("grammar", []):
             grammar = GrammarLearned(

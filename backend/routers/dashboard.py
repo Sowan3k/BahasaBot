@@ -10,11 +10,15 @@ Endpoints:
   GET /api/dashboard/quiz-history — paginated quiz history
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+import uuid
+
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
+from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.db.database import get_db
 from backend.middleware.auth_middleware import get_current_user
+from backend.models.progress import VocabularyLearned
 from backend.models.user import User
 from backend.schemas.dashboard import (
     DashboardSummaryResponse,
@@ -192,4 +196,37 @@ async def quiz_history(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to load quiz history. Please try again.",
+        )
+
+
+@router.delete("/vocabulary", status_code=status.HTTP_200_OK)
+async def delete_vocabulary(
+    ids: list[uuid.UUID] = Body(..., embed=True),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """
+    Delete vocabulary entries by ID. Only deletes entries belonging to the current user.
+    """
+    if not ids:
+        return {"deleted": 0}
+    try:
+        result = await db.execute(
+            delete(VocabularyLearned).where(
+                VocabularyLearned.id.in_(ids),
+                VocabularyLearned.user_id == current_user.id,
+            )
+        )
+        await db.commit()
+        return {"deleted": result.rowcount}
+    except Exception as exc:
+        await db.rollback()
+        logger.exception(
+            "Delete vocabulary failed",
+            user_id=str(current_user.id),
+            error=str(exc),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete vocabulary. Please try again.",
         )

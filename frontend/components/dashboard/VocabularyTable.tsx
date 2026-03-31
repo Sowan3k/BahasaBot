@@ -5,11 +5,10 @@ import { useState } from "react";
 import type { VocabularyEntry } from "@/lib/types";
 
 interface Props {
-  /** Pre-loaded items (first page). */
   items: VocabularyEntry[];
   total: number;
-  /** Called when the user navigates pages. */
   onPageChange?: (page: number) => void;
+  onDelete?: (ids: string[]) => Promise<void>;
   page?: number;
   limit?: number;
   loading?: boolean;
@@ -27,11 +26,14 @@ export default function VocabularyTable({
   items,
   total,
   onPageChange,
+  onDelete,
   page = 1,
   limit = 20,
   loading = false,
 }: Props) {
   const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
 
   const filtered = items.filter(
     (v) =>
@@ -41,16 +43,65 @@ export default function VocabularyTable({
 
   const totalPages = Math.max(1, Math.ceil(total / limit));
 
+  const allFilteredSelected =
+    filtered.length > 0 && filtered.every((v) => selected.has(v.id));
+
+  function toggleAll() {
+    if (allFilteredSelected) {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        filtered.forEach((v) => next.delete(v.id));
+        return next;
+      });
+    } else {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        filtered.forEach((v) => next.add(v.id));
+        return next;
+      });
+    }
+  }
+
+  function toggleOne(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  async function handleDelete() {
+    if (!onDelete || selected.size === 0) return;
+    setDeleting(true);
+    try {
+      await onDelete(Array.from(selected));
+      setSelected(new Set());
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   return (
     <div className="space-y-3">
-      {/* Search */}
-      <input
-        type="text"
-        placeholder="Search words or meanings…"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="w-full rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-      />
+      {/* Toolbar */}
+      <div className="flex items-center gap-3">
+        <input
+          type="text"
+          placeholder="Search words or meanings…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="flex-1 rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+        />
+        {onDelete && selected.size > 0 && (
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            className="flex items-center gap-1.5 rounded-md border border-destructive px-3 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
+          >
+            {deleting ? "Deleting…" : `Delete (${selected.size})`}
+          </button>
+        )}
+      </div>
 
       {/* Table */}
       {loading ? (
@@ -64,6 +115,17 @@ export default function VocabularyTable({
           <table className="min-w-full divide-y divide-border text-sm">
             <thead className="bg-muted/50">
               <tr>
+                {onDelete && (
+                  <th className="px-3 py-2.5 w-8">
+                    <input
+                      type="checkbox"
+                      checked={allFilteredSelected}
+                      onChange={toggleAll}
+                      className="rounded border-border cursor-pointer"
+                      aria-label="Select all"
+                    />
+                  </th>
+                )}
                 <th className="px-4 py-2.5 text-left font-medium">Malay Word</th>
                 <th className="px-4 py-2.5 text-left font-medium">Meaning</th>
                 <th className="px-4 py-2.5 text-left font-medium">Source</th>
@@ -72,7 +134,21 @@ export default function VocabularyTable({
             </thead>
             <tbody className="divide-y divide-border">
               {filtered.map((v) => (
-                <tr key={v.id} className="hover:bg-muted/30 transition-colors">
+                <tr
+                  key={v.id}
+                  className={`hover:bg-muted/30 transition-colors ${selected.has(v.id) ? "bg-muted/20" : ""}`}
+                >
+                  {onDelete && (
+                    <td className="px-3 py-2.5">
+                      <input
+                        type="checkbox"
+                        checked={selected.has(v.id)}
+                        onChange={() => toggleOne(v.id)}
+                        className="rounded border-border cursor-pointer"
+                        aria-label={`Select ${v.word}`}
+                      />
+                    </td>
+                  )}
                   <td className="px-4 py-2.5 font-medium">{v.word}</td>
                   <td className="px-4 py-2.5 text-muted-foreground">{v.meaning}</td>
                   <td className="px-4 py-2.5">

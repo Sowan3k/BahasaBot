@@ -149,6 +149,12 @@ export const dashboardApi = {
       params: { page, limit },
     }),
 
+  /** Delete vocabulary entries by ID. */
+  deleteVocabulary: (ids: string[]) =>
+    apiClient.delete<{ deleted: number }>("/api/dashboard/vocabulary", {
+      data: { ids },
+    }),
+
   /** Paginated grammar list. */
   getGrammar: (page = 1, limit = 20) =>
     apiClient.get<GrammarListResponse>("/api/dashboard/grammar", {

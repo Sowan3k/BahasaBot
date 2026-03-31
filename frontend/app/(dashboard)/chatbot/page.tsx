@@ -4,9 +4,9 @@
  * Chatbot Page — /chatbot
  *
  * Full-page streaming chat interface.
- * Lives inside app/chatbot/layout.tsx which provides the AppSidebar and
- * a flex-col overflow-hidden main container, so this page uses flex-1 + min-h-0
- * to fill the remaining height and scroll only the message list internally.
+ * Lives inside (dashboard)/layout.tsx which provides the single AppSidebar and
+ * a flex-col main container. This page uses flex-1 + min-h-0 to fill the
+ * remaining height and scroll only the message list internally.
  *
  * - Sends messages to POST /api/chatbot/message and reads the SSE stream.
  * - Creates a new session on first message; reuses session_id thereafter.

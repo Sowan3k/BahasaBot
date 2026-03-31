@@ -121,7 +121,7 @@ export default function RegisterPage() {
   return (
     <AuthCard>
       {/* Header */}
-      <div className="text-center space-y-1 mb-5">
+      <div className="text-center space-y-1 mb-6">
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -150,12 +150,12 @@ export default function RegisterPage() {
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-2.5">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
         {/* Full name */}
         {(() => {
           const { onBlur: nameOnBlur, ...nameRest } = register("name");
           return (
-            <motion.div whileHover={{ scale: 1.01 }} transition={{ type: "spring", stiffness: 400, damping: 25 }}>
+            <motion.div className="relative" whileHover={{ scale: 1.01 }} transition={{ type: "spring", stiffness: 400, damping: 25 }}>
               <div className="relative flex items-center rounded-lg overflow-hidden">
                 <User className={`absolute left-3 w-4 h-4 transition-colors duration-300 ${focusedInput === "name" ? "text-white" : "text-white/40"}`} />
                 <input
@@ -177,7 +177,7 @@ export default function RegisterPage() {
         {(() => {
           const { onBlur: emailOnBlur, ...emailRest } = register("email");
           return (
-            <motion.div whileHover={{ scale: 1.01 }} transition={{ type: "spring", stiffness: 400, damping: 25 }}>
+            <motion.div className="relative" whileHover={{ scale: 1.01 }} transition={{ type: "spring", stiffness: 400, damping: 25 }}>
               <div className="relative flex items-center rounded-lg overflow-hidden">
                 <Mail className={`absolute left-3 w-4 h-4 transition-colors duration-300 ${focusedInput === "email" ? "text-white" : "text-white/40"}`} />
                 <input
@@ -199,7 +199,7 @@ export default function RegisterPage() {
         {(() => {
           const { onBlur: passwordOnBlur, ...passwordRest } = register("password");
           return (
-            <motion.div whileHover={{ scale: 1.01 }} transition={{ type: "spring", stiffness: 400, damping: 25 }}>
+            <motion.div className="relative" whileHover={{ scale: 1.01 }} transition={{ type: "spring", stiffness: 400, damping: 25 }}>
               <div className="relative flex items-center rounded-lg overflow-hidden">
                 <Lock className={`absolute left-3 w-4 h-4 transition-colors duration-300 ${focusedInput === "password" ? "text-white" : "text-white/40"}`} />
                 <input
@@ -224,7 +224,7 @@ export default function RegisterPage() {
         {(() => {
           const { onBlur: confirmOnBlur, ...confirmRest } = register("confirmPassword");
           return (
-            <motion.div whileHover={{ scale: 1.01 }} transition={{ type: "spring", stiffness: 400, damping: 25 }}>
+            <motion.div className="relative" whileHover={{ scale: 1.01 }} transition={{ type: "spring", stiffness: 400, damping: 25 }}>
               <div className="relative flex items-center rounded-lg overflow-hidden">
                 <Lock className={`absolute left-3 w-4 h-4 transition-colors duration-300 ${focusedInput === "confirmPassword" ? "text-white" : "text-white/40"}`} />
                 <input

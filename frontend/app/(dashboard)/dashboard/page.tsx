@@ -169,6 +169,23 @@ export default function DashboardPage() {
       .finally(() => setVocabLoading(false));
   }, [activeTab, vocabPage]);
 
+  async function handleVocabDelete(ids: string[]) {
+    await dashboardApi.deleteVocabulary(ids);
+    // Refresh the current page; if it's now empty go back one page
+    const remaining = (vocabData?.total ?? 0) - ids.length;
+    const newPage = Math.min(vocabPage, Math.max(1, Math.ceil(remaining / 20)));
+    if (newPage !== vocabPage) {
+      setVocabPage(newPage);
+    } else {
+      setVocabLoading(true);
+      dashboardApi
+        .getVocabulary(vocabPage, 20)
+        .then((res) => setVocabData(res.data))
+        .catch(() => {})
+        .finally(() => setVocabLoading(false));
+    }
+  }
+
   // Load grammar when tab activates or page changes
   useEffect(() => {
     if (activeTab !== "grammar") return;
@@ -327,6 +344,7 @@ export default function DashboardPage() {
             limit={20}
             loading={vocabLoading}
             onPageChange={(p) => setVocabPage(p)}
+            onDelete={handleVocabDelete}
           />
         </div>
       )}

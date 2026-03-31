@@ -1,21 +1,45 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-03-25
+## Last Updated: 2026-03-31
 
 ## Feature Status
 | Feature | Status | Notes |
 |---|---|---|
-| Auth | ✅ Complete + Verified | Email + Google OAuth, JWT, token refresh, 7-day sessions — smoke-tested end-to-end |
-| AI Chatbot Tutor | ✅ Complete + Verified | SSE streaming, LangChain, RAG — all tested end-to-end |
-| Course Generator | ✅ Complete + Verified | 4 bugs fixed + end-to-end tested (see debug session below) |
+| Auth | ✅ Complete + Verified | Email + Google OAuth, JWT, token refresh, 30-min sessions |
+| AI Chatbot Tutor | ✅ Complete + Verified | SSE streaming, LangChain, RAG — chatbot language bug fixed |
+| Course Generator | ✅ Complete + Verified | 4 bugs fixed + end-to-end tested |
 | Quiz | ✅ Complete | Module quiz (70% pass gate) + Adaptive quiz (CEFR) |
-| Dashboard | ✅ Complete | Phase 7 — all endpoints + all frontend components implemented |
+| Dashboard | ✅ Complete + Vocab Delete | Vocab dedup on save + delete-by-selection UI added |
 | Production Hardening | ✅ Code complete | Phase 8 — rate limiting, Sentry, deployment config, .env audit |
 
 ## Missing / Broken
 - frontend/app/(dashboard)/quiz/adaptive/results/page.tsx — completeness unknown
 - frontend/app/(dashboard)/quiz/module/[moduleId]/results/page.tsx — completeness unknown
+
+## What Was Done This Session (Chatbot Language Fix + Vocab Dedup + Delete)
+
+### Chatbot Language Bug Fix
+- **Root cause 1: Wrong system prompt delivery** — `ChatGoogleGenerativeAI` does not reliably honour `SystemMessage` objects in the messages array. Fixed by passing system prompt via `system_instruction` at model-init time (`gemini_service.py` `stream_text`).
+- **Root cause 2: Weak language rule** — "respond mostly in English" was too ambiguous for Gemini 2.5 Flash. Replaced with an explicit hard rule: "If the student writes in ENGLISH → your ENTIRE explanation MUST be in English. NEVER give a full Malay response when the student asked in English."
+- **Files changed:** `backend/services/gemini_service.py`, `backend/services/langchain_service.py`
+
+### Session Expiry
+- Changed session expiry from 3 min (test) → **30 minutes** for regular use.
+- `ACCESS_TOKEN_EXPIRE_MINUTES=30` in `backend/.env`, `ACCESS_TOKEN_TTL_MS` = 29 min, NextAuth `maxAge` = 30 min.
+- **Files changed:** `backend/.env`, `frontend/lib/auth.ts`
+
+### Vocabulary Dedup (no more duplicate words)
+- Before inserting any vocab word, a case-insensitive `.ilike()` check runs against the user's existing vocabulary. Duplicate words are silently skipped.
+- Applied to **both** save paths: chatbot extraction (`langchain_service.py`) and course class completion (`course_service.py`).
+- **Tested:** saving "makan" twice → second insert skipped; "MAKAN" (case) also blocked.
+
+### Vocabulary Delete (select + delete from Dashboard)
+- New `DELETE /api/dashboard/vocabulary` endpoint — accepts `{ ids: [...] }`, only deletes rows owned by the current user (security enforced at DB query level).
+- `VocabularyTable.tsx` — added per-row checkboxes, select-all header checkbox, and "Delete (N)" button in toolbar. Only rendered when `onDelete` prop is passed (overview preview is unaffected).
+- `dashboard/page.tsx` — `handleVocabDelete()` calls the API then refreshes the current page (or steps back if page is now empty).
+- `frontend/lib/api.ts` — added `dashboardApi.deleteVocabulary(ids)`.
+- **Tested end-to-end via API:** DELETE returns `{"deleted":1}`, GET after confirms count drops, deleting non-owned ID returns `{"deleted":0}`.
 
 ## What Was Done This Session (UI Polish — Colors + Typography)
 

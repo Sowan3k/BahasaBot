@@ -211,11 +211,17 @@ async def stream_text(
     Stream text generation from Gemini using the chatbot model. Yields string chunks as they arrive.
 
     Uses _chatbot_llm() (CHATBOT_GEMINI_MODEL env var) — separate from course/quiz generation.
+    Passes system_prompt via system_instruction at model-init time (the correct Gemini approach).
     Handles both plain-string and list-of-blocks content formats from newer Gemini models.
     Falls back to yielding FALLBACK_MESSAGE as a single chunk on error.
     """
-    llm = _chatbot_llm()
-    messages = _build_messages(prompt, system_prompt)
+    llm = ChatGoogleGenerativeAI(
+        model=CHATBOT_MODEL,
+        google_api_key=GOOGLE_API_KEY,
+        temperature=0.7,
+        **({"system_instruction": system_prompt} if system_prompt else {}),
+    )
+    messages = [HumanMessage(content=prompt)]
     try:
         async for chunk in llm.astream(messages):
             content = chunk.content

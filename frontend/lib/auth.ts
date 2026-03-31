@@ -15,9 +15,9 @@ import type { User } from "@/lib/types";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-// Access token TTL mirrors ACCESS_TOKEN_EXPIRE_MINUTES in backend/.env (10 min).
+// Access token TTL mirrors ACCESS_TOKEN_EXPIRE_MINUTES in backend/.env (30 min).
 // We refresh 60 s before expiry so there's always a valid token in flight.
-const ACCESS_TOKEN_TTL_MS = (10 * 60 - 60) * 1000; // 9 minutes
+const ACCESS_TOKEN_TTL_MS = (30 * 60 - 60) * 1000; // 29 minutes
 
 async function refreshAccessToken(
   refreshToken: string,
@@ -139,9 +139,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     error: "/login",
   },
 
-  // Session lives for 7 days — matching the refresh token TTL in backend/.env.
-  // Previously this was 10 * 60 (10 min), which caused spontaneous sign-outs.
-  session: { strategy: "jwt", maxAge: 7 * 24 * 60 * 60 },
+  // Session lives for 30 minutes.
+  session: { strategy: "jwt", maxAge: 30 * 60 },
 
   // Required for NextAuth v5 on non-HTTPS (localhost) environments
   trustHost: true,
