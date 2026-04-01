@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
@@ -61,7 +62,10 @@ export function AppSidebar() {
         >
           <Menu size={20} />
         </button>
-        <span className="font-heading font-bold text-lg text-foreground">BahasaBot</span>
+        <div className="flex items-center gap-2">
+          <Image src="/Project Logo.png" width={28} height={28} alt="BahasaBot" className="rounded-md" />
+          <span className="font-heading font-bold text-lg text-foreground">BahasaBot</span>
+        </div>
         <ThemeToggle />
       </header>
 
@@ -80,7 +84,10 @@ export function AppSidebar() {
         }`}
       >
         <div className="flex items-center justify-between px-4 h-14 border-b shrink-0">
-          <span className="font-heading font-bold text-lg">BahasaBot</span>
+          <div className="flex items-center gap-2">
+            <Image src="/Project Logo.png" width={28} height={28} alt="BahasaBot" className="rounded-md" />
+            <span className="font-heading font-bold text-lg">BahasaBot</span>
+          </div>
           <button
             onClick={() => setMobileOpen(false)}
             className="p-2 rounded-md text-foreground hover:bg-muted transition-colors"
@@ -141,15 +148,12 @@ export function AppSidebar() {
           {collapsed ? (
             <Link
               href="/dashboard"
-              className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center font-bold text-primary-foreground text-lg font-heading"
-            >
-              B
+              >
+              <Image src="/Project Logo.png" width={36} height={36} alt="BahasaBot" className="rounded-lg" />
             </Link>
           ) : (
             <Link href="/dashboard" className="flex items-center gap-2 w-full px-1">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center font-bold text-primary-foreground text-sm font-heading shrink-0">
-                B
-              </div>
+              <Image src="/Project Logo.png" width={32} height={32} alt="BahasaBot" className="rounded-lg shrink-0" />
               <span className="font-heading font-bold text-xl text-foreground">BahasaBot</span>
             </Link>
           )}

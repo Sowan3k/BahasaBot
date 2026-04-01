@@ -10,6 +10,7 @@ import Link from "next/link";
 import { quizApi } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ArrowLeft } from "lucide-react";
 import type {
   ModuleQuizQuestion,
   ModuleQuizResult,
@@ -237,6 +238,12 @@ export default function ModuleQuizPage({
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
+      {/* Back button */}
+      <Link href={`/courses/${courseId}/modules/${moduleId}`} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+        <ArrowLeft size={16} />
+        Back to Module
+      </Link>
+
       {/* Breadcrumb */}
       <nav className="text-sm text-muted-foreground">
         <Link href="/courses" className="hover:text-foreground">Courses</Link>

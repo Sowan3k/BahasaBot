@@ -14,6 +14,7 @@
  * - Auto-scrolls to the latest message.
  */
 
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -242,9 +243,7 @@ export default function ChatbotPage() {
       {/* ── Header ── */}
       <header className="flex items-center justify-between px-4 py-3 bg-card border-b shrink-0 relative z-10">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-xs select-none">
-            BB
-          </div>
+          <Image src="/Project Logo.png" width={28} height={28} alt="BahasaBot" className="rounded-full select-none" />
           <div>
             <p className="text-sm font-semibold tracking-tight leading-tight">AI Tutor</p>
             <p className="text-xs text-muted-foreground leading-tight">Bahasa Melayu</p>

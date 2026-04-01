@@ -11,6 +11,7 @@ import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import { coursesApi } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 import type { ClassDetail, Course, VocabularyItem, ExampleSentence } from "@/lib/types";
 
 // ── Vocabulary flashcards ─────────────────────────────────────────────────────
@@ -158,6 +159,12 @@ export default function ClassPage({
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
+
+      {/* Back button */}
+      <Link href={`/courses/${courseId}/modules/${moduleId}`} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+        <ArrowLeft size={16} />
+        Back to Module
+      </Link>
 
       {/* Breadcrumb */}
       <nav className="text-sm text-muted-foreground flex flex-wrap gap-1 items-center">

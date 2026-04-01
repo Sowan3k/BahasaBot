@@ -30,7 +30,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ThemeContext.Provider value={themeValue}>
       <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-        <SessionProvider>
+        {/* refetchInterval: poll session every 60 s so expiry is detected proactively.
+            refetchOnWindowFocus: re-check immediately when the tab regains focus. */}
+        <SessionProvider refetchInterval={60} refetchOnWindowFocus={true}>
           <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
         </SessionProvider>
       </GoogleOAuthProvider>

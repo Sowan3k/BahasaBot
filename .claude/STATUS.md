@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-03-31
+## Last Updated: 2026-04-01
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -17,12 +17,36 @@ _Update this file at the end of every session_
 - frontend/app/(dashboard)/quiz/adaptive/results/page.tsx — completeness unknown
 - frontend/app/(dashboard)/quiz/module/[moduleId]/results/page.tsx — completeness unknown
 
-## What Was Done This Session (Chatbot Language Fix + Vocab Dedup + Delete)
+## What Was Done This Session (Logo, Back Buttons, Auto-Logout, Chatbot Fix)
 
-### Chatbot Language Bug Fix
-- **Root cause 1: Wrong system prompt delivery** — `ChatGoogleGenerativeAI` does not reliably honour `SystemMessage` objects in the messages array. Fixed by passing system prompt via `system_instruction` at model-init time (`gemini_service.py` `stream_text`).
-- **Root cause 2: Weak language rule** — "respond mostly in English" was too ambiguous for Gemini 2.5 Flash. Replaced with an explicit hard rule: "If the student writes in ENGLISH → your ENTIRE explanation MUST be in English. NEVER give a full Malay response when the student asked in English."
-- **Files changed:** `backend/services/gemini_service.py`, `backend/services/langchain_service.py`
+### Project Logo Integration
+- Replaced the "B" letter placeholder in the sidebar with the actual `Project Logo.png` at correct sizes.
+- **Sidebar collapsed**: 36×36 logo image (was green `bg-primary` box with "B").
+- **Sidebar expanded**: 32×32 logo + "BahasaBot" text.
+- **Mobile header + drawer**: 28×28 logo + "BahasaBot" text.
+- **Chatbot header avatar**: 28×28 logo (was "BB" initials circle).
+- Auth pages and favicons were already using the logo correctly.
+- **Files changed:** `frontend/components/nav/AppSidebar.tsx`, `frontend/app/(dashboard)/chatbot/page.tsx`
+
+### Back Buttons on Course Pages
+- Added a consistent `← Back` button at the top of every course page (above breadcrumb).
+- Course detail → "← Back to Courses" (`/courses`)
+- Module detail → "← Back to Course" (`/courses/[courseId]`)
+- Class/Lesson page → "← Back to Module" (`/courses/[courseId]/modules/[moduleId]`)
+- Module Quiz → "← Back to Module" (`/courses/[courseId]/modules/[moduleId]`)
+- Uses `ArrowLeft` icon from lucide-react, styled `text-muted-foreground hover:text-foreground`.
+- **Files changed:** all 4 course page files
+
+### Auto-Logout on Session Expiry
+- `SessionProvider` now polls every 60 s (`refetchInterval={60}`) + re-checks on tab focus (`refetchOnWindowFocus={true}`).
+- Added `SessionWatcher` component in `(dashboard)/layout.tsx` — watches `status` and `session.error`. When session expires (`status === "unauthenticated"`) or refresh token expires (`error === "RefreshTokenExpired"`), automatically calls `signOut({ callbackUrl: "/login" })` and redirects.
+- **Files changed:** `frontend/components/providers.tsx`, `frontend/app/(dashboard)/layout.tsx`
+
+### Chatbot System Prompt Fix (Bot was responding generically)
+- **Root cause:** `system_instruction` passed as a constructor kwarg to `ChatGoogleGenerativeAI` is silently ignored by the current `langchain-google-genai` version — Gemini fell back to its default "I'm an AI assistant" identity.
+- **Fix:** Pass system prompt as `SystemMessage` at the front of the messages list — this is the correct LangChain approach and works reliably.
+- **Verified:** Chatbot now correctly identifies as BahasaBot, responds in English when asked in English, and stays focused on Bahasa Melayu tutoring.
+- **Files changed:** `backend/services/gemini_service.py`
 
 ### Session Expiry
 - Changed session expiry from 3 min (test) → **30 minutes** for regular use.

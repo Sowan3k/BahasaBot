@@ -219,9 +219,12 @@ async def stream_text(
         model=CHATBOT_MODEL,
         google_api_key=GOOGLE_API_KEY,
         temperature=0.7,
-        **({"system_instruction": system_prompt} if system_prompt else {}),
     )
-    messages = [HumanMessage(content=prompt)]
+    messages = (
+        [SystemMessage(content=system_prompt), HumanMessage(content=prompt)]
+        if system_prompt
+        else [HumanMessage(content=prompt)]
+    )
     try:
         async for chunk in llm.astream(messages):
             content = chunk.content

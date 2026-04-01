@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { coursesApi } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 import type { Course, Module } from "@/lib/types";
 
 export default function ModuleDetailPage({
@@ -69,6 +70,12 @@ export default function ModuleDetailPage({
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
+      {/* Back button */}
+      <Link href={`/courses/${courseId}`} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+        <ArrowLeft size={16} />
+        Back to Course
+      </Link>
+
       {/* Breadcrumb */}
       <nav className="text-sm text-muted-foreground">
         <Link href="/courses" className="hover:text-foreground">Courses</Link>
