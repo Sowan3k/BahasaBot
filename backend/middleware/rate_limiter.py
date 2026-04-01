@@ -68,16 +68,31 @@ def _get_user_id_or_ip(request) -> str:
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
+# Try to create the limiter with Redis storage.
+# If Redis is unreachable at startup (or the URL is invalid), fall back to
+# in-memory storage so the app continues to work — rate limiting just becomes
+# per-process rather than distributed. This avoids 500 errors caused by Redis
+# timeouts on free-tier Redis Cloud instances that occasionally drop connections.
+try:
+    import redis as _redis_sync
+    _test_client = _redis_sync.from_url(REDIS_URL, socket_connect_timeout=3, socket_timeout=3)
+    _test_client.ping()
+    _test_client.close()
+    _storage_uri: str | None = REDIS_URL
+    logger.info("Rate limiter initialised", storage=REDIS_URL.split("@")[-1])
+except Exception as _redis_err:
+    _storage_uri = None  # SlowAPI uses in-memory when storage_uri is None
+    logger.warning(
+        "Rate limiter Redis unavailable — falling back to in-memory storage",
+        error=str(_redis_err),
+    )
+
 limiter = Limiter(
     key_func=_get_user_id_or_ip,
-    # Use Redis for distributed rate limiting across multiple workers.
-    # Falls back gracefully to in-memory if Redis is unavailable.
-    storage_uri=REDIS_URL,
+    storage_uri=_storage_uri,
     default_limits=["60/minute"],
     strategy="fixed-window",
 )
-
-logger.info("Rate limiter initialised", storage=REDIS_URL.split("@")[-1])
 
 # ── Per-feature limit strings ──────────────────────────────────────────────────
 # Import these in routers for the @limiter.limit(...) decorator.

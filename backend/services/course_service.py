@@ -66,7 +66,14 @@ async def generate_course_skeleton(topic: str, level: str = "A1") -> dict:
 
     Falls back to a minimal skeleton if Gemini fails.
     """
-    prompt = f"""You are an expert Bahasa Melayu (Malay language) curriculum designer.
+    prompt = f"""You are an expert language curriculum designer for an English-medium Malay language learning platform.
+
+LANGUAGE RULES — READ CAREFULLY:
+- Write ALL titles, descriptions, objectives, and module/class names in ENGLISH.
+- The course teaches MALAYSIAN Bahasa Melayu (not Indonesian Malay) to international students.
+- Any Malay words that appear in titles or descriptions must use Malaysian vocabulary \
+(e.g. "kosong" for zero, NOT "nol"/"sifar"; "awak/kamu" for you; standard Malaysian spelling).
+- Do NOT write titles or descriptions in Malay — they are navigation labels for English-speaking learners.
 
 Create a structured course outline for international students learning Malay.
 
@@ -80,30 +87,30 @@ Generate a course with:
 
 Return ONLY valid JSON — no markdown, no prose:
 {{
-  "title": "Full course title (English, e.g. 'Ordering Food at a Restaurant in Malay')",
-  "description": "2-3 sentences describing what students will learn in this course.",
+  "title": "Full course title in English (e.g. 'Ordering Food at a Restaurant in Malay')",
+  "description": "2-3 sentences in English describing what students will learn in this course.",
   "objectives": [
-    "Objective 1 — what the student can do after completing this course",
-    "Objective 2",
-    "Objective 3"
+    "Objective 1 in English — what the student can do after completing this course",
+    "Objective 2 in English",
+    "Objective 3 in English"
   ],
   "modules": [
     {{
-      "title": "Module 1 title",
-      "description": "One-sentence description of this module's focus.",
+      "title": "Module 1 title in English",
+      "description": "One-sentence description in English of this module's focus.",
       "classes": [
-        {{"title": "Class 1.1 title"}},
-        {{"title": "Class 1.2 title"}},
-        {{"title": "Class 1.3 title"}}
+        {{"title": "Class 1.1 title in English"}},
+        {{"title": "Class 1.2 title in English"}},
+        {{"title": "Class 1.3 title in English"}}
       ]
     }},
     {{
-      "title": "Module 2 title",
-      "description": "One-sentence description.",
+      "title": "Module 2 title in English",
+      "description": "One-sentence description in English.",
       "classes": [
-        {{"title": "Class 2.1 title"}},
-        {{"title": "Class 2.2 title"}},
-        {{"title": "Class 2.3 title"}}
+        {{"title": "Class 2.1 title in English"}},
+        {{"title": "Class 2.2 title in English"}},
+        {{"title": "Class 2.3 title in English"}}
       ]
     }}
   ]
@@ -191,11 +198,23 @@ async def _generate_class_content_inner(
     # No JSON parsing involved, so it cannot fail silently from malformed JSON.
 
     content_system = (
-        "You are an expert Bahasa Melayu (Malay language) teacher. "
+        "You are an expert English-medium Malaysian Bahasa Melayu teacher for international students. "
+        "CRITICAL — LANGUAGE OF INSTRUCTION: Write ALL explanations, instructions, headings, and descriptions "
+        "in ENGLISH. This is an English-medium course teaching Malay to international students who speak English. "
+        "The MALAY WORDS AND PHRASES you teach must use Malaysian Bahasa Melayu vocabulary "
+        "(NOT Indonesian Malay). Malaysian examples: 'kosong' for zero (not 'nol'/'sifar'), "
+        "'awak/kamu' for you, 'kereta' for car (not 'mobil'), 'mahu' for want (not 'mau'), "
+        "standard Malaysian spelling. "
         "Respond with plain Markdown only — no JSON, no code fences wrapping your response."
     )
 
-    content_prompt = f"""Write a complete, engaging Malay language lesson for the following class.
+    content_prompt = f"""Write a complete, engaging English-medium Malay language lesson for the following class.
+
+CRITICAL LANGUAGE RULE:
+- ALL explanations, instructions, and descriptions MUST be written in ENGLISH.
+- The MALAY WORDS AND PHRASES you teach must use Malaysian Bahasa Melayu (NOT Indonesian Malay).
+- Example: write "The word for 'water' in Malay is **air** /aɪr/." NOT "Perkataan untuk 'water' ialah air."
+- This is a language learning course — students are English speakers learning Malay, not Malay speakers.
 
 Course: "{course_title}"
 Module: "{module_title}"
@@ -207,24 +226,26 @@ Your lesson MUST follow this exact structure (minimum 300 words total):
 
 # {class_title}
 
-A brief introduction paragraph (2-3 sentences) explaining what this class covers and why it matters for learning Malay.
+A brief introduction paragraph in English (2-3 sentences) explaining what this class covers and why it matters.
 
 ## Core Content
 
-Detailed explanations of the key concepts. Use **bold** for all Malay keywords when first introduced. Provide clear explanations and context for each concept.
+Explanations in English of the key Malay concepts. Use **bold** for all Malay keywords when first introduced.
+Provide English explanations and usage context for each Malay concept.
 
 ## Vocabulary
 
-List and explain the key Malay words and phrases introduced in this class. Include pronunciation hints where helpful.
+List the key Malaysian Malay words and phrases introduced in this class with their English meanings.
+Include pronunciation hints in English where helpful.
 
 ## Example Sentences
 
-Show 4-5 example sentences in Malay with English translations. Format each as:
+Show 4-5 example sentences in Malaysian Malay with English translations. Format each as:
 - **Malay sentence** — English translation
 
 ## Tips
 
-2-3 practical tips for remembering and using what was learned in this class."""
+2-3 practical tips in English for remembering and using what was learned in this class."""
 
     content = await generate_text(content_prompt, system_prompt=content_system)
 
@@ -252,28 +273,43 @@ Show 4-5 example sentences in Malay with English translations. Format each as:
     # ── Call B: Structured vocabulary and examples only ────────────────────────
     # Only small flat JSON objects — no multi-line strings — making parse reliable.
 
-    structured_prompt = f"""You are a Bahasa Melayu language data assistant.
+    structured_prompt = f"""You are a Malaysian Bahasa Melayu language data assistant.
 
-Generate vocabulary and example sentences for this Malay language class:
+Generate vocabulary and example sentences for this Malay language class.
+CRITICAL: Use Malaysian Bahasa Melayu (Malay as used in Malaysia), NOT Indonesian Malay.
+Use Malaysian vocabulary: "kosong" for zero, "awak" for you (informal), standard Malaysian spelling.
+
 Course: "{course_title}" | Module: "{module_title}" | Class: "{class_title}"
 Topic: "{topic}" | Level: {level} ({level_desc})
 
 Return ONLY valid JSON — no markdown fences, no prose:
 {{
   "vocabulary_json": [
-    {{"word": "Malay word", "meaning": "English meaning", "example": "One example sentence in Malay. No newlines."}},
-    {{"word": "...", "meaning": "...", "example": "..."}}
+    {{
+      "word": "Malaysian Malay word or phrase",
+      "meaning": "English meaning",
+      "example": "One short example sentence in Malaysian Malay. No newlines.",
+      "ipa": "/IPA transcription using International Phonetic Alphabet, e.g. /sə.la.mat/. Include slashes.",
+      "syllables": [
+        {{"syllable": "first-syllable", "sounds_like": "English approximation e.g. suh"}},
+        {{"syllable": "next-syllable", "sounds_like": "English approximation"}}
+      ],
+      "synonyms": ["Malaysian Malay synonym1", "synonym2"]
+    }}
   ],
   "examples_json": [
-    {{"bm": "One complete Malay sentence. No newlines.", "en": "One English translation. No newlines."}},
+    {{"bm": "One complete Malaysian Malay sentence. No newlines.", "en": "English translation. No newlines."}},
     {{"bm": "...", "en": "..."}}
   ]
 }}
 
 Rules:
-- vocabulary_json: exactly 5 to 8 items. Each value must be a single-line string with no newline characters.
-- examples_json: exactly 4 to 6 pairs. Each value must be a single-line string with no newline characters.
-- Do NOT use any \\n inside string values."""
+- vocabulary_json: exactly 5 to 8 items. Every string value must be single-line with no \\n characters.
+- "ipa": standard IPA notation with syllable-separating dots (e.g. "/ma.kan/"). Always include the slashes.
+- "syllables": break the word into its spoken syllables with natural English "sounds like" approximations.
+- "synonyms": list 1-3 closest Malaysian Malay synonyms; use empty array [] if none exist.
+- examples_json: exactly 4 to 6 pairs. Each value must be a single-line string with no \\n characters.
+- Do NOT use any \\n inside any string value."""
 
     structured = await generate_json(structured_prompt)
 
@@ -291,6 +327,54 @@ Rules:
         "vocabulary_json": vocabulary_json,
         "examples_json": examples_json,
     }
+
+
+# ── Retry wrapper ─────────────────────────────────────────────────────────────
+
+
+async def _generate_class_with_retry(
+    class_title: str,
+    module_title: str,
+    course_title: str,
+    topic: str,
+    level: str,
+) -> dict:
+    """
+    Generate class content with one automatic retry on transient failure.
+
+    Gemini free-tier rate limits (429) can cause the first attempt to fail even with
+    per-call retry logic. Waiting 35 seconds before the second attempt gives the
+    rate-limit window time to reset.
+
+    If both attempts fail, returns minimal fallback content so the overall course
+    generation still succeeds rather than aborting entirely.
+    """
+    try:
+        return await generate_class_content(class_title, module_title, course_title, topic, level)
+    except RuntimeError:
+        logger.warning(
+            "Class content generation failed on first attempt — waiting 35s before retry",
+            class_title=class_title,
+        )
+        await asyncio.sleep(35)
+        try:
+            return await generate_class_content(class_title, module_title, course_title, topic, level)
+        except RuntimeError:
+            logger.error(
+                "Class content generation failed after retry — using fallback content",
+                class_title=class_title,
+            )
+            return {
+                "content": (
+                    f"# {class_title}\n\n"
+                    "This lesson content could not be generated at this time due to a temporary API issue. "
+                    "Please delete this course and generate it again to get full lesson content.\n\n"
+                    "## What You Will Learn\n\n"
+                    f"This class covers key aspects of **{class_title}** as part of the **{module_title}** module."
+                ),
+                "vocabulary_json": [],
+                "examples_json": [],
+            }
 
 
 # ── Step 3: Save to database ───────────────────────────────────────────────────
@@ -383,7 +467,7 @@ async def generate_course(
         count = 0
         for cls_data in mod_data["classes"]:
             tasks.append(
-                generate_class_content(
+                _generate_class_with_retry(
                     class_title=cls_data["title"],
                     module_title=mod_data["title"],
                     course_title=skeleton["title"],
@@ -622,30 +706,46 @@ async def mark_class_complete(
             )
         )
 
-        # Save vocabulary encountered in this class (skip duplicates)
+        # Commit class completion first so it's saved even if vocab save fails
+        await db.commit()
+
+        # Save vocabulary encountered in this class (skip duplicates).
+        # Runs in a separate try/except so a malformed vocab item never blocks
+        # the class from being marked complete.
         if cls.vocabulary_json:
-            for item in cls.vocabulary_json:
-                word = item.get("word", "").strip()
-                meaning = item.get("meaning", "").strip()
-                if word and meaning:
-                    existing = await db.execute(
-                        select(VocabularyLearned.id).where(
-                            VocabularyLearned.user_id == user_id,
-                            VocabularyLearned.word.ilike(word),
-                        )
-                    )
-                    if existing.scalar_one_or_none() is None:
-                        db.add(
-                            VocabularyLearned(
-                                user_id=user_id,
-                                word=word,
-                                meaning=meaning,
-                                source_type="course",
-                                source_id=cls.id,
+            try:
+                for item in cls.vocabulary_json:
+                    if not isinstance(item, dict):
+                        continue
+                    # Use `or ""` so None/falsy values (e.g. Gemini returned null
+                    # or a number for "word") become "" before str() + strip().
+                    word = str(item.get("word") or "").strip()[:250]
+                    meaning = str(item.get("meaning") or "").strip()
+                    if word and meaning:
+                        dedup_check = await db.execute(
+                            select(VocabularyLearned.id).where(
+                                VocabularyLearned.user_id == user_id,
+                                VocabularyLearned.word.ilike(word),
                             )
                         )
-
-        await db.commit()
+                        if dedup_check.scalar_one_or_none() is None:
+                            db.add(
+                                VocabularyLearned(
+                                    user_id=user_id,
+                                    word=word,
+                                    meaning=meaning,
+                                    source_type="course",
+                                    source_id=cls.id,
+                                )
+                            )
+                await db.commit()
+            except Exception as vocab_exc:
+                logger.warning(
+                    "Vocabulary save failed — class completion is already recorded",
+                    class_id=str(class_id),
+                    error=str(vocab_exc),
+                )
+                await db.rollback()
 
     # Check if all classes in this module are now complete
     all_cls_result = await db.execute(

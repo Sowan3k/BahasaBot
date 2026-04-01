@@ -54,10 +54,18 @@ export interface PaginatedResponse<T> {
 
 // ── Courses (Phase 4) ─────────────────────────────────────────────────────────
 
+export interface SyllableBreakdown {
+  syllable: string;
+  sounds_like: string;
+}
+
 export interface VocabularyItem {
   word: string;
   meaning: string;
   example: string;
+  ipa?: string;               // IPA transcription e.g. "/sə.la.mat/"
+  syllables?: SyllableBreakdown[];
+  synonyms?: string[];        // Malaysian Malay synonyms
 }
 
 export interface ExampleSentence {

@@ -180,13 +180,25 @@ async def complete_class(
     Saves vocabulary from the class to the user's learning record.
     Returns whether all classes in the module are now done (quiz_unlocked).
     """
-    result = await mark_class_complete(
-        user_id=current_user.id,
-        course_id=course_id,
-        module_id=module_id,
-        class_id=class_id,
-        db=db,
-    )
+    try:
+        result = await mark_class_complete(
+            user_id=current_user.id,
+            course_id=course_id,
+            module_id=module_id,
+            class_id=class_id,
+            db=db,
+        )
+    except Exception as exc:
+        logger.error(
+            "mark_class_complete raised an unexpected exception",
+            error=str(exc),
+            class_id=str(class_id),
+            user_id=str(current_user.id),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to save progress. Please try again.",
+        )
     if "error" in result:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=result["error"])
     return ClassCompleteResponse(**result)

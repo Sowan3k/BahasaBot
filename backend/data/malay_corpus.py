@@ -1056,4 +1056,100 @@ MALAY_CORPUS: list[dict] = [
         ),
         "metadata": {"type": "culture", "level": "B1", "topic": "Bahasa Melayu national language"},
     },
+    # ── IPA Pronunciation Guide — Greetings & Common Words (A1) ─────────────────
+    {
+        "content": (
+            "IPA pronunciation guide for common Malaysian Malay greetings and everyday words. "
+            "IPA uses dots to separate syllables and slashes /.../ to mark pronunciation. "
+            "'Selamat pagi' (good morning) — IPA: /sə.la.mat pa.gi/ — sounds like: suh-LAH-mat PAH-ghee. "
+            "'Selamat malam' (good night) — IPA: /sə.la.mat ma.lam/ — sounds like: suh-LAH-mat MAH-lam. "
+            "'Terima kasih' (thank you) — IPA: /tə.ri.ma ka.sɪh/ — sounds like: tuh-REE-mah KAH-sih. "
+            "'Sama-sama' (you're welcome) — IPA: /sa.ma sa.ma/ — sounds like: SAH-mah SAH-mah. "
+            "'Apa khabar' (how are you) — IPA: /a.pa xa.bar/ — sounds like: AH-pah KHA-bar (kh is a soft throat sound). "
+            "'Khabar baik' (I'm fine) — IPA: /xa.bar baɪk/ — sounds like: KHA-bar BIKE. "
+            "'Maaf' (sorry/excuse me) — IPA: /ma.ʔaf/ — sounds like: MAH-af. "
+            "'Tolong' (please/help) — IPA: /to.loŋ/ — sounds like: TOH-long. "
+            "Key pronunciation rules in Malaysian Malay: "
+            "The letter 'e' has two sounds — schwa /ə/ (like 'uh' in 'about') in unstressed syllables, "
+            "and full /e/ (like 'eh') in stressed syllables. "
+            "The letter 'a' is always /a/ as in 'father', never as in 'cat'. "
+            "The letter 'i' is always /i/ as in 'machine'. "
+            "The letter 'u' is always /u/ as in 'moon'. "
+            "'ng' is a single sound /ŋ/ as in 'sing' — it can appear at the start of a word in Malay. "
+            "'ny' is /ɲ/ as in 'canyon'. "
+            "'kh' is a velar fricative /x/ like the 'ch' in Scottish 'loch'."
+        ),
+        "metadata": {"type": "pronunciation", "level": "A1", "topic": "IPA pronunciation greetings"},
+    },
+    # ── IPA Pronunciation — Numbers 0–10 (A1) ────────────────────────────────────
+    {
+        "content": (
+            "IPA pronunciation guide for Malaysian Malay numbers 0–10. "
+            "In Malaysian Malay, zero is 'kosong' /ko.soŋ/ (NOT 'sifar' or 'nol' which are Indonesian). "
+            "'Satu' (one) — IPA: /sa.tu/ — sounds like: SAH-too. "
+            "'Dua' (two) — IPA: /du.a/ — sounds like: DOO-ah. "
+            "'Tiga' (three) — IPA: /ti.ga/ — sounds like: TEE-gah. "
+            "'Empat' (four) — IPA: /əm.pat/ — sounds like: um-PAT. "
+            "'Lima' (five) — IPA: /li.ma/ — sounds like: LEE-mah. "
+            "'Enam' (six) — IPA: /ə.nam/ — sounds like: uh-NAM. "
+            "'Tujuh' (seven) — IPA: /tu.dʒuh/ — sounds like: too-JOO. "
+            "'Lapan' (eight) — IPA: /la.pan/ — sounds like: LAH-pan. "
+            "'Sembilan' (nine) — IPA: /səm.bi.lan/ — sounds like: sum-BEE-lan. "
+            "'Sepuluh' (ten) — IPA: /sə.pu.luh/ — sounds like: suh-POO-luh. "
+            "Numbers 11–19: add 'belas' — 'sebelas' (11) /sə.bə.las/, 'dua belas' (12) /du.a bə.las/. "
+            "Numbers 20, 30… use 'puluh': 'dua puluh' (20) /du.a pu.luh/, 'tiga puluh' (30). "
+            "'Seratus' (one hundred) — IPA: /sə.ra.tus/ — sounds like: suh-RAH-toos. "
+            "'Seribu' (one thousand) — IPA: /sə.ri.bu/ — sounds like: suh-REE-boo."
+        ),
+        "metadata": {"type": "pronunciation", "level": "A1", "topic": "IPA pronunciation numbers"},
+    },
+    # ── IPA Pronunciation — Common Verbs & Daily Life (A1) ───────────────────────
+    {
+        "content": (
+            "IPA pronunciation guide for common Malaysian Malay verbs and daily-life vocabulary. "
+            "'Makan' (eat) — IPA: /ma.kan/ — sounds like: MAH-kan. "
+            "'Minum' (drink) — IPA: /mi.num/ — sounds like: MEE-noom. "
+            "'Pergi' (go) — IPA: /pər.gi/ — sounds like: pur-GHEE. "
+            "'Datang' (come) — IPA: /da.taŋ/ — sounds like: DAH-tang. "
+            "'Beli' (buy) — IPA: /bə.li/ — sounds like: buh-LEE. "
+            "'Kerja' (work) — IPA: /kər.dʒa/ — sounds like: ker-JAH. "
+            "'Tidur' (sleep) — IPA: /ti.dur/ — sounds like: TEE-door. "
+            "'Bangun' (wake up) — IPA: /ba.ŋun/ — sounds like: BAH-goon. "
+            "'Belajar' (study/learn) — IPA: /bə.la.dʒar/ — sounds like: buh-LAH-jar. "
+            "'Faham' (understand) — IPA: /fa.ham/ — sounds like: FAH-hum. "
+            "Common nouns with IPA: "
+            "'Rumah' (house) — /ru.mah/ — ROO-mah. "
+            "'Sekolah' (school) — /sə.ko.lah/ — suh-KOH-lah. "
+            "'Kereta' (car) — /kə.re.ta/ — kuh-REH-tah (Malaysian Malay; NOT 'mobil' which is Indonesian). "
+            "'Pasar' (market) — /pa.sar/ — PAH-sar. "
+            "'Makanan' (food) — /ma.ka.nan/ — mah-KAH-nan. "
+            "'Minuman' (drink/beverage) — /mi.nu.man/ — mee-NOO-man."
+        ),
+        "metadata": {"type": "pronunciation", "level": "A1", "topic": "IPA pronunciation verbs daily life"},
+    },
+    # ── Malaysian Malay vs Indonesian Malay — Key Differences (A2) ──────────────
+    {
+        "content": (
+            "Key vocabulary differences between Malaysian Bahasa Melayu and Indonesian Bahasa Indonesia. "
+            "Always use the MALAYSIAN form when learning or teaching Bahasa Melayu in Malaysia. "
+            "Zero: Malaysian 'kosong' /ko.soŋ/ — Indonesian 'nol'/'sifar' (do NOT use in Malaysia). "
+            "Car: Malaysian 'kereta' /kə.re.ta/ — Indonesian 'mobil'. "
+            "Bus: Malaysian 'bas' /bas/ — Indonesian 'bis'. "
+            "Phone: Malaysian 'telefon' /tə.le.fon/ — Indonesian 'ponsel'. "
+            "Train: Malaysian 'kereta api' or 'tren' — Indonesian 'kereta api'/'kereta'. "
+            "Hospital: Malaysian 'hospital' /hos.pi.tal/ — Indonesian 'rumah sakit'. "
+            "Want: Malaysian 'mahu' /ma.hu/ — Indonesian 'mau'. "
+            "You (informal): Malaysian 'awak' /a.wak/ or 'kamu' /ka.mu/ — Indonesian 'kamu'/'lo'. "
+            "I/me (informal): Malaysian 'saya' /sa.ya/ or 'aku' /a.ku/ — Indonesian same. "
+            "Can: Malaysian 'boleh' /bo.leh/ — Indonesian 'bisa'. "
+            "Must: Malaysian 'mesti'/'kena' — Indonesian 'harus'. "
+            "Good/Nice: Malaysian 'bagus' /ba.gus/ — both use 'bagus' but Malaysian also uses 'baik'. "
+            "Spelling note: Malaysian Malay uses 'e' where Indonesian uses 'a' in some words: "
+            "Malaysian 'empat' (four) — Indonesian 'empat' (same here); "
+            "Malaysian 'mereka' — Indonesian 'mereka' (same); "
+            "but Malaysian 'cendawan' (mushroom) — Indonesian 'jamur'. "
+            "Both share most core grammar and vocabulary but these key differences matter for authenticity."
+        ),
+        "metadata": {"type": "vocabulary", "level": "A2", "topic": "Malaysian vs Indonesian Malay differences"},
+    },
 ]

@@ -148,6 +148,36 @@ _Status: ✅ Code complete — deployment pending_
 
 ---
 
+## Phase 9 — Background Course Generation with Progress Tracking
+_Status: 🔲 Not started_
+
+**Goal:** Eliminate the full-screen blocking modal during course generation. User submits a topic, the modal closes in ~1 s, and a persistent floating progress bar (bottom-right) tracks generation in the background. User can freely navigate to other features while the course generates.
+
+**Approach:** FastAPI `BackgroundTasks` (no new dependencies) + Redis job state + React Context + `localStorage` + React Query polling every 3 s.
+
+### Backend
+- [ ] `backend/schemas/course.py` — replace `CourseGenerateResponse` (returns `job_id` instead of `course_id`); add `JobStatusResponse` schema
+- [ ] `backend/services/course_service.py` — add `_update_job()` Redis helper; add `job_id: str | None = None` param to `generate_course()`; write progress milestones at 5 / 15 / 20 / 85 / 100%
+- [ ] `backend/routers/courses.py` — add `_run_generation_task()` background wrapper (own DB session); modify generate endpoint to return 202 + `job_id` immediately via `BackgroundTasks`; add `GET /api/courses/jobs/{job_id}` poll endpoint (place before `/{course_id}` route)
+
+### Frontend
+- [ ] `frontend/lib/types.ts` — update `CourseGenerateResponse` (now `job_id`); add `JobStatus` type + `JobStatusResponse` interface
+- [ ] `frontend/lib/api.ts` — add `coursesApi.getJobStatus(jobId)`
+- [ ] `frontend/lib/course-generation-context.tsx` *(new file)* — React Context + `localStorage` persistence of active `job_id` across navigation and page refresh
+- [ ] `frontend/components/courses/CourseGenerationProgress.tsx` *(new file)* — fixed bottom-right floating card; polls every 3 s via React Query `refetchInterval`; shows progress bar + step text while running; "View Course" link + dismiss on complete; error + dismiss on failure; invalidates `["courses"]` query on completion
+- [ ] `frontend/app/(dashboard)/layout.tsx` — wrap with `<CourseGenerationProvider>`; render `<CourseGenerationProgress />` outside `<main>` so it overlays all pages
+- [ ] `frontend/components/courses/CourseGenerationModal.tsx` — submit → get `job_id` → `setActiveJobId()` → `onClose()` immediately; remove `setInterval` step-cycling timer; modal no longer blocks
+- [ ] `frontend/app/(dashboard)/courses/page.tsx` — disable "+ New Course" button while `activeJobId !== null`
+
+### Edge cases covered
+- Redis down: course still generates; poll returns 404s → frontend clears job after retries
+- Browser refresh mid-generation: `localStorage` restores `job_id`; polling resumes
+- Sign-out / different user: poll returns 404 (user_id mismatch) → clears localStorage
+- Rate limit hit (5/hr): 429 returned before `job_id` is issued; modal shows error as before
+- Generation failure: background task catches exception → writes `status: "failed"` to Redis → error shown in floating card
+
+---
+
 ## Final Phase — Production Readiness
 - [ ] Rate limiting audit (backend/middleware/rate_limiter.py)
 - [ ] Input sanitization across all routers

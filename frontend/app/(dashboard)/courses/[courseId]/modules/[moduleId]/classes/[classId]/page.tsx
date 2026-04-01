@@ -12,7 +12,35 @@ import ReactMarkdown from "react-markdown";
 import { coursesApi } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
-import type { ClassDetail, Course, VocabularyItem, ExampleSentence } from "@/lib/types";
+import type { ClassDetail, Course, VocabularyItem, ExampleSentence, SyllableBreakdown } from "@/lib/types";
+
+// ── IPA syllable breakdown table ──────────────────────────────────────────────
+
+function SyllableTable({ syllables }: { syllables: SyllableBreakdown[] }) {
+  if (!syllables.length) return null;
+  return (
+    <table className="text-xs w-full border-collapse mt-1">
+      <thead>
+        <tr>
+          <th className="text-left pr-4 pb-0.5 font-medium text-muted-foreground/70 uppercase tracking-wide">
+            Syllable
+          </th>
+          <th className="text-left font-medium text-muted-foreground/70 uppercase tracking-wide">
+            Sounds like
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {syllables.map((s, j) => (
+          <tr key={j} className="border-t border-border/30">
+            <td className="pr-4 py-0.5 font-mono text-primary/80">{s.syllable}</td>
+            <td className="py-0.5 text-muted-foreground">{s.sounds_like}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
 
 // ── Vocabulary flashcards ─────────────────────────────────────────────────────
 
@@ -30,19 +58,51 @@ function VocabularySection({
         <h2 className="text-lg font-semibold tracking-tight">Vocabulary</h2>
         <span className="text-xs text-muted-foreground">{items.length} words</span>
       </div>
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2">
         {items.map((item, i) => (
           <div
             key={i}
-            className="rounded-lg border bg-card p-4 border-l-4 border-l-primary/60 space-y-1.5"
+            className="rounded-lg border bg-card p-4 border-l-4 border-l-primary/60 space-y-2"
           >
-            <div className="flex items-center justify-between">
+            {/* Word + saved indicator */}
+            <div className="flex items-center justify-between gap-2">
               <span className="font-semibold text-base text-primary">{item.word}</span>
               {isCompleted && (
-                <span className="text-xs text-green-500 font-medium">✓ saved</span>
+                <span className="text-xs text-green-500 font-medium flex-shrink-0">✓ saved</span>
               )}
             </div>
+
+            {/* IPA transcription */}
+            {item.ipa && (
+              <p className="text-xs font-mono text-muted-foreground leading-none">{item.ipa}</p>
+            )}
+
+            {/* Syllable breakdown table */}
+            {item.syllables && item.syllables.length > 0 && (
+              <div className="rounded bg-muted/50 px-2.5 py-2">
+                <SyllableTable syllables={item.syllables} />
+              </div>
+            )}
+
+            {/* Synonyms */}
+            {item.synonyms && item.synonyms.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1">
+                <span className="text-xs text-muted-foreground/60">Also:</span>
+                {item.synonyms.map((syn, j) => (
+                  <span
+                    key={j}
+                    className="text-xs bg-muted text-muted-foreground rounded px-1.5 py-0.5"
+                  >
+                    {syn}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Meaning */}
             <p className="text-sm text-muted-foreground leading-relaxed">{item.meaning}</p>
+
+            {/* Example sentence */}
             {item.example && (
               <p className="text-xs text-muted-foreground/80 italic border-t border-border/50 pt-1.5">
                 {item.example}

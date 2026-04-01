@@ -94,7 +94,14 @@ async def generate_module_quiz(module_id: UUID, db: AsyncSession) -> list[dict]:
             ]
             content_summary += "\nExample sentences:\n" + "\n".join(ex_lines)
 
-    prompt = f"""You are a Bahasa Melayu (Malay language) quiz generator.
+    prompt = f"""You are a Malaysian Bahasa Melayu (Malay language) quiz generator for international students.
+
+LANGUAGE RULES:
+- Write all QUESTION TEXT and EXPLANATIONS in ENGLISH (students are English speakers learning Malay).
+- The MALAY WORDS in questions/answers/options must use Malaysian Bahasa Melayu vocabulary \
+(NOT Indonesian Malay): "kosong" for zero (NOT "sifar"/"nol"), "awak/kamu" for you, \
+"kereta" for car (NOT "mobil"), "mahu" for want (NOT "mau"), standard Malaysian spelling.
+- Do NOT write question text in Malay — questions are English prompts testing Malay knowledge.
 
 Generate exactly 10 quiz questions based on the following module content.
 
@@ -107,10 +114,12 @@ Generate:
 
 Rules:
 - Questions MUST test content from the module above (vocabulary, phrases, translations, grammar)
-- For MCQ: make distractors plausible (related Malay words, not random nonsense)
+- For MCQ: make distractors plausible (related Malaysian Malay words, not random nonsense)
 - For fill-in-blank: provide enough context so there is exactly one correct answer
 - Vary difficulty (mix easy recall and applied usage questions)
 - Each question must have a brief, helpful explanation of the correct answer
+- For vocabulary questions, include the IPA pronunciation in the explanation, e.g.: \
+"'Makanan' /ma.ka.nan/ means food."
 
 Return ONLY valid JSON — no markdown, no prose:
 {{
@@ -118,10 +127,10 @@ Return ONLY valid JSON — no markdown, no prose:
     {{
       "id": "q1",
       "type": "mcq",
-      "question": "What is the Malay word for 'food'?",
+      "question": "What is the Malaysian Malay word for 'food'?",
       "options": ["makanan", "minuman", "pakaian", "buku"],
       "correct_answer": "makanan",
-      "explanation": "'Makanan' means food. The others mean drink, clothing, and book."
+      "explanation": "'Makanan' /ma.ka.nan/ means food. The others mean drink, clothing, and book."
     }},
     {{
       "id": "q2",
@@ -129,7 +138,7 @@ Return ONLY valid JSON — no markdown, no prose:
       "question": "Complete: 'Saya _____ nasi goreng.' (I ___ fried rice)",
       "options": null,
       "correct_answer": "makan",
-      "explanation": "'Makan' is the Malay verb for 'eat'."
+      "explanation": "'Makan' /ma.kan/ is the Malaysian Malay verb for 'eat'."
     }}
   ]
 }}
@@ -560,7 +569,14 @@ async def generate_standalone_quiz(user_id: UUID, db: AsyncSession) -> list[dict
         lines = [f"- {g.rule} (e.g. {g.example})" for g in grammar]
         grammar_section = "Recently learned grammar rules:\n" + "\n".join(lines)
 
-    prompt = f"""You are an adaptive Bahasa Melayu (Malay language) quiz generator.
+    prompt = f"""You are an adaptive Malaysian Bahasa Melayu (Malay language) quiz generator for international students.
+
+LANGUAGE RULES:
+- Write all QUESTION TEXT and EXPLANATIONS in ENGLISH (students are English speakers learning Malay).
+- The MALAY WORDS in questions/answers/options must use Malaysian Bahasa Melayu vocabulary \
+(NOT Indonesian Malay): "kosong" for zero (NOT "sifar"/"nol"), "awak/kamu" for you, \
+"kereta" for car (NOT "mobil"), "mahu" for want (NOT "mau"), standard Malaysian spelling.
+- Do NOT write question text in Malay — questions are English prompts testing Malay knowledge.
 
 Generate exactly 15 quiz questions personalised for this learner.
 
@@ -578,11 +594,13 @@ Generate:
 Rules:
 - Prioritise the user's weak areas above
 - Use vocabulary and grammar from the user's learning history where possible
-- MCQ distractors must be plausible Malay words (not random noise)
+- MCQ distractors must be plausible Malaysian Malay words (not random noise)
 - Fill-in-blank and translation must have exactly one accepted correct answer
 - Vary difficulty slightly — mostly easy/medium since this is a language learner
 - Each question needs a brief, helpful explanation of the correct answer
 - For translation questions, the question should be the English sentence and correct_answer the Malay translation
+- For vocabulary questions, include the IPA pronunciation in the explanation, e.g.: \
+"'Air' /aɪr/ means water in Malaysian Malay."
 
 Return ONLY valid JSON — no markdown, no prose:
 {{
@@ -590,10 +608,10 @@ Return ONLY valid JSON — no markdown, no prose:
     {{
       "id": "q1",
       "type": "mcq",
-      "question": "What is the Malay word for 'water'?",
+      "question": "What is the Malaysian Malay word for 'water'?",
       "options": ["air", "api", "tanah", "angin"],
       "correct_answer": "air",
-      "explanation": "'Air' means water in Malay."
+      "explanation": "'Air' /aɪr/ means water in Malaysian Malay."
     }},
     {{
       "id": "q7",
@@ -601,15 +619,15 @@ Return ONLY valid JSON — no markdown, no prose:
       "question": "Complete: 'Saya _____ di rumah.' (I ___ at home)",
       "options": null,
       "correct_answer": "tinggal",
-      "explanation": "'Tinggal' means 'live/stay'."
+      "explanation": "'Tinggal' /tiŋ.gal/ means 'live/stay' in Malaysian Malay."
     }},
     {{
       "id": "q13",
       "type": "translation",
-      "question": "Translate to Malay: 'I want to eat rice.'",
+      "question": "Translate to Malaysian Malay: 'I want to eat rice.'",
       "options": null,
       "correct_answer": "Saya mahu makan nasi.",
-      "explanation": "'Mahu' = want, 'makan' = eat, 'nasi' = rice."
+      "explanation": "'Mahu' /ma.hu/ = want, 'makan' /ma.kan/ = eat, 'nasi' /na.si/ = rice."
     }}
   ]
 }}
