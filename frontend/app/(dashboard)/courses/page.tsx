@@ -10,6 +10,7 @@ import Link from "next/link";
 import { coursesApi } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { CourseGenerationModal } from "@/components/courses/CourseGenerationModal";
+import { useCourseGeneration } from "@/lib/course-generation-context";
 import type { CourseSummary } from "@/lib/types";
 
 // ── Progress bar ──────────────────────────────────────────────────────────────
@@ -114,6 +115,7 @@ export default function CoursesPage() {
   const [showModal, setShowModal] = useState(false);
   const [page, setPage] = useState(1);
   const LIMIT = 9;
+  const { activeJobId } = useCourseGeneration();
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["courses", page],
@@ -134,7 +136,13 @@ export default function CoursesPage() {
             AI-generated Malay language courses personalised to your topics
           </p>
         </div>
-        <Button onClick={() => setShowModal(true)}>+ New Course</Button>
+        <Button
+          onClick={() => setShowModal(true)}
+          disabled={!!activeJobId}
+          title={activeJobId ? "A course is already being generated" : undefined}
+        >
+          {activeJobId ? "Generating…" : "+ New Course"}
+        </Button>
       </div>
 
       {/* States */}
@@ -158,7 +166,9 @@ export default function CoursesPage() {
       {!isLoading && !isError && courses.length === 0 && (
         <div className="rounded-lg border border-dashed p-12 text-center space-y-4">
           <p className="text-muted-foreground">You haven&apos;t generated any courses yet.</p>
-          <Button onClick={() => setShowModal(true)}>Generate your first course</Button>
+          <Button onClick={() => setShowModal(true)} disabled={!!activeJobId}>
+            {activeJobId ? "Course generating in background…" : "Generate your first course"}
+          </Button>
         </div>
       )}
 

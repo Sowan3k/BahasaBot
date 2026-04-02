@@ -128,8 +128,19 @@ class CourseOut(BaseModel):
 
 
 class CourseGenerateResponse(BaseModel):
-    course_id: UUID
-    message: str = "Course generated successfully"
+    """Returned immediately (HTTP 202) after submitting a generation request."""
+    job_id: str
+    message: str = "Course generation started"
+
+
+class JobStatusResponse(BaseModel):
+    """Returned by GET /api/courses/jobs/{job_id} — frontend polls this."""
+    job_id: str
+    status: str          # "pending" | "running" | "complete" | "failed"
+    progress: int        # 0–100
+    step: str            # Human-readable current step
+    course_id: str | None = None   # Set when status == "complete"
+    error: str | None = None       # Set when status == "failed"
 
 
 class ClassCompleteResponse(BaseModel):

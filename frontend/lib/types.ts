@@ -3,7 +3,7 @@
 
 // ── User ──────────────────────────────────────────────────────────────────────
 
-export type ProficiencyLevel = "A1" | "A2" | "B1" | "B2";
+export type ProficiencyLevel = "BPS-1" | "BPS-2" | "BPS-3" | "BPS-4";
 
 export interface User {
   id: string;
@@ -140,8 +140,20 @@ export interface CourseSummary {
 }
 
 export interface CourseGenerateResponse {
-  course_id: string;
+  /** job_id is returned immediately (HTTP 202). Poll /api/courses/jobs/{job_id} for status. */
+  job_id: string;
   message: string;
+}
+
+export type JobStatus = "pending" | "running" | "complete" | "failed";
+
+export interface JobStatusResponse {
+  job_id: string;
+  status: JobStatus;
+  progress: number;   // 0–100
+  step: string;
+  course_id?: string; // Present when status === "complete"
+  error?: string;     // Present when status === "failed"
 }
 
 // ── Chatbot (Phase 3) — stub types ───────────────────────────────────────────

@@ -14,7 +14,7 @@ import type {
   WeakPointEntry,
 } from "@/lib/types";
 
-import CEFRProgressBar from "@/components/dashboard/CEFRProgressBar";
+import BPSProgressBar from "@/components/dashboard/BPSProgressBar";
 import QuizHistoryTable from "@/components/dashboard/QuizHistoryTable";
 import StatsCards from "@/components/dashboard/StatsCards";
 import VocabularyTable from "@/components/dashboard/VocabularyTable";
@@ -275,7 +275,7 @@ export default function DashboardPage() {
               <div className="relative rounded-[1.25rem] border-[0.75px] border-border p-2">
                 <GlowingEffect spread={40} glow={true} disabled={false} proximity={64} inactiveZone={0.01} borderWidth={3} />
                 <div className="relative overflow-hidden rounded-xl border-[0.75px] border-border bg-background p-5 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
-                  <CEFRProgressBar level={summary.stats.proficiency_level} />
+                  <BPSProgressBar level={summary.stats.proficiency_level} />
                 </div>
               </div>
 

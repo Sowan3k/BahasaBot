@@ -127,26 +127,47 @@ _Status: ✅ Complete_
 
 ---
 
+## Phase 8 — Production Hardening & Deployment
+_Status: ✅ Complete — deployment pending_
+
+- [x] Rate limiting — SlowAPI implemented (rate_limiter.py), wired into main.py, per-route on chatbot (20/min) and course gen (5/hr)
+- [x] Input sanitization across all routers — schemas have min/max_length, EmailStr, UUID path params, whitespace stripping
+- [x] Error handling audit — all routers: try/except, HTTP status codes, global exception handler in main.py
+- [x] Redis caching utilities — cache.py complete (graceful degradation); quiz 30min TTL, module quiz 2h TTL
+- [x] Streaming responses for chatbot — SSE via sse-starlette; implemented in chatbot router + langchain_service
+- [x] PostgreSQL connection pooling — pool_size=10, pool_pre_ping=True in db/database.py
+- [x] Pagination on all list endpoints — courses, chatbot sessions, chatbot history
+- [x] Python logging — structlog JSON in production, colored dev output; get_logger used in all routers
+- [x] Sentry integration — backend: sentry_sdk.init() in main.py; frontend: @sentry/nextjs + sentry.*.config.ts + instrumentation.ts
+- [x] Health endpoint — /health returns Redis status; UptimeRobot can target this
+- [x] CORS locked to env var — ALLOWED_ORIGINS reads from .env (set to Vercel domain in production)
+- [x] JWT expiry verified — access token 30 min, refresh token 7 days
+- [x] Deployment config — backend/Procfile + backend/railway.toml; frontend/vercel.json updated
+- [x] Environment variables audit — added missing GOOGLE_CLIENT_ID to .env.example
+- [ ] Final end-to-end test of all features (manual — deploy and smoke-test)
+
+---
+
 ## Phase 9 — Background Course Generation with Progress Tracking
-_Status: 🔲 Not started_
+_Status: ✅ Complete_
 
 **Goal:** Eliminate the full-screen blocking modal during course generation. User submits a topic, the modal closes in ~1 s, and a persistent floating progress bar (bottom-right) tracks generation in the background. User can freely navigate to other features while the course generates.
 
 **Approach:** FastAPI `BackgroundTasks` (no new dependencies) + Redis job state + React Context + `localStorage` + React Query polling every 3 s.
 
 ### Backend
-- [ ] `backend/schemas/course.py` — replace `CourseGenerateResponse` (returns `job_id` instead of `course_id`); add `JobStatusResponse` schema
-- [ ] `backend/services/course_service.py` — add `_update_job()` Redis helper; add `job_id: str | None = None` param to `generate_course()`; write progress milestones at 5 / 15 / 20 / 85 / 100%
-- [ ] `backend/routers/courses.py` — add `_run_generation_task()` background wrapper (own DB session); modify generate endpoint to return 202 + `job_id` immediately via `BackgroundTasks`; add `GET /api/courses/jobs/{job_id}` poll endpoint (place before `/{course_id}` route)
+- [x] `backend/schemas/course.py` — replace `CourseGenerateResponse` (returns `job_id` instead of `course_id`); add `JobStatusResponse` schema
+- [x] `backend/services/course_service.py` — add `_update_job()` Redis helper; add `job_id: str | None = None` param to `generate_course()`; write progress milestones at 5 / 15 / 20 / 85 / 100%
+- [x] `backend/routers/courses.py` — add `_run_generation_task()` background wrapper (own DB session); modify generate endpoint to return 202 + `job_id` immediately via `BackgroundTasks`; add `GET /api/courses/jobs/{job_id}` poll endpoint (place before `/{course_id}` route)
 
 ### Frontend
-- [ ] `frontend/lib/types.ts` — update `CourseGenerateResponse` (now `job_id`); add `JobStatus` type + `JobStatusResponse` interface
-- [ ] `frontend/lib/api.ts` — add `coursesApi.getJobStatus(jobId)`
-- [ ] `frontend/lib/course-generation-context.tsx` *(new file)* — React Context + `localStorage` persistence of active `job_id` across navigation and page refresh
-- [ ] `frontend/components/courses/CourseGenerationProgress.tsx` *(new file)* — fixed bottom-right floating card; polls every 3 s via React Query `refetchInterval`; shows progress bar + step text while running; "View Course" link + dismiss on complete; error + dismiss on failure; invalidates `["courses"]` query on completion
-- [ ] `frontend/app/(dashboard)/layout.tsx` — wrap with `<CourseGenerationProvider>`; render `<CourseGenerationProgress />` outside `<main>` so it overlays all pages
-- [ ] `frontend/components/courses/CourseGenerationModal.tsx` — submit → get `job_id` → `setActiveJobId()` → `onClose()` immediately; remove `setInterval` step-cycling timer; modal no longer blocks
-- [ ] `frontend/app/(dashboard)/courses/page.tsx` — disable "+ New Course" button while `activeJobId !== null`
+- [x] `frontend/lib/types.ts` — update `CourseGenerateResponse` (now `job_id`); add `JobStatus` type + `JobStatusResponse` interface
+- [x] `frontend/lib/api.ts` — add `coursesApi.getJobStatus(jobId)`
+- [x] `frontend/lib/course-generation-context.tsx` *(new file)* — React Context + `localStorage` persistence of active `job_id` across navigation and page refresh
+- [x] `frontend/components/courses/CourseGenerationProgress.tsx` *(new file)* — fixed bottom-right floating card; polls every 3 s via React Query `refetchInterval`; shows progress bar + step text while running; "View Course" link + dismiss on complete; error + dismiss on failure; invalidates `["courses"]` query on completion
+- [x] `frontend/app/(dashboard)/layout.tsx` — wrap with `<CourseGenerationProvider>`; render `<CourseGenerationProgress />` outside `<main>` so it overlays all pages
+- [x] `frontend/components/courses/CourseGenerationModal.tsx` — submit → get `job_id` → `setActiveJobId()` → `onClose()` immediately; remove `setInterval` step-cycling timer; modal no longer blocks
+- [x] `frontend/app/(dashboard)/courses/page.tsx` — disable "+ New Course" button while `activeJobId !== null`
 
 ### Edge cases covered
 - Redis down: course still generates; poll returns 404s → frontend clears job after retries
@@ -157,57 +178,43 @@ _Status: 🔲 Not started_
 
 ---
 
-## Final Phase — Production Readiness
-- [ ] Rate limiting audit (backend/middleware/rate_limiter.py)
-- [ ] Input sanitization across all routers
-- [ ] Error handling audit (all routers + services)
-- [ ] Redis caching (backend/utils/cache.py)
-- [ ] malay_corpus.py — create missing RAG seed corpus
-- [ ] Verify langchain_service.py completeness
-- [ ] Verify rag_service.py completeness
-- [ ] Deployment config — Vercel + Railway + Supabase
-- [ ] Environment variables audit (.env.example vs actual usage)
-
----
-
 ## Phase 10 — BPS Migration (CEFR Rename)
-_Status: 🔲 Not started_
+_Status: ✅ Complete_
 
 **Goal:** Fully retire CEFR labels (A1/A2/B1/B2) and replace with BahasaBot Proficiency Scale (BPS-1/BPS-2/BPS-3/BPS-4) across the entire codebase, DB, and UI.
 
-**Why first:** Every subsequent phase references BPS levels. Do this migration before building new features so nothing is built on top of old CEFR labels.
-
-- [ ] Write Alembic migration: rename cefr_level column to bps_level on users table
-- [ ] Write Alembic migration: UPDATE all existing stored values ('A1'→'BPS-1', 'A2'→'BPS-2', 'B1'→'BPS-3', 'B2'→'BPS-4') in users table
-- [ ] backend/services/quiz_service.py — update CEFR recalculation logic to output BPS labels
-- [ ] backend/services/progress_service.py — update all references from cefr_level to bps_level
-- [ ] backend/routers/dashboard.py — update any CEFR string references in responses
-- [ ] frontend/components/dashboard/CEFRProgressBar.tsx — rename file to BPSProgressBar.tsx, update labels to BPS-1 through BPS-4
-- [ ] frontend/components/dashboard/StatsCards.tsx — update proficiency display
-- [ ] frontend/lib/types.ts — update TypeScript types (cefr_level → bps_level, A1/A2/B1/B2 → BPS-1/BPS-2/BPS-3/BPS-4)
-- [ ] frontend/lib/api.ts — update any field references
-- [ ] Global search: find any remaining 'CEFR', 'A1', 'A2', 'B1', 'B2' strings in user-facing text and replace
-- [ ] Verify dashboard still displays correctly after migration
+- [x] Write Alembic migration: UPDATE all existing stored values ('A1'→'BPS-1', 'A2'→'BPS-2', 'B1'→'BPS-3', 'B2'→'BPS-4') in users table — `20260402_1000_bps_migration.py`
+- [x] backend/models/user.py — Enum values and server_default updated to BPS labels
+- [x] backend/schemas/auth.py — Literal type updated to BPS-1/BPS-2/BPS-3/BPS-4
+- [x] backend/schemas/quiz.py — comments updated
+- [x] backend/services/quiz_service.py — _calculate_cefr_level() returns BPS labels; default "BPS-1"
+- [x] backend/services/progress_service.py — default fallback updated to "BPS-1"
+- [x] backend/routers/courses.py — default fallback updated to "BPS-1"
+- [x] backend/services/course_service.py — prompt text updated from CEFR to BPS labels
+- [x] frontend/lib/types.ts — ProficiencyLevel type updated to BPS-1/BPS-2/BPS-3/BPS-4
+- [x] frontend/components/dashboard/BPSProgressBar.tsx — new file (CEFRProgressBar.tsx kept for safety; BPSProgressBar.tsx is the active component)
+- [x] frontend/app/(dashboard)/dashboard/page.tsx — import updated to BPSProgressBar
+- [x] frontend/app/(dashboard)/quiz/adaptive/page.tsx — CEFR_LABEL/CEFR_COLOR → BPS_LABEL/BPS_COLOR; user-facing text updated
 
 ---
 
 ## Phase 11 — DB Schema Migration (New Tables)
-_Status: 🔲 Not started_
+_Status: ✅ Complete_
 
 **Goal:** Add all new tables and columns required by Phases 12–22 in a single Alembic migration so subsequent phases have the DB ready.
 
-- [ ] Write single Alembic migration file for all new additions:
-  - [ ] New table: learning_roadmaps (id, user_id, deadline_date, goal_type, roadmap_json JSONB, banner_image_url, created_at)
-  - [ ] New table: roadmap_activity_completions (id, user_id, activity_id varchar, completed_at)
-  - [ ] New table: notifications (id, user_id, type varchar, message text, read boolean default false, created_at)
-  - [ ] New table: password_reset_tokens (id, user_id, token_hash varchar, expires_at timestamp, used boolean default false, created_at)
-  - [ ] New table: evaluation_feedback (id, user_id, quiz_type varchar, rating int, weak_points_relevant varchar, comments text, created_at)
-  - [ ] New table: spelling_game_scores (id, user_id, words_correct int, words_attempted int, session_date date)
-  - [ ] New columns on users: onboarding_completed boolean default false, native_language varchar nullable, learning_goal varchar nullable, profile_picture_url varchar nullable, role varchar default 'user', streak_count int default 0, xp_total int default 0
-  - [ ] New column on courses: cover_image_url varchar nullable
-- [ ] Add SQLAlchemy ORM models for all new tables (backend/models/)
-- [ ] Run alembic upgrade head and verify all tables created successfully
-- [ ] Add appropriate DB indexes: notifications(user_id), learning_roadmaps(user_id), password_reset_tokens(token_hash)
+- [x] Write single Alembic migration file for all new additions:
+  - [x] New table: learning_roadmaps (id, user_id, deadline_date, goal_type, roadmap_json JSONB, banner_image_url, created_at)
+  - [x] New table: roadmap_activity_completions (id, user_id, activity_id varchar, completed_at)
+  - [x] New table: notifications (id, user_id, type varchar, message text, read boolean default false, created_at)
+  - [x] New table: password_reset_tokens (id, user_id, token_hash varchar, expires_at timestamp, used boolean default false, created_at)
+  - [x] New table: evaluation_feedback (id, user_id, quiz_type varchar, rating int, weak_points_relevant varchar, comments text, created_at)
+  - [x] New table: spelling_game_scores (id, user_id, words_correct int, words_attempted int, session_date date)
+  - [x] New columns on users: onboarding_completed boolean default false, native_language varchar nullable, learning_goal varchar nullable, profile_picture_url varchar nullable, role varchar default 'user', streak_count int default 0, xp_total int default 0
+  - [x] New column on courses: cover_image_url varchar nullable
+- [x] Add SQLAlchemy ORM models for all new tables (backend/models/)
+- [x] Run alembic upgrade head and verify all tables created successfully
+- [x] Add appropriate DB indexes: notifications(user_id), learning_roadmaps(user_id), password_reset_tokens(token_hash)
 
 ---
 
@@ -461,23 +468,3 @@ _Status: 🔲 Not started_
 - [ ] Run full end-to-end smoke test of all 20 features
 - [ ] Update STATUS.md to reflect all completed phases
 
----
-
-## Phase 24 — Production Hardening & Deployment
-_Status: ⚠️ In progress — deployment pending_
-
-- [x] Rate limiting — SlowAPI implemented (rate_limiter.py), wired into main.py, per-route on chatbot (20/min) and course gen (5/hr)
-- [x] Input sanitization across all routers — schemas have min/max_length, EmailStr, UUID path params, whitespace stripping
-- [x] Error handling audit — all routers: try/except, HTTP status codes, global exception handler in main.py
-- [x] Redis caching utilities — cache.py complete (graceful degradation); quiz 30min TTL, module quiz 2h TTL
-- [x] Streaming responses for chatbot — SSE via sse-starlette; implemented in chatbot router + langchain_service
-- [x] PostgreSQL connection pooling — pool_size=10, pool_pre_ping=True in db/database.py
-- [x] Pagination on all list endpoints — courses, chatbot sessions, chatbot history
-- [x] Python logging — structlog JSON in production, colored dev output; get_logger used in all routers
-- [x] Sentry integration — backend: sentry_sdk.init() in main.py; frontend: @sentry/nextjs + sentry.*.config.ts + instrumentation.ts
-- [x] Health endpoint — /health returns Redis status; UptimeRobot can target this
-- [x] CORS locked to env var — ALLOWED_ORIGINS reads from .env (set to Vercel domain in production)
-- [x] JWT expiry verified — access token 30 min, refresh token 7 days
-- [x] Deployment config — backend/Procfile + backend/railway.toml; frontend/vercel.json updated
-- [x] Environment variables audit — added missing GOOGLE_CLIENT_ID to .env.example
-- [ ] Final end-to-end test of all features (manual — deploy and smoke-test)

@@ -27,9 +27,35 @@ from sqlalchemy.orm import selectinload
 from backend.models.course import Class, Course, Module
 from backend.models.progress import UserProgress, VocabularyLearned
 from backend.services.gemini_service import FALLBACK_MESSAGE, generate_json, generate_text
+from backend.utils.cache import cache_set
 from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
+
+# Job state TTL in Redis — 1 hour is enough for any reasonable generation time
+_JOB_TTL = 3600
+
+
+async def _update_job(
+    job_id: str,
+    status: str,
+    progress: int,
+    step: str,
+    course_id: str | None = None,
+    error: str | None = None,
+) -> None:
+    """
+    Write background job state to Redis so the frontend can poll it.
+
+    key: course_job:{job_id}
+    Falls back silently if Redis is unavailable (course still generates normally).
+    """
+    payload: dict = {"job_id": job_id, "status": status, "progress": progress, "step": step}
+    if course_id is not None:
+        payload["course_id"] = course_id
+    if error is not None:
+        payload["error"] = error
+    await cache_set(f"course_job:{job_id}", payload, ttl=_JOB_TTL)
 
 
 # ── Level descriptors ──────────────────────────────────────────────────────────
@@ -78,7 +104,7 @@ LANGUAGE RULES — READ CAREFULLY:
 Create a structured course outline for international students learning Malay.
 
 Topic: "{topic}"
-Target Level: {level} (CEFR — A1=beginner, A2=elementary, B1=intermediate, B2=upper-intermediate)
+Target Level: {level} (BPS — BPS-1=beginner, BPS-2=elementary, BPS-3=intermediate, BPS-4=upper-intermediate)
 
 Generate a course with:
 - 2 to 3 modules
@@ -444,6 +470,7 @@ async def generate_course(
     user_id: UUID,
     db: AsyncSession,
     level: str = "A1",
+    job_id: str | None = None,
 ) -> Course:
     """
     Full course generation pipeline:
@@ -451,13 +478,22 @@ async def generate_course(
       2. Generate all class content in parallel via asyncio.gather
       3. Save everything to DB transactionally
 
+    If job_id is provided, progress milestones are written to Redis so the
+    frontend can poll GET /api/courses/jobs/{job_id}.
+
     Returns the saved Course ORM object.
     """
     logger.info("Course generation started", topic=topic, user_id=str(user_id), level=level)
 
+    if job_id:
+        await _update_job(job_id, "running", 5, "Validating topic and designing course structure…")
+
     # Step 1 — skeleton
     skeleton = await generate_course_skeleton(topic, level)
     skeleton["topic"] = topic  # Store original user topic verbatim
+
+    if job_id:
+        await _update_job(job_id, "running", 15, "Course outline ready — generating lesson content…")
 
     # Step 2 — generate all class content in parallel
     tasks: list = []
@@ -478,6 +514,9 @@ async def generate_course(
             count += 1
         module_class_counts.append(count)
 
+    if job_id:
+        await _update_job(job_id, "running", 20, f"Writing {len(tasks)} lessons in parallel…")
+
     logger.info("Generating class content in parallel", total_classes=len(tasks))
     flat_results = await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -494,14 +533,23 @@ async def generate_course(
                     error=str(result),
                     error_type=type(result).__name__,
                 )
+                if job_id:
+                    await _update_job(job_id, "failed", 0, "Generation failed", error=str(result))
                 raise RuntimeError(f"Course generation failed: {result}") from result
             module_contents.append(result)
             idx += 1
         class_contents.append(module_contents)
 
+    if job_id:
+        await _update_job(job_id, "running", 85, "All lessons written — saving your course…")
+
     # Step 3 — persist
     course = await save_course(skeleton, class_contents, user_id, db)
     logger.info("Course saved", course_id=str(course.id), title=course.title)
+
+    if job_id:
+        await _update_job(job_id, "complete", 100, "Course ready!", course_id=str(course.id))
+
     return course
 
 

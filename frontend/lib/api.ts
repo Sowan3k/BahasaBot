@@ -11,6 +11,7 @@ import type {
   Course,
   CourseSummary,
   CourseGenerateResponse,
+  JobStatusResponse,
   DashboardSummary,
   GrammarListResponse,
   ModuleQuizResponse,
@@ -98,6 +99,10 @@ export const coursesApi = {
   /** Delete a course and all its data. */
   delete: (courseId: string) =>
     apiClient.delete(`/api/courses/${courseId}`),
+
+  /** Poll the status of a background course generation job. */
+  getJobStatus: (jobId: string) =>
+    apiClient.get<JobStatusResponse>(`/api/courses/jobs/${jobId}`),
 };
 
 // ── Quiz API ──────────────────────────────────────────────────────────────────

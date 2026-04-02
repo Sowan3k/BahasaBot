@@ -110,6 +110,6 @@ class StandaloneQuizResultResponse(BaseModel):
     correct_count: int
     total_questions: int
     question_results: list[QuestionResult]
-    new_proficiency_level: str      # CEFR: A1, A2, B1, B2
+    new_proficiency_level: str      # BPS: BPS-1, BPS-2, BPS-3, BPS-4
     previous_proficiency_level: str
-    level_changed: bool             # True if CEFR level changed this attempt
+    level_changed: bool             # True if BPS level changed this attempt

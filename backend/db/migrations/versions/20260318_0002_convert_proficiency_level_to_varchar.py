@@ -34,6 +34,11 @@ def upgrade() -> None:
         "USING proficiency_level::VARCHAR"
     )
 
+    # The server_default may still be typed as proficiency_level_enum (e.g. 'A1'::proficiency_level_enum).
+    # Drop and reset it as a plain VARCHAR literal so the ENUM type has no remaining dependents.
+    op.execute("ALTER TABLE users ALTER COLUMN proficiency_level DROP DEFAULT")
+    op.execute("ALTER TABLE users ALTER COLUMN proficiency_level SET DEFAULT 'A1'")
+
     # Drop the now-unused custom ENUM type.
     # IF EXISTS makes this safe on databases that never had it
     # (e.g. those created from the updated migrations that use VARCHAR from the start).

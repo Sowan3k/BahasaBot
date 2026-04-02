@@ -2,7 +2,7 @@
 
 // Adaptive Standalone Quiz Page
 // 15 questions: 6 MCQ + 6 fill-in-blank + 3 translation, personalised to user's weak points.
-// Scores server-side; recalculates CEFR proficiency level after submission.
+// Scores server-side; recalculates BPS proficiency level after submission.
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -16,19 +16,19 @@ import type {
   QuizAnswer,
 } from "@/lib/types";
 
-// CEFR level display helpers
-const CEFR_LABEL: Record<string, string> = {
-  A1: "A1 — Beginner",
-  A2: "A2 — Elementary",
-  B1: "B1 — Intermediate",
-  B2: "B2 — Upper Intermediate",
+// BPS level display helpers
+const BPS_LABEL: Record<string, string> = {
+  "BPS-1": "BPS-1 — Beginner",
+  "BPS-2": "BPS-2 — Elementary",
+  "BPS-3": "BPS-3 — Intermediate",
+  "BPS-4": "BPS-4 — Upper Intermediate",
 };
 
-const CEFR_COLOR: Record<string, string> = {
-  A1: "text-slate-600",
-  A2: "text-blue-600",
-  B1: "text-emerald-600",
-  B2: "text-violet-600",
+const BPS_COLOR: Record<string, string> = {
+  "BPS-1": "text-slate-600",
+  "BPS-2": "text-blue-600",
+  "BPS-3": "text-emerald-600",
+  "BPS-4": "text-violet-600",
 };
 
 export default function AdaptiveQuizPage() {
@@ -61,7 +61,7 @@ export default function AdaptiveQuizPage() {
       standaloneQuizApi.submit(submittedAnswers).then((r) => r.data),
     onSuccess: (data) => {
       setResult(data);
-      // Invalidate dashboard so CEFR level + weak points refresh
+      // Invalidate dashboard so BPS level + weak points refresh
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
@@ -132,19 +132,19 @@ export default function AdaptiveQuizPage() {
             {result.correct_count} / {result.total_questions} correct
           </p>
 
-          {/* CEFR level update banner */}
+          {/* BPS level update banner */}
           {result.level_changed ? (
             <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-4 py-3 space-y-0.5">
               <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
                 Level Updated!
               </p>
               <p className="text-sm text-muted-foreground">
-                <span className={`font-medium ${CEFR_COLOR[result.previous_proficiency_level]}`}>
-                  {CEFR_LABEL[result.previous_proficiency_level] ?? result.previous_proficiency_level}
+                <span className={`font-medium ${BPS_COLOR[result.previous_proficiency_level]}`}>
+                  {BPS_LABEL[result.previous_proficiency_level] ?? result.previous_proficiency_level}
                 </span>
                 {" → "}
-                <span className={`font-medium ${CEFR_COLOR[result.new_proficiency_level]}`}>
-                  {CEFR_LABEL[result.new_proficiency_level] ?? result.new_proficiency_level}
+                <span className={`font-medium ${BPS_COLOR[result.new_proficiency_level]}`}>
+                  {BPS_LABEL[result.new_proficiency_level] ?? result.new_proficiency_level}
                 </span>
               </p>
             </div>
@@ -152,8 +152,8 @@ export default function AdaptiveQuizPage() {
             <div className="rounded-lg bg-muted/60 px-4 py-2.5">
               <p className="text-sm text-muted-foreground">
                 Current level:{" "}
-                <span className={`font-semibold ${CEFR_COLOR[result.new_proficiency_level]}`}>
-                  {CEFR_LABEL[result.new_proficiency_level] ?? result.new_proficiency_level}
+                <span className={`font-semibold ${BPS_COLOR[result.new_proficiency_level]}`}>
+                  {BPS_LABEL[result.new_proficiency_level] ?? result.new_proficiency_level}
                 </span>
               </p>
             </div>
@@ -249,7 +249,7 @@ export default function AdaptiveQuizPage() {
         </p>
         <h1 className="text-3xl font-bold tracking-tight">Bahasa Melayu Quiz</h1>
         <p className="text-sm text-muted-foreground leading-relaxed">
-          {quiz.question_count} questions personalised to your weak points · Scoring updates your CEFR level
+          {quiz.question_count} questions personalised to your weak points · Scoring updates your BPS level
         </p>
       </div>
 

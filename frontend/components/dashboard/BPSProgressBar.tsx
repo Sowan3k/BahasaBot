@@ -2,26 +2,26 @@
 
 import type { ProficiencyLevel } from "@/lib/types";
 
-const LEVELS: ProficiencyLevel[] = ["A1", "A2", "B1", "B2"];
+const LEVELS: ProficiencyLevel[] = ["BPS-1", "BPS-2", "BPS-3", "BPS-4"];
 
 const LEVEL_LABELS: Record<ProficiencyLevel, string> = {
-  A1: "Beginner",
-  A2: "Elementary",
-  B1: "Intermediate",
-  B2: "Upper-Intermediate",
+  "BPS-1": "Beginner",
+  "BPS-2": "Elementary",
+  "BPS-3": "Intermediate",
+  "BPS-4": "Upper-Intermediate",
 };
 
 interface Props {
   level: ProficiencyLevel;
 }
 
-export default function CEFRProgressBar({ level }: Props) {
+export default function BPSProgressBar({ level }: Props) {
   const currentIndex = LEVELS.indexOf(level);
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-base tracking-tight">CEFR Proficiency Level</h3>
+        <h3 className="font-semibold text-base tracking-tight">BahasaBot Proficiency Scale (BPS)</h3>
         <span className="text-sm font-medium text-muted-foreground">
           {level} — {LEVEL_LABELS[level]}
         </span>
@@ -51,7 +51,7 @@ export default function CEFRProgressBar({ level }: Props) {
 
       {/* Description */}
       <p className="text-sm text-muted-foreground leading-relaxed">
-        {level === "B2"
+        {level === "BPS-4"
           ? "You have reached the highest tracked level. Keep practising!"
           : `Next level: ${LEVELS[currentIndex + 1]} — ${LEVEL_LABELS[LEVELS[currentIndex + 1]]}. Take the adaptive quiz to improve.`}
       </p>

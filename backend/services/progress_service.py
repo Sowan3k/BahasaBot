@@ -232,7 +232,7 @@ async def get_dashboard_summary(user_id: UUID, db: AsyncSession) -> dict:
     # ── User proficiency level ────────────────────────────────────────────────
     user_result = await db.execute(select(User).where(User.id == user_id))
     user = user_result.scalar_one_or_none()
-    proficiency_level: str = user.proficiency_level if user else "A1"
+    proficiency_level: str = user.proficiency_level if user else "BPS-1"
 
     # ── Aggregate counts ──────────────────────────────────────────────────────
     courses_created: int = (

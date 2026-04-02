@@ -33,6 +33,8 @@ class Course(Base):
     topic: Mapped[str] = mapped_column(String(500), nullable=False)
     # JSON array of learning objective strings
     objectives: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)
+    # URL of the AI-generated cover image (generated once on creation, never regenerated)
+    cover_image_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

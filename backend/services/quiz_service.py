@@ -17,7 +17,7 @@ Functions (Phase 6):
 Internal helpers:
   - _update_weak_points(user_id, wrong, db)           — upsert weak_points for wrong answers
   - _improve_weak_points(user_id, correct_qs, db)     — strengthen weak_points for correct answers
-  - _calculate_cefr_level(user_id, db)                — rule-based CEFR level from quiz history
+  - _calculate_cefr_level(user_id, db)                — rule-based BPS level from quiz history
 """
 
 from uuid import UUID
@@ -452,21 +452,21 @@ async def _improve_weak_points(
             wp.strength_score = min(1.0, wp.strength_score + 0.1)
 
 
-# ── CEFR level calculation ──────────────────────────────────────────────────────
+# ── BPS level calculation ───────────────────────────────────────────────────────
 
 
 async def _calculate_cefr_level(user_id: UUID, db: AsyncSession) -> str:
     """
-    Calculate the user's CEFR proficiency level based on their last 3 standalone quiz attempts.
+    Calculate the user's BPS proficiency level based on their last 3 standalone quiz attempts.
 
     Rule:
-      avg_score >= 0.80 → B2
-      avg_score >= 0.60 → B1
-      avg_score >= 0.40 → A2
-      otherwise         → A1
+      avg_score >= 0.80 → BPS-4 (Upper-Intermediate)
+      avg_score >= 0.60 → BPS-3 (Intermediate)
+      avg_score >= 0.40 → BPS-2 (Elementary)
+      otherwise         → BPS-1 (Beginner)
 
-    Returns one of: "A1", "A2", "B1", "B2".
-    If there are no attempts, returns "A1".
+    Returns one of: "BPS-1", "BPS-2", "BPS-3", "BPS-4".
+    If there are no attempts, returns "BPS-1".
     """
     result = await db.execute(
         select(StandaloneQuizAttempt)
@@ -477,18 +477,18 @@ async def _calculate_cefr_level(user_id: UUID, db: AsyncSession) -> str:
     attempts = result.scalars().all()
 
     if not attempts:
-        return "A1"
+        return "BPS-1"
 
     avg_score = sum(a.score for a in attempts) / len(attempts)
 
     if avg_score >= 0.80:
-        return "B2"
+        return "BPS-4"
     elif avg_score >= 0.60:
-        return "B1"
+        return "BPS-3"
     elif avg_score >= 0.40:
-        return "A2"
+        return "BPS-2"
     else:
-        return "A1"
+        return "BPS-1"
 
 
 # ── Standalone quiz (Phase 6) ───────────────────────────────────────────────────
@@ -798,13 +798,13 @@ async def submit_standalone_quiz(
     )
     await db.flush()  # flush so the new attempt is visible to _calculate_cefr_level
 
-    # Calculate new CEFR level
+    # Calculate new BPS level
     new_level = await _calculate_cefr_level(user_id, db)
 
     # Load current user proficiency level and update if changed
     user_result = await db.execute(select(User).where(User.id == user_id))
     user = user_result.scalar_one_or_none()
-    previous_level = user.proficiency_level if user else "A1"
+    previous_level = user.proficiency_level if user else "BPS-1"
     level_changed = new_level != previous_level
 
     if user and level_changed:

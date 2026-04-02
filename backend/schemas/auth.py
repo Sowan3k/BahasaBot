@@ -49,7 +49,7 @@ class UserResponse(BaseModel):
     id: str  # UUID serialised as string
     email: str
     name: str
-    proficiency_level: Literal["A1", "A2", "B1", "B2"]
+    proficiency_level: Literal["BPS-1", "BPS-2", "BPS-3", "BPS-4"]
     provider: Literal["email", "google"]
     created_at: datetime
 

@@ -1,34 +1,26 @@
 "use client";
 
-// Course generation modal
-// Shows a topic input field with multi-step loading feedback during generation.
-// Calls POST /api/courses/generate and redirects to the new course on success.
+// Course generation modal — non-blocking (Phase 9)
+// Submits the topic, receives a job_id immediately (HTTP 202), stores it in
+// CourseGenerationContext, then closes. The floating CourseGenerationProgress
+// card takes over tracking in the background.
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { coursesApi } from "@/lib/api";
+import { useCourseGeneration } from "@/lib/course-generation-context";
 import axios from "axios";
 
 interface CourseGenerationModalProps {
   onClose: () => void;
 }
 
-// Steps shown to the user during generation so it doesn't feel like a black box
-const GENERATION_STEPS = [
-  "Validating your topic…",
-  "Designing course structure…",
-  "Generating lesson content…",
-  "Saving your course…",
-];
-
 export function CourseGenerationModal({ onClose }: CourseGenerationModalProps) {
-  const router = useRouter();
+  const { setActiveJobId } = useCourseGeneration();
   const [topic, setTopic] = useState("");
   const [loading, setLoading] = useState(false);
-  const [stepIndex, setStepIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   async function handleGenerate() {
@@ -39,20 +31,13 @@ export function CourseGenerationModal({ onClose }: CourseGenerationModalProps) {
 
     setError(null);
     setLoading(true);
-    setStepIndex(0);
-
-    // Cycle through visual steps while waiting for the API
-    const stepInterval = setInterval(() => {
-      setStepIndex((prev) => Math.min(prev + 1, GENERATION_STEPS.length - 1));
-    }, 4000);
 
     try {
       const { data } = await coursesApi.generate(topic.trim());
-      clearInterval(stepInterval);
-      router.push(`/courses/${data.course_id}`);
+      // Store the job_id — CourseGenerationProgress will poll from here
+      setActiveJobId(data.job_id);
       onClose();
     } catch (err: unknown) {
-      clearInterval(stepInterval);
       if (axios.isAxiosError(err)) {
         const detail: string = err.response?.data?.detail ?? "";
         const status = err.response?.status;
@@ -61,8 +46,7 @@ export function CourseGenerationModal({ onClose }: CourseGenerationModalProps) {
         } else if (status === 429) {
           setError("You've reached the course generation limit (5 per hour). Please try again later.");
         } else {
-          // Shows the real error in development (backend returns it when APP_ENV=development)
-          setError(detail || "Course generation failed. Please try again.");
+          setError(detail || "Failed to start course generation. Please try again.");
         }
       } else {
         setError("Something went wrong. Please try again.");
@@ -112,18 +96,16 @@ export function CourseGenerationModal({ onClose }: CourseGenerationModalProps) {
           </p>
         </div>
 
-        {/* Loading steps */}
-        {loading && (
-          <div className="flex items-center gap-3 rounded-md bg-muted px-4 py-3 text-sm">
-            <span className="animate-spin text-base">⏳</span>
-            <span>{GENERATION_STEPS[stepIndex]}</span>
-          </div>
-        )}
-
         {/* Error */}
         {error && !loading && (
           <p className="text-sm text-destructive">{error}</p>
         )}
+
+        {/* Info: generation runs in background */}
+        <p className="text-xs text-muted-foreground rounded-md bg-muted px-3 py-2">
+          Generation runs in the background — you can freely navigate while it works.
+          A progress card will appear in the bottom-right corner.
+        </p>
 
         {/* Actions */}
         <div className="flex gap-3 justify-end">
@@ -131,7 +113,7 @@ export function CourseGenerationModal({ onClose }: CourseGenerationModalProps) {
             Cancel
           </Button>
           <Button onClick={handleGenerate} disabled={loading || topic.trim().length < 3}>
-            {loading ? "Generating…" : "Generate Course"}
+            {loading ? "Starting…" : "Generate Course"}
           </Button>
         </div>
       </div>

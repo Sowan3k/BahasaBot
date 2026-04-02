@@ -8,6 +8,8 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { AppSidebar } from "@/components/nav/AppSidebar";
+import { CourseGenerationProvider } from "@/lib/course-generation-context";
+import { CourseGenerationProgress } from "@/components/courses/CourseGenerationProgress";
 
 /**
  * Watches the NextAuth session and auto-logs out when it expires.
@@ -35,13 +37,17 @@ function SessionWatcher() {
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
-      <SessionWatcher />
-      <AppSidebar />
-      {/* flex-col allows flex-1 children (chatbot) to fill height; overflow-y-auto scrolls regular pages */}
-      <main className="flex-1 min-w-0 overflow-y-auto flex flex-col pt-14 md:pt-0">
-        {children}
-      </main>
-    </div>
+    <CourseGenerationProvider>
+      <div className="flex h-screen overflow-hidden bg-background">
+        <SessionWatcher />
+        <AppSidebar />
+        {/* flex-col allows flex-1 children (chatbot) to fill height; overflow-y-auto scrolls regular pages */}
+        <main className="flex-1 min-w-0 overflow-y-auto flex flex-col pt-14 md:pt-0">
+          {children}
+        </main>
+        {/* Floating progress card — overlays all pages while a course generates */}
+        <CourseGenerationProgress />
+      </div>
+    </CourseGenerationProvider>
   );
 }

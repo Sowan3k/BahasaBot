@@ -2,7 +2,8 @@
 Courses Router — /api/courses/*
 
 Endpoints:
-  POST   /api/courses/generate                                         — generate course from topic
+  POST   /api/courses/generate                                         — kick off background course generation (returns job_id)
+  GET    /api/courses/jobs/{job_id}                                    — poll background job status (Phase 9)
   GET    /api/courses/                                                  — list user's courses (paginated)
   GET    /api/courses/{course_id}                                       — full course tree with progress
   GET    /api/courses/{course_id}/modules/{module_id}/classes/{class_id} — get single class detail
@@ -12,12 +13,13 @@ Endpoints:
 """
 
 import os
+import uuid
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.db.database import get_db
+from backend.db.database import get_db, AsyncSessionLocal
 from backend.middleware.auth_middleware import get_current_user
 from backend.middleware.rate_limiter import COURSE_GEN_LIMIT, limiter
 from backend.models.user import User
@@ -25,6 +27,7 @@ from backend.schemas.course import (
     ClassCompleteResponse,
     CourseGenerateRequest,
     CourseGenerateResponse,
+    JobStatusResponse,
 )
 from backend.schemas.quiz import (
     ModuleQuizResponse,
@@ -32,6 +35,7 @@ from backend.schemas.quiz import (
     ModuleQuizSubmitRequest,
 )
 from backend.services.course_service import (
+    _update_job,
     delete_course,
     generate_course,
     get_class_detail,
@@ -40,6 +44,7 @@ from backend.services.course_service import (
     mark_class_complete,
 )
 from backend.services.quiz_service import get_module_quiz, submit_module_quiz
+from backend.utils.cache import cache_get
 from backend.utils.content_filter import is_topic_appropriate
 from backend.utils.logger import get_logger
 
@@ -47,23 +52,60 @@ router = APIRouter()
 logger = get_logger(__name__)
 
 
+# ── Background task runner ─────────────────────────────────────────────────────
+
+
+async def _run_generation_task(
+    job_id: str,
+    topic: str,
+    user_id: UUID,
+    level: str,
+) -> None:
+    """
+    Runs the full course generation pipeline in the background with its own DB session.
+
+    Writes progress milestones to Redis via _update_job() so the frontend can poll
+    GET /api/courses/jobs/{job_id}.  Any exception is caught here — it writes a
+    "failed" status to Redis rather than crashing the worker.
+    """
+    async with AsyncSessionLocal() as db:
+        try:
+            await generate_course(
+                topic=topic,
+                user_id=user_id,
+                db=db,
+                level=level,
+                job_id=job_id,
+            )
+        except Exception as exc:
+            logger.error(
+                "Background course generation failed",
+                job_id=job_id,
+                error=str(exc),
+                user_id=str(user_id),
+            )
+            app_env = os.getenv("APP_ENV", "development")
+            error_msg = str(exc) if app_env == "development" else "Course generation failed. Please try again."
+            await _update_job(job_id, "failed", 0, "Generation failed", error=error_msg)
+
+
 # ── Generate course ────────────────────────────────────────────────────────────
 
 
-@router.post("/generate", response_model=CourseGenerateResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/generate", response_model=CourseGenerateResponse, status_code=status.HTTP_202_ACCEPTED)
 @limiter.limit(COURSE_GEN_LIMIT)
 async def generate_course_endpoint(
     request: Request,
     body: CourseGenerateRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> CourseGenerateResponse:
     """
-    Generate a new personalised Malay course from a topic.
+    Kick off course generation in the background (non-blocking).
 
-    - Validates topic through a two-pass content filter
-    - Generates skeleton + all class content in parallel via Gemini
-    - Persists course to PostgreSQL and returns the new course_id
+    Returns HTTP 202 immediately with a job_id.
+    The client polls GET /api/courses/jobs/{job_id} every 3 s for progress.
     """
     # Content filter — server-side validation (never trust frontend alone)
     is_ok, reason = await is_topic_appropriate(body.topic)
@@ -73,28 +115,47 @@ async def generate_course_endpoint(
             detail=f"Topic rejected: {reason}",
         )
 
-    try:
-        course = await generate_course(
-            topic=body.topic,
-            user_id=current_user.id,
-            db=db,
-            level=current_user.proficiency_level or "A1",
-        )
-    except Exception as exc:
-        logger.error("Course generation failed", error=str(exc), user_id=str(current_user.id))
-        # In development, surface the real error so it appears in the UI — much easier to debug.
-        app_env = os.getenv("APP_ENV", "development")
-        detail = (
-            f"Course generation failed: {exc}"
-            if app_env == "development"
-            else "Course generation failed. Please try again."
-        )
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=detail,
-        )
+    job_id = str(uuid.uuid4())
+    level = current_user.proficiency_level or "BPS-1"
 
-    return CourseGenerateResponse(course_id=course.id)
+    # Write initial "pending" state so the first poll doesn't return 404
+    await _update_job(job_id, "pending", 0, "Queued…")
+
+    background_tasks.add_task(
+        _run_generation_task,
+        job_id=job_id,
+        topic=body.topic,
+        user_id=current_user.id,
+        level=level,
+    )
+
+    logger.info("Course generation queued", job_id=job_id, topic=body.topic, user_id=str(current_user.id))
+    return CourseGenerateResponse(job_id=job_id)
+
+
+# ── Poll job status ────────────────────────────────────────────────────────────
+# IMPORTANT: This route MUST be declared before /{course_id} to avoid FastAPI
+# treating "jobs" as a UUID path parameter.
+
+
+@router.get("/jobs/{job_id}", response_model=JobStatusResponse)
+async def get_job_status(
+    job_id: str,
+    current_user: User = Depends(get_current_user),
+) -> JobStatusResponse:
+    """
+    Poll the status of a background course generation job.
+
+    Returns the current progress (0–100), status string, and course_id once complete.
+    Returns 404 if the job is unknown or has expired from Redis.
+    """
+    data = await cache_get(f"course_job:{job_id}")
+    if data is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Job not found or expired",
+        )
+    return JobStatusResponse(**data)
 
 
 # ── List courses ───────────────────────────────────────────────────────────────
