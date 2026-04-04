@@ -343,3 +343,91 @@ export interface QuizHistoryResponse {
   page: number;
   limit: number;
 }
+
+// ── Profile (Phase 13) ────────────────────────────────────────────────────────
+
+/** GET /api/profile/ */
+export interface UserProfile {
+  id: string;
+  email: string;
+  name: string;
+  native_language: string | null;
+  learning_goal: string | null;
+  profile_picture_url: string | null;
+  proficiency_level: ProficiencyLevel;
+  role: string;
+  streak_count: number;
+  xp_total: number;
+  onboarding_completed: boolean;
+  provider: "email" | "google";
+}
+
+/** PATCH /api/profile/ request body */
+export interface ProfileUpdatePayload {
+  name?: string;
+  native_language?: string | null;
+  learning_goal?: string | null;
+  profile_picture_url?: string | null;
+  onboarding_completed?: boolean;
+}
+
+/** POST /api/profile/change-password request body */
+export interface ChangePasswordPayload {
+  current_password: string;
+  new_password: string;
+}
+
+/** POST /api/profile/change-password response */
+export interface ChangePasswordResponse {
+  message: string;
+}
+
+// ── Admin (Phase 15) ──────────────────────────────────────────────────────────
+
+/** GET /api/admin/stats */
+export interface AdminStats {
+  total_users: number;
+  active_users: number;
+  total_courses_generated: number;
+  total_quiz_attempts: number;
+  quiz_pass_rate: number;       // 0–100
+  feedback_count: number;
+  avg_feedback_rating: number | null;
+}
+
+/** Row in GET /api/admin/users */
+export interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  proficiency_level: ProficiencyLevel;
+  role: "user" | "admin";
+  is_active: boolean;
+  streak_count: number;
+  xp_total: number;
+  provider: "email" | "google";
+  created_at: string;
+}
+
+/** Row in GET /api/admin/feedback */
+export interface AdminFeedbackItem {
+  id: string;
+  user_id: string;
+  user_name: string;
+  user_email: string;
+  quiz_type: "module" | "standalone";
+  rating: number;               // 1–5
+  weak_points_relevant: "yes" | "no" | "somewhat";
+  comments: string | null;
+  created_at: string;
+}
+
+/** GET /api/admin/feedback response */
+export interface AdminFeedbackResponse {
+  items: AdminFeedbackItem[];
+  total: number;
+  page: number;
+  limit: number;
+  avg_rating: number | null;
+  rating_distribution: Record<number, number>;
+}

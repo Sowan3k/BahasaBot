@@ -21,6 +21,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.models.chatbot import ChatMessage, ChatSession
+from backend.models.user import User
 from backend.models.progress import GrammarLearned, VocabularyLearned
 from backend.services import gemini_service, rag_service
 from backend.utils.cache import cache_delete, cache_get, cache_set
@@ -64,7 +65,7 @@ Formatting rules (IMPORTANT — follow these exactly):
 
 Relevant Malay language knowledge (from the learning corpus):
 {context}
-"""
+{native_language_context}"""
 
 EXTRACTION_PROMPT = """\
 Analyse the following Bahasa Melayu tutoring response and extract:
@@ -176,10 +177,12 @@ async def stream_chat_response(
     Flow:
       1. Save user message to DB.
       2. Retrieve RAG context (top-5 relevant corpus chunks).
-      3. Load conversation history from Redis/DB.
-      4. Build the full prompt and stream Gemini response.
-      5. After streaming, save assistant message to DB.
-      6. Kick off vocab/grammar extraction in the background.
+      3. Fetch user's native language from DB for personalised prompt context.
+      4. Load conversation history from Redis/DB.
+      5. Build the full prompt and stream Gemini response.
+      6. Stream the response and collect the full text.
+      7. Save assistant message to DB.
+      8. Kick off vocab/grammar extraction in the background.
     """
     # 1. Save user message
     user_msg = ChatMessage(
@@ -198,10 +201,26 @@ async def stream_chat_response(
         else "No specific reference material found — use your general Malay knowledge."
     )
 
-    # 3. Load conversation history
+    # 3. Fetch user's native language for personalised tutor context
+    nl_result = await db.execute(
+        select(User.native_language).where(User.id == user_id)
+    )
+    native_language: str | None = nl_result.scalar_one_or_none()
+    if native_language:
+        native_language_context = (
+            f"\nLEARNER CONTEXT:\n"
+            f"The user's native language is {native_language}. "
+            f"Where helpful, draw on similarities or differences between "
+            f"{native_language} and Malay to aid understanding "
+            f"(e.g. shared vocabulary, contrasting grammar patterns)."
+        )
+    else:
+        native_language_context = ""
+
+    # 4. Load conversation history
     history = await _load_history(session_id, db)
 
-    # 4. Build prompt — prepend history as a conversational context block
+    # 5. Build prompt — prepend history as a conversational context block
     history_text = ""
     if history:
         lines = []
@@ -218,9 +237,12 @@ async def stream_chat_response(
     else:
         full_prompt = f"Student: {user_message}"
 
-    system_prompt = CHATBOT_SYSTEM_PROMPT.format(context=context_text)
+    system_prompt = CHATBOT_SYSTEM_PROMPT.format(
+        context=context_text,
+        native_language_context=native_language_context,
+    )
 
-    # 5. Stream the response and collect the full text
+    # 6. Stream the response and collect the full text
     full_response: list[str] = []
     try:
         async for chunk in gemini_service.stream_text(full_prompt, system_prompt):
@@ -234,7 +256,7 @@ async def stream_chat_response(
 
     assistant_text = "".join(full_response)
 
-    # 6. Save assistant message to DB
+    # 7. Save assistant message to DB
     assistant_msg = ChatMessage(
         session_id=session_id,
         role="assistant",
@@ -247,7 +269,7 @@ async def stream_chat_response(
     # Invalidate the cached history so the next load includes these two new messages
     await _invalidate_history_cache(session_id)
 
-    # 7. Background task: extract and persist vocab/grammar
+    # 8. Background task: extract and persist vocab/grammar
     asyncio.create_task(
         _extract_and_save(
             assistant_text=assistant_text,

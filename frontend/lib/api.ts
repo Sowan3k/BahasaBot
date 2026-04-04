@@ -6,6 +6,11 @@ import axios from "axios";
 import { getSession, signOut } from "next-auth/react";
 
 import type {
+  AdminFeedbackResponse,
+  AdminStats,
+  AdminUser,
+  ChangePasswordPayload,
+  ChangePasswordResponse,
   ClassCompleteResponse,
   ClassDetail,
   Course,
@@ -17,11 +22,13 @@ import type {
   ModuleQuizResponse,
   ModuleQuizResult,
   PaginatedResponse,
+  ProfileUpdatePayload,
   ProgressResponse,
   QuizAnswer,
   QuizHistoryResponse,
   StandaloneQuizResponse,
   StandaloneQuizResult,
+  UserProfile,
   VocabularyListResponse,
   WeakPointsResponse,
 } from "@/lib/types";
@@ -177,6 +184,48 @@ export const dashboardApi = {
   /** Paginated quiz history (module + standalone). */
   getQuizHistory: (page = 1, limit = 20) =>
     apiClient.get<QuizHistoryResponse>("/api/dashboard/quiz-history", {
+      params: { page, limit },
+    }),
+};
+
+// ── Profile API (Phase 13) ────────────────────────────────────────────────────
+
+export const profileApi = {
+  /** Get the current user's full profile. */
+  getProfile: () =>
+    apiClient.get<UserProfile>("/api/profile/"),
+
+  /** Update editable profile fields. Only provided fields are updated. */
+  updateProfile: (payload: ProfileUpdatePayload) =>
+    apiClient.patch<UserProfile>("/api/profile/", payload),
+
+  /** Change password (email accounts only). */
+  changePassword: (payload: ChangePasswordPayload) =>
+    apiClient.post<ChangePasswordResponse>("/api/profile/change-password", payload),
+};
+
+// ── Admin API (Phase 15) ──────────────────────────────────────────────────────
+
+export const adminApi = {
+  /** Aggregate system stats for the admin overview dashboard. */
+  getStats: () =>
+    apiClient.get<AdminStats>("/api/admin/stats"),
+
+  /** Paginated list of all users. */
+  getUsers: (page = 1, limit = 20) =>
+    apiClient.get<PaginatedResponse<AdminUser>>("/api/admin/users", {
+      params: { page, limit },
+    }),
+
+  /** Deactivate a user account by ID. */
+  deactivateUser: (userId: string) =>
+    apiClient.patch<{ id: string; is_active: boolean }>(
+      `/api/admin/users/${userId}/deactivate`
+    ),
+
+  /** Paginated evaluation feedback responses with aggregate stats. */
+  getFeedback: (page = 1, limit = 20) =>
+    apiClient.get<AdminFeedbackResponse>("/api/admin/feedback", {
       params: { page, limit },
     }),
 };

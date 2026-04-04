@@ -12,23 +12,28 @@ import {
   MessageSquare,
   BookOpen,
   Brain,
+  Settings,
+  ShieldCheck,
   LogOut,
   Menu,
   X,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { profileApi } from "@/lib/api";
 
-const NAV_ITEMS = [
+const BASE_NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard",    icon: LayoutDashboard },
   { label: "AI Tutor",  href: "/chatbot",      icon: MessageSquare },
   { label: "Courses",   href: "/courses",      icon: BookOpen },
   { label: "Quiz",      href: "/quiz/adaptive", icon: Brain },
+  { label: "Settings",  href: "/settings",     icon: Settings },
 ] as const;
 
 export function AppSidebar() {
   // Default false — useEffect reads localStorage after mount to avoid SSR hydration mismatch
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const pathname = usePathname();
   const { data: session } = useSession();
 
@@ -41,6 +46,19 @@ export function AppSidebar() {
   useEffect(() => {
     localStorage.setItem("sidebar-collapsed", String(collapsed));
   }, [collapsed]);
+
+  // Fetch role once when session is available — determines whether Admin link is shown
+  useEffect(() => {
+    if (session?.user) {
+      profileApi.getProfile()
+        .then((res) => setIsAdmin(res.data.role === "admin"))
+        .catch(() => {});
+    }
+  }, [session?.user]);
+
+  const navItems = isAdmin
+    ? [...BASE_NAV_ITEMS, { label: "Admin", href: "/admin", icon: ShieldCheck } as const]
+    : BASE_NAV_ITEMS;
 
   function isActive(href: string) {
     const base = "/" + href.split("/")[1];
@@ -98,7 +116,7 @@ export function AppSidebar() {
         </div>
 
         <nav className="flex-1 p-3 space-y-1">
-          {NAV_ITEMS.map(({ label, href, icon: Icon }) => {
+          {navItems.map(({ label, href, icon: Icon }) => {
             const active = isActive(href);
             return (
               <Link
@@ -161,7 +179,7 @@ export function AppSidebar() {
 
         {/* ── Nav items ── */}
         <nav className="flex-1 p-2 space-y-1">
-          {NAV_ITEMS.map(({ label, href, icon: Icon }) => {
+          {navItems.map(({ label, href, icon: Icon }) => {
             const active = isActive(href);
             return (
               <div key={href} className="relative group/item">

@@ -91,3 +91,38 @@ class AccessTokenResponse(BaseModel):
 
     access_token: str
     token_type: str = "bearer"
+
+
+class ForgotPasswordRequest(BaseModel):
+    """Payload for POST /api/auth/forgot-password."""
+
+    email: EmailStr
+
+
+class ForgotPasswordResponse(BaseModel):
+    """
+    Generic success response — always returned regardless of whether the email
+    exists to prevent email-enumeration attacks.
+    """
+
+    message: str
+
+
+class ResetPasswordRequest(BaseModel):
+    """Payload for POST /api/auth/reset-password."""
+
+    token: str  # raw token from URL query param
+    new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def password_min_length(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters")
+        return v
+
+
+class ResetPasswordResponse(BaseModel):
+    """Response after a successful password reset."""
+
+    message: str

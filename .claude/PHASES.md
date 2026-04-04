@@ -55,6 +55,9 @@ _Status: ✅ Complete (services not fully verified)_
 - [x] Frontend: SSE streaming chat UI (app/chatbot/page.tsx)
 - [x] Frontend: ChatMessage component, VocabularyHighlight component
 
+### Pending Enhancement (to be done after Phase 13)
+- [x] backend/services/langchain_service.py — update CHATBOT_SYSTEM_PROMPT to include user's native_language fetched from users table — pass it as context so the AI tutor can reference linguistic similarities (e.g. "The user's native language is Bengali")
+
 ---
 
 ## Phase 4 — Dynamic Course Generator (Days 8–10)
@@ -219,84 +222,87 @@ _Status: ✅ Complete_
 ---
 
 ## Phase 12 — Forgot Password
-_Status: 🔲 Not started_
+_Status: ✅ Complete — pending: add RESEND_API_KEY to backend/.env_
 
 **Goal:** Allow email/password users to reset their password via a Resend email link.
 
 ### Backend
-- [ ] backend/services/email_service.py — Resend SDK integration, send_reset_email() function
-- [ ] backend/routers/auth.py — add POST /api/auth/forgot-password (generate token, store hash, send email)
-- [ ] backend/routers/auth.py — add POST /api/auth/reset-password (validate token, update password, mark token used)
-- [ ] Add RESEND_API_KEY to backend/.env.example
+- [x] backend/services/email_service.py — Resend SDK integration, send_reset_email() function
+- [x] backend/routers/auth.py — add POST /api/auth/forgot-password (generate token, store hash, send email)
+- [x] backend/routers/auth.py — add POST /api/auth/reset-password (validate token, update password, mark token used)
+- [x] Add RESEND_API_KEY to backend/.env.example
 
 ### Frontend
-- [ ] frontend/app/(auth)/forgot-password/page.tsx — email input form, submit triggers API call, show success message
-- [ ] frontend/app/(auth)/reset-password/page.tsx — reads token from URL query param, new password form, submit triggers API call
-- [ ] Add "Forgot password?" link on login page pointing to /forgot-password
-- [ ] Handle Google OAuth accounts: show "Use Google to reset your password" message instead of form
+- [x] frontend/app/(auth)/forgot-password/page.tsx — email input form, submit triggers API call, show success message
+- [x] frontend/app/(auth)/reset-password/page.tsx — reads token from URL query param, new password form, submit triggers API call
+- [x] Add "Forgot password?" link on login page pointing to /forgot-password
+- [x] Handle Google OAuth accounts: show "Use Google to reset your password" message instead of form
 
 ---
 
 ## Phase 13 — User Profile Management + Settings Hub
-_Status: 🔲 Not started_
+_Status: ✅ Complete_
 
 **Goal:** Let users view and edit their profile. Create the /settings hub that will also house Password and About pages.
 
 ### Backend
-- [ ] backend/routers/profile.py — GET /api/profile/ (return user profile fields)
-- [ ] backend/routers/profile.py — PATCH /api/profile/ (update name, native_language, learning_goal, profile_picture_url — email and role NOT changeable here)
-- [ ] backend/schemas/ — ProfileResponse and ProfileUpdateRequest Pydantic schemas
-- [ ] Register profile router in backend/main.py
+- [x] backend/routers/profile.py — GET /api/profile/ (return user profile fields)
+- [x] backend/routers/profile.py — PATCH /api/profile/ (update name, native_language, learning_goal, profile_picture_url — email and role NOT changeable here)
+- [x] backend/routers/profile.py — POST /api/profile/change-password (current + new password; Google guard)
+- [x] backend/schemas/profile.py — ProfileResponse and ProfileUpdateRequest Pydantic schemas
+- [x] Register profile router in backend/main.py
 
 ### Frontend
-- [ ] frontend/app/(dashboard)/settings/page.tsx — settings hub with links to Profile, Password, About
-- [ ] frontend/app/(dashboard)/settings/profile/page.tsx — display and edit profile fields
-- [ ] frontend/app/(dashboard)/settings/password/page.tsx — change password form (current password + new password)
-- [ ] frontend/app/(dashboard)/settings/about/page.tsx — static About/Credits page (BahasaBot logo, USM logo, Sowan, Dr. Tan Tien Ping, academic year)
-- [ ] Add Settings link to sidebar
-- [ ] frontend/lib/api.ts — add profileApi.getProfile() and profileApi.updateProfile()
-- [ ] frontend/lib/types.ts — add UserProfile interface
+- [x] frontend/app/(dashboard)/settings/page.tsx — settings hub with links to Profile, Password, About
+- [x] frontend/app/(dashboard)/settings/profile/page.tsx — display and edit profile fields
+- [x] frontend/app/(dashboard)/settings/password/page.tsx — change password form (current password + new password)
+- [x] frontend/app/(dashboard)/settings/about/page.tsx — static About/Credits page (BahasaBot logo, USM logo, Sowan, Dr. Tan Tien Ping, academic year)
+- [x] Add Settings link to sidebar
+- [x] frontend/lib/api.ts — add profileApi.getProfile(), profileApi.updateProfile(), profileApi.changePassword()
+- [x] frontend/lib/types.ts — add UserProfile, ProfileUpdatePayload, ChangePasswordPayload, ChangePasswordResponse
 
 ---
 
 ## Phase 14 — Onboarding Flow
-_Status: 🔲 Not started_
+_Status: ✅ Complete_
 
 **Goal:** Guide new users through setup on their first login only.
 
-- [ ] frontend/components/onboarding/OnboardingModal.tsx — multi-step modal component
-- [ ] frontend/components/onboarding/OnboardingStep.tsx — individual step wrapper
-- [ ] Steps: Welcome → Native Language selection → Reason for learning Malay → Brief sidebar tour → Optional Journey CTA
-- [ ] On step completion: PATCH /api/profile/ to save native_language and learning_goal
-- [ ] On final step: PATCH /api/profile/ to set onboarding_completed = true
-- [ ] Trigger: check onboarding_completed on dashboard layout load — if false, show modal
-- [ ] frontend/app/(dashboard)/layout.tsx — add onboarding check and modal render
+- [x] frontend/components/onboarding/OnboardingModal.tsx — multi-step modal component
+- [x] frontend/components/onboarding/OnboardingStep.tsx — individual step wrapper
+- [x] Steps: Welcome → Native Language selection → Reason for learning Malay → Brief sidebar tour → Optional Journey CTA
+- [x] On step completion: PATCH /api/profile/ to save native_language and learning_goal
+- [x] On final step: PATCH /api/profile/ to set onboarding_completed = true
+- [x] Trigger: check onboarding_completed on dashboard layout load — if false, show modal
+- [x] frontend/app/(dashboard)/layout.tsx — add onboarding check and modal render
+- [x] backend/schemas/profile.py — added onboarding_completed field to ProfileUpdateRequest
+- [x] frontend/lib/types.ts — added onboarding_completed to ProfileUpdatePayload
 
 ---
 
 ## Phase 15 — Admin Control Panel
-_Status: 🔲 Not started_
+_Status: ✅ Complete_
 
 **Goal:** Give admin users a protected dashboard to monitor system usage and view evaluation feedback.
 
 ### Backend
-- [ ] backend/services/admin_service.py — get_stats(), get_all_users(), get_feedback_responses()
-- [ ] backend/routers/admin.py — GET /api/admin/stats (admin only)
-- [ ] backend/routers/admin.py — GET /api/admin/users (admin only, paginated)
-- [ ] backend/routers/admin.py — GET /api/admin/feedback (admin only, paginated)
-- [ ] backend/routers/admin.py — PATCH /api/admin/users/{id}/deactivate (admin only)
-- [ ] Role check: all admin endpoints verify user.role == 'admin' — return 403 otherwise
-- [ ] Seed: first user registered with ADMIN_EMAIL env var gets role='admin' automatically
-- [ ] Register admin router in backend/main.py
+- [x] backend/services/admin_service.py — get_stats(), get_all_users(), get_feedback_responses(), deactivate_user()
+- [x] backend/routers/admin.py — GET /api/admin/stats (admin only)
+- [x] backend/routers/admin.py — GET /api/admin/users (admin only, paginated)
+- [x] backend/routers/admin.py — GET /api/admin/feedback (admin only, paginated)
+- [x] backend/routers/admin.py — PATCH /api/admin/users/{id}/deactivate (admin only)
+- [x] Role check: require_admin dependency raises HTTP 403 for non-admin users
+- [x] Seed: ADMIN_EMAIL env var — registering with that email auto-grants role='admin'
+- [x] Register admin router in backend/main.py
 
 ### Frontend
-- [ ] frontend/app/(dashboard)/admin/page.tsx — stats overview (total users, quiz pass rate, course count, feedback count)
-- [ ] frontend/app/(dashboard)/admin/users/page.tsx — paginated user table with BPS level, last active, deactivate button
-- [ ] frontend/app/(dashboard)/admin/feedback/page.tsx — feedback table with aggregate rating + open text responses
-- [ ] Sidebar: show Admin link only if user.role === 'admin'
-- [ ] Route protection: middleware redirects non-admin to /dashboard
-- [ ] frontend/lib/api.ts — add adminApi functions
-- [ ] frontend/lib/types.ts — add AdminStats, AdminUser interfaces
+- [x] frontend/app/(dashboard)/admin/page.tsx — stats overview (total users, quiz pass rate, course count, feedback count, avg rating)
+- [x] frontend/app/(dashboard)/admin/users/page.tsx — paginated user table with BPS level, XP, status, deactivate button
+- [x] frontend/app/(dashboard)/admin/feedback/page.tsx — feedback cards with star rating, relevance badge, open text, aggregate distribution chart
+- [x] Sidebar: Admin link shown only if user.role === 'admin' (fetched from /api/profile/)
+- [x] Route protection: each admin page fetches profile on mount and redirects non-admin to /dashboard
+- [x] frontend/lib/api.ts — adminApi (getStats, getUsers, deactivateUser, getFeedback)
+- [x] frontend/lib/types.ts — AdminStats, AdminUser, AdminFeedbackItem, AdminFeedbackResponse
 
 ---
 
@@ -385,6 +391,7 @@ _Status: 🔲 Not started_
 
 ### Backend
 - [ ] backend/services/journey_service.py — generate_roadmap(user_id, deadline_date, goal_type): fetches BPS level + weak points, calls Gemini with structured JSON prompt, returns roadmap JSON
+- [ ] backend/services/journey_service.py — include user's native_language from users table in the Gemini prompt when generating roadmap (e.g. "User's native language is Bengali — use relatable comparisons where helpful")
 - [ ] Gemini prompt must return: { phases: [ { phase, title, duration_weeks, weeks: [ { week, activities: [ { id, type, title, topic, reason } ] } ] } ] }
 - [ ] Activity types: 'course' | 'quiz' | 'chatbot'
 - [ ] backend/routers/journey.py — POST /api/journey/ (generate + save to learning_roadmaps table, trigger banner image generation)
