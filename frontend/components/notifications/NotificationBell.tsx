@@ -1,65 +1,65 @@
 "use client";
 
 /**
- * NotificationBell — global floating button (fixed top-right, all screens)
+ * NotificationBell — global floating wrapper (fixed top-right, all screens)
  *
- * Sits at z-[55] — above the mobile header (z-50) but below the mobile drawer (z-[70]).
- * On mobile (< md): positioned at top-3 right-14 to sit beside the ThemeToggle in the header.
- * On desktop (md+): top-5 right-5, floating above the main content area.
+ * This component owns data fetching and polling.
+ * All visual rendering is delegated to <NotificationPopover> from /components/ui/.
  *
- * Animations:
- *  • bell-ring  — icon swings when unread count is > 0 (fires on mount + each new unread)
- *  • bell-glow  — soft pulsing ring on the button when unread > 0
- *  • badge-pop  — badge scales in with a spring when it first appears
- *  • ping       — Tailwind animate-ping on a ghost circle behind the badge
- *  • panel-slide — panel slides + fades in on open (handled in NotificationPanel)
- *  • active:scale-90 — button squishes on click
- *  • hover:scale-105  — gentle lift on hover
+ * Positioning:
+ *   Mobile (< md): top-3 right-14  — beside the ThemeToggle in the mobile header
+ *   Desktop (md+): top-5 right-5   — floating above the main content area
+ *   z-[55] — above the mobile header (z-50), below the mobile drawer (z-[70])
+ *
+ * The NotificationPopover renders its panel as `absolute right-0 mt-3` relative
+ * to this fixed container, so no additional positioning needed on the panel.
  */
 
-import { Bell } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { notificationsApi } from "@/lib/api";
 import type { AppNotification } from "@/lib/types";
-import { NotificationPanel } from "./NotificationPanel";
+import { NotificationPopover, type NotificationItem } from "@/components/ui/notification-popover";
 
 const POLL_INTERVAL_MS = 60_000;
 
+/** Map BahasaBot AppNotification → NotificationItem shape used by the popover UI. */
+function toPopoverItem(n: AppNotification): NotificationItem {
+  // Derive a human-friendly title from the notification type
+  const titleMap: Record<string, string> = {
+    streak_milestone: "Streak Milestone",
+    xp_milestone:     "XP Milestone",
+    journey_reminder: "Journey Reminder",
+    course_complete:  "Course Ready",
+    phase_complete:   "Phase Complete",
+  };
+  return {
+    id:          n.id,
+    title:       titleMap[n.type] ?? "Notification",
+    description: n.message,
+    timestamp:   new Date(n.created_at),
+    type:        n.type,
+    read:        n.read,
+  };
+}
+
 export function NotificationBell() {
   const { status } = useSession();
-  const [open, setOpen] = useState(false);
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-
-  // Track previous unread so we can re-trigger the ring animation on new notifications
-  const prevUnread = useRef(0);
-  const [ringKey, setRingKey] = useState(0);
-  const [badgeKey, setBadgeKey] = useState(0);
-
+  const [items, setItems] = useState<AppNotification[]>([]);
   const pollerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // ── Fetch ───────────────────────────────────────────────────────────────────
+  // ── Fetch ─────────────────────────────────────────────────────────────────
 
   const fetchNotifications = useCallback(async () => {
     try {
       const res = await notificationsApi.getNotifications();
-      const { notifications: items, unread_count } = res.data;
-      setNotifications(items);
-      setUnreadCount(unread_count);
-
-      // Re-trigger ring animation whenever unread count increases
-      if (unread_count > prevUnread.current) {
-        setRingKey((k) => k + 1);
-        if (prevUnread.current === 0) setBadgeKey((k) => k + 1);
-      }
-      prevUnread.current = unread_count;
+      setItems(res.data.notifications);
     } catch {
-      // Silently fail — badge just won't update
+      // Silent — bell just won't refresh
     }
   }, []);
 
-  // ── Polling ─────────────────────────────────────────────────────────────────
+  // ── Start polling ─────────────────────────────────────────────────────────
 
   useEffect(() => {
     if (status !== "authenticated") return;
@@ -68,100 +68,47 @@ export function NotificationBell() {
     return () => { if (pollerRef.current) clearInterval(pollerRef.current); };
   }, [status, fetchNotifications]);
 
-  // ── Open / close ────────────────────────────────────────────────────────────
+  // ── Handle mark-read callbacks from popover ───────────────────────────────
 
-  const handleToggle = useCallback(() => {
-    setOpen((prev) => {
-      if (!prev) fetchNotifications();
-      return !prev;
-    });
-  }, [fetchNotifications]);
+  const handleChange = useCallback(
+    async (updated: NotificationItem[]) => {
+      // Sync local state back to AppNotification shape
+      setItems((prev) =>
+        prev.map((n) => {
+          const match = updated.find((u) => u.id === n.id);
+          return match ? { ...n, read: match.read } : n;
+        })
+      );
 
-  // ── Optimistic mark-read ────────────────────────────────────────────────────
+      // Determine which IDs just became read and call the API
+      const nowRead = updated.filter((u) => u.read).map((u) => u.id);
+      const wasUnread = items.filter((n) => !n.read).map((n) => n.id);
+      const justMarked = wasUnread.filter((id) => nowRead.includes(id));
 
-  const handleMarkRead = useCallback((id: string) => {
-    setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, read: true } : n));
-    setUnreadCount((prev) => {
-      const next = Math.max(0, prev - 1);
-      prevUnread.current = next;
-      return next;
-    });
-  }, []);
+      if (justMarked.length === wasUnread.length && justMarked.length > 1) {
+        // All were marked — use mark-all-read endpoint
+        try { await notificationsApi.markAllRead(); } catch { /* silent */ }
+      } else {
+        // Individual marks
+        await Promise.allSettled(
+          justMarked.map((id) => notificationsApi.markRead(id))
+        );
+      }
+    },
+    [items]
+  );
 
-  const handleMarkAllRead = useCallback(() => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    setUnreadCount(0);
-    prevUnread.current = 0;
-  }, []);
-
-  // ── Render ──────────────────────────────────────────────────────────────────
+  // ── Render ────────────────────────────────────────────────────────────────
 
   if (status !== "authenticated") return null;
 
-  const hasUnread = unreadCount > 0;
-
   return (
-    <>
-      {/* ── Floating bell button ── */}
-      <button
-        onClick={handleToggle}
-        aria-label={`Notifications${hasUnread ? ` — ${unreadCount} unread` : ""}`}
-        className={[
-          // Positioning — beside mobile header ThemeToggle; floating top-right on desktop
-          "fixed top-3 right-14 md:top-5 md:right-5",
-          "z-[55]",
-          // Shape & surface
-          "w-10 h-10 rounded-full",
-          "bg-card/90 dark:bg-card/95",
-          "backdrop-blur-sm",
-          "border border-border",
-          "shadow-md shadow-black/10",
-          // Layout
-          "flex items-center justify-center",
-          // Icon colour
-          "text-foreground/70",
-          // Interactions
-          "transition-all duration-200 ease-out",
-          "hover:scale-105 hover:shadow-lg hover:text-primary hover:border-primary/50",
-          "active:scale-90 active:shadow-sm",
-          // Glow pulse when there are unread notifications
-          hasUnread ? "animate-bell-glow" : "",
-        ].filter(Boolean).join(" ")}
-      >
-        {/* Bell icon — re-keyed to replay ring animation on new notifications */}
-        <Bell
-          key={ringKey}
-          size={18}
-          strokeWidth={2}
-          className={hasUnread ? "animate-bell-ring" : ""}
-          style={{ transformOrigin: "top center" }}
-        />
-
-        {/* Unread badge */}
-        {hasUnread && (
-          <span
-            key={`badge-${badgeKey}`}
-            className="absolute -top-1 -right-1 flex items-center justify-center animate-badge-pop"
-          >
-            {/* Ping ghost ring — disappears after one cycle */}
-            <span className="absolute w-full h-full rounded-full bg-primary opacity-60 animate-ping" />
-            {/* Solid badge */}
-            <span className="relative min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center leading-none shadow-sm">
-              {unreadCount > 99 ? "99+" : unreadCount}
-            </span>
-          </span>
-        )}
-      </button>
-
-      {/* ── Notification panel ── */}
-      {open && (
-        <NotificationPanel
-          notifications={notifications}
-          onMarkRead={handleMarkRead}
-          onMarkAllRead={handleMarkAllRead}
-          onClose={() => setOpen(false)}
-        />
-      )}
-    </>
+    /* Fixed container — the popover panel is absolute relative to this */
+    <div className="fixed top-3 right-14 md:top-5 md:right-5 z-[55]">
+      <NotificationPopover
+        notifications={items.map(toPopoverItem)}
+        onNotificationsChange={handleChange}
+      />
+    </div>
   );
 }
