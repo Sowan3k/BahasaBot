@@ -432,6 +432,22 @@ export interface AdminFeedbackResponse {
   rating_distribution: Record<number, number>;
 }
 
+/** GET /api/admin/users/{userId}/analytics */
+export interface AdminUserAnalytics {
+  token_usage: {
+    total_input_tokens: number;
+    total_output_tokens: number;
+    total_tokens: number;
+    by_feature: Record<string, { input: number; output: number; total: number }>;
+    daily: { date: string; tokens: number }[];
+  };
+  activity: {
+    total_events: number;
+    by_feature: Record<string, number>;
+    daily: { date: string; events: number }[];
+  };
+}
+
 /** GET /api/admin/users/{userId} — full user detail */
 export interface AdminUserDetail {
   id: string;

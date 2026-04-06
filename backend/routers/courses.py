@@ -361,4 +361,11 @@ async def submit_module_quiz_endpoint(
             detail="Quiz scoring failed. Please try again.",
         )
 
+    # Log module quiz activity — fire-and-forget
+    try:
+        from backend.utils.analytics import log_activity
+        await log_activity(db, user_id=current_user.id, feature="module_quiz", duration_seconds=0)
+    except Exception:
+        pass
+
     return ModuleQuizResultResponse(**result)

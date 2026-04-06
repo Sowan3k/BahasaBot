@@ -269,7 +269,7 @@ async def stream_chat_response(
     # Invalidate the cached history so the next load includes these two new messages
     await _invalidate_history_cache(session_id)
 
-    # 8. Background task: extract and persist vocab/grammar
+    # 8. Background task: extract and persist vocab/grammar + log activity
     asyncio.create_task(
         _extract_and_save(
             assistant_text=assistant_text,
@@ -277,6 +277,13 @@ async def stream_chat_response(
             session_id=uuid.UUID(session_id),
             db_factory=db,  # type: ignore[arg-type]
         )
+    )
+
+    # 9. Log chatbot activity event (fire-and-forget)
+    # Token counts are unavailable in streaming mode — log event only
+    from backend.utils.analytics import log_activity  # local import avoids circular dep
+    asyncio.create_task(
+        log_activity(db, user_id=user_id, feature="chatbot", duration_seconds=0)
     )
 
 

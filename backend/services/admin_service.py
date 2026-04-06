@@ -20,6 +20,7 @@ import bcrypt
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.models.analytics import ActivityLog, TokenUsageLog
 from backend.models.chatbot import ChatSession
 from backend.models.course import Course
 from backend.models.evaluation import EvaluationFeedback
@@ -430,4 +431,127 @@ async def reset_user_data(db: AsyncSession, user_id: uuid.UUID, admin_user: User
         "proficiency_level": target.proficiency_level,
         "streak_count": target.streak_count,
         "xp_total": target.xp_total,
+    }
+
+
+# ── User analytics ────────────────────────────────────────────────────────────
+
+
+async def get_user_analytics(db: AsyncSession, user_id: uuid.UUID, days: int = 30) -> dict:
+    """
+    Return token usage + activity time data for a single user.
+
+    Token usage:
+      - total_input_tokens, total_output_tokens, total_tokens (all time)
+      - by_feature: {feature: {input, output, total}} breakdown
+      - daily_tokens: [{date, total_tokens}] for last `days` days (for line chart)
+
+    Activity:
+      - total_events: count of all activity_log rows
+      - by_feature: {feature: count} breakdown
+      - daily_activity: [{date, count}] for last `days` days (for bar chart)
+
+    Raises ValueError if user not found.
+    """
+    from datetime import date, timedelta
+    from sqlalchemy import cast, Date as DateType
+
+    # Verify user exists
+    result = await db.execute(select(User.id).where(User.id == user_id))
+    if result.scalar_one_or_none() is None:
+        raise ValueError(f"User {user_id} not found")
+
+    cutoff = func.now() - func.cast(f"{days} days", type_=None)
+
+    # ── Token usage totals ────────────────────────────────────────────────────
+    tok_totals = await db.execute(
+        select(
+            func.coalesce(func.sum(TokenUsageLog.input_tokens), 0).label("input"),
+            func.coalesce(func.sum(TokenUsageLog.output_tokens), 0).label("output"),
+            func.coalesce(func.sum(TokenUsageLog.total_tokens), 0).label("total"),
+        ).where(TokenUsageLog.user_id == user_id)
+    )
+    tok_row = tok_totals.one()
+
+    # ── Token usage by feature ────────────────────────────────────────────────
+    tok_by_feat = await db.execute(
+        select(
+            TokenUsageLog.feature,
+            func.coalesce(func.sum(TokenUsageLog.input_tokens), 0).label("input"),
+            func.coalesce(func.sum(TokenUsageLog.output_tokens), 0).label("output"),
+            func.coalesce(func.sum(TokenUsageLog.total_tokens), 0).label("total"),
+        )
+        .where(TokenUsageLog.user_id == user_id)
+        .group_by(TokenUsageLog.feature)
+    )
+    tokens_by_feature = {
+        row.feature: {"input": row.input, "output": row.output, "total": row.total}
+        for row in tok_by_feat.all()
+    }
+
+    # ── Daily token usage (last N days) ──────────────────────────────────────
+    daily_tok = await db.execute(
+        select(
+            cast(TokenUsageLog.created_at, DateType).label("day"),
+            func.coalesce(func.sum(TokenUsageLog.total_tokens), 0).label("total"),
+        )
+        .where(
+            TokenUsageLog.user_id == user_id,
+            TokenUsageLog.created_at >= func.now() - func.cast(f"{days} days", type_=None),
+        )
+        .group_by("day")
+        .order_by("day")
+    )
+    daily_tokens_raw = {str(row.day): int(row.total) for row in daily_tok.all()}
+
+    # ── Activity totals ───────────────────────────────────────────────────────
+    act_total = await db.scalar(
+        select(func.count()).select_from(ActivityLog).where(ActivityLog.user_id == user_id)
+    )
+
+    # ── Activity by feature ───────────────────────────────────────────────────
+    act_by_feat = await db.execute(
+        select(ActivityLog.feature, func.count().label("count"))
+        .where(ActivityLog.user_id == user_id)
+        .group_by(ActivityLog.feature)
+    )
+    activity_by_feature = {row.feature: row.count for row in act_by_feat.all()}
+
+    # ── Daily activity (last N days) ──────────────────────────────────────────
+    daily_act = await db.execute(
+        select(
+            cast(ActivityLog.created_at, DateType).label("day"),
+            func.count().label("count"),
+        )
+        .where(
+            ActivityLog.user_id == user_id,
+            ActivityLog.created_at >= func.now() - func.cast(f"{days} days", type_=None),
+        )
+        .group_by("day")
+        .order_by("day")
+    )
+    daily_activity_raw = {str(row.day): int(row.count) for row in daily_act.all()}
+
+    # ── Fill missing days with zeros so charts have continuous x-axis ─────────
+    today = date.today()
+    daily_tokens: list[dict] = []
+    daily_activity: list[dict] = []
+    for i in range(days):
+        d = str(today - timedelta(days=days - 1 - i))
+        daily_tokens.append({"date": d, "tokens": daily_tokens_raw.get(d, 0)})
+        daily_activity.append({"date": d, "events": daily_activity_raw.get(d, 0)})
+
+    return {
+        "token_usage": {
+            "total_input_tokens": int(tok_row.input),
+            "total_output_tokens": int(tok_row.output),
+            "total_tokens": int(tok_row.total),
+            "by_feature": tokens_by_feature,
+            "daily": daily_tokens,
+        },
+        "activity": {
+            "total_events": act_total or 0,
+            "by_feature": activity_by_feature,
+            "daily": daily_activity,
+        },
     }

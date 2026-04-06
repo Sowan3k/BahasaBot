@@ -9,6 +9,7 @@ import type {
   AdminFeedbackResponse,
   AdminStats,
   AdminUser,
+  AdminUserAnalytics,
   AdminUserDetail,
   ChangePasswordPayload,
   ChangePasswordResponse,
@@ -221,6 +222,12 @@ export const adminApi = {
   /** Full profile + activity stats for a single user. */
   getUserDetail: (userId: string) =>
     apiClient.get<AdminUserDetail>(`/api/admin/users/${userId}`),
+
+  /** Token usage + activity timeline charts for a single user. */
+  getUserAnalytics: (userId: string, days = 30) =>
+    apiClient.get<AdminUserAnalytics>(`/api/admin/users/${userId}/analytics`, {
+      params: { days },
+    }),
 
   /** Deactivate a user account by ID. */
   deactivateUser: (userId: string) =>

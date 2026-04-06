@@ -231,6 +231,32 @@ async def reset_user_data(
         raise HTTPException(status_code=500, detail="Failed to reset user data")
 
 
+# ── GET /api/admin/users/{user_id}/analytics ──────────────────────────────────
+
+
+@router.get("/users/{user_id}/analytics")
+async def get_user_analytics(
+    user_id: uuid.UUID,
+    days: int = Query(default=30, ge=7, le=90, description="Number of days to look back"),
+    _admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """
+    Token usage + activity timeline for a single user.
+
+    Returns daily token consumption and daily activity event counts
+    for the last `days` days (default 30, max 90), plus feature-level breakdowns.
+    Used to render line/bar charts on the admin user detail page.
+    """
+    try:
+        return await admin_service.get_user_analytics(db, user_id=user_id, days=days)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    except Exception as exc:
+        logger.error("Failed to fetch user analytics", user_id=str(user_id), error=str(exc))
+        raise HTTPException(status_code=500, detail="Failed to fetch analytics")
+
+
 # ── GET /api/admin/feedback ────────────────────────────────────────────────────
 
 

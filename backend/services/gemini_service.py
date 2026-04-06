@@ -87,11 +87,14 @@ def _parse_retry_delay(exc: Exception) -> float:
 async def _invoke_with_retry(
     messages: list[SystemMessage | HumanMessage],
     max_retries: int = 3,
-) -> str:
+) -> tuple[str, int, int]:
     """
     Low-level LLM invocation with exponential backoff retry.
     Handles 429 ResourceExhausted by waiting the API-suggested delay.
     Raises RuntimeError if all attempts fail.
+
+    Returns (text, input_tokens, output_tokens).
+    Token counts come from response.usage_metadata when available; fall back to 0.
     """
     llm = _chat_llm()
     last_exc: Exception | None = None
@@ -108,8 +111,15 @@ async def _invoke_with_retry(
                         text_parts.append(block.get("text", ""))
                     elif isinstance(block, str):
                         text_parts.append(block)
-                return "".join(text_parts)
-            return str(content)
+                text = "".join(text_parts)
+            else:
+                text = str(content)
+
+            # Extract token counts from usage_metadata if present
+            meta = getattr(response, "usage_metadata", None) or {}
+            input_tokens = getattr(meta, "input_tokens", None) or meta.get("input_tokens", 0) or 0
+            output_tokens = getattr(meta, "output_tokens", None) or meta.get("output_tokens", 0) or 0
+            return text, int(input_tokens), int(output_tokens)
         except Exception as exc:
             last_exc = exc
             # For 429 rate-limit errors, use the API-suggested retry delay
@@ -154,10 +164,30 @@ async def generate_text(
     """
     try:
         messages = _build_messages(prompt, system_prompt)
-        return await _invoke_with_retry(messages, max_retries)
+        text, _, _ = await _invoke_with_retry(messages, max_retries)
+        return text
     except Exception as exc:
         logger.error("generate_text failed after all retries", error=str(exc))
         return FALLBACK_MESSAGE
+
+
+async def generate_text_with_usage(
+    prompt: str,
+    system_prompt: str | None = None,
+    max_retries: int = 3,
+) -> tuple[str, int, int]:
+    """
+    Like generate_text but also returns (input_tokens, output_tokens).
+
+    Returns (FALLBACK_MESSAGE, 0, 0) if all retries fail.
+    Used by callers that need to log token consumption.
+    """
+    try:
+        messages = _build_messages(prompt, system_prompt)
+        return await _invoke_with_retry(messages, max_retries)
+    except Exception as exc:
+        logger.error("generate_text_with_usage failed after all retries", error=str(exc))
+        return FALLBACK_MESSAGE, 0, 0
 
 
 async def generate_json(
@@ -179,7 +209,7 @@ async def generate_json(
 
     for attempt in range(max_retries):
         try:
-            raw = await _invoke_with_retry(messages, max_retries=1)
+            raw, _, _ = await _invoke_with_retry(messages, max_retries=1)
             # Strip markdown code fences if the model adds them
             cleaned = raw.strip()
             if cleaned.startswith("```"):

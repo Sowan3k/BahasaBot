@@ -12,6 +12,7 @@ import {
   ShieldCheck,
   ChevronRight,
   AlertTriangle,
+  type LucideIcon,
 } from "lucide-react";
 import { adminApi, profileApi } from "@/lib/api";
 import type { AdminStats } from "@/lib/types";
@@ -49,7 +50,7 @@ function StatCard({
 }: {
   label: string;
   value: string | number;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: LucideIcon;
   color: string;
   bg: string;
   sub?: string;

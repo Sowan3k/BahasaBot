@@ -1,6 +1,7 @@
 # Import all ORM models so Alembic autogenerate can discover them and
 # SQLAlchemy metadata is fully populated before any migration or query runs.
 
+from backend.models.analytics import ActivityLog, TokenUsageLog  # noqa: F401
 from backend.models.chatbot import ChatMessage, ChatSession  # noqa: F401
 from backend.models.course import Class, Course, Module  # noqa: F401
 from backend.models.document import Document  # noqa: F401

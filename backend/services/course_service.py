@@ -550,6 +550,13 @@ async def generate_course(
     if job_id:
         await _update_job(job_id, "complete", 100, "Course ready!", course_id=str(course.id))
 
+    # Log course generation activity (fire-and-forget — failure must not abort course save)
+    try:
+        from backend.utils.analytics import log_activity
+        await log_activity(db, user_id=user_id, feature="course_gen", duration_seconds=0)
+    except Exception:
+        pass
+
     return course
 
 

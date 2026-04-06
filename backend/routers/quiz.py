@@ -86,6 +86,12 @@ async def submit_adaptive_quiz(
 
     try:
         result = await submit_standalone_quiz(current_user.id, user_answers, db)
+        # Log quiz activity — fire-and-forget
+        try:
+            from backend.utils.analytics import log_activity
+            await log_activity(db, user_id=current_user.id, feature="standalone_quiz", duration_seconds=0)
+        except Exception:
+            pass
         return StandaloneQuizResultResponse(**result)
     except Exception as exc:
         logger.exception(
