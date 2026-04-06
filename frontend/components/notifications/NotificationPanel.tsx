@@ -3,38 +3,49 @@
 /**
  * NotificationPanel
  *
- * Dropdown panel that lists the last 20 notifications newest-first.
- * Clicking a notification marks it as read.
- * "Mark all as read" button clears the entire unread count.
+ * Dropdown panel that slides in below the floating NotificationBell.
+ * Fixed position: top-[60px] right-3 on mobile, top-[68px] right-4 on desktop.
+ * The `animate-panel-slide` class (defined in globals.css) handles the
+ * slide-down + fade-in entrance.
+ *
+ * Clicking a notification marks it as read (optimistic update in parent).
+ * "Mark all as read" button in header clears the entire badge.
  */
 
-import { Bell, Check, CheckCheck, Flame, Star, Map, BookOpen, Trophy } from "lucide-react";
+import {
+  Bell,
+  BookOpen,
+  Check,
+  CheckCheck,
+  Flame,
+  Map,
+  Star,
+  Trophy,
+} from "lucide-react";
 import { useCallback } from "react";
 import { notificationsApi } from "@/lib/api";
 import type { AppNotification } from "@/lib/types";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/** Pick an icon based on notification type. */
 function NotificationIcon({ type }: { type: string }) {
   const cls = "shrink-0 mt-0.5";
   switch (type) {
     case "streak_milestone":
-      return <Flame size={16} className={`${cls} text-orange-500`} />;
+      return <Flame size={15} className={`${cls} text-orange-500`} />;
     case "xp_milestone":
-      return <Star size={16} className={`${cls} text-yellow-500`} />;
+      return <Star size={15} className={`${cls} text-yellow-500`} />;
     case "journey_reminder":
-      return <Map size={16} className={`${cls} text-blue-500`} />;
+      return <Map size={15} className={`${cls} text-blue-500`} />;
     case "course_complete":
-      return <BookOpen size={16} className={`${cls} text-green-500`} />;
+      return <BookOpen size={15} className={`${cls} text-green-500`} />;
     case "phase_complete":
-      return <Trophy size={16} className={`${cls} text-purple-500`} />;
+      return <Trophy size={15} className={`${cls} text-purple-500`} />;
     default:
-      return <Bell size={16} className={`${cls} text-muted-foreground`} />;
+      return <Bell size={15} className={`${cls} text-muted-foreground`} />;
   }
 }
 
-/** Format an ISO date string into a relative label (e.g. "2h ago"). */
 function relativeTime(isoDate: string): string {
   const diff = Date.now() - new Date(isoDate).getTime();
   const mins = Math.floor(diff / 60_000);
@@ -66,85 +77,134 @@ export function NotificationPanel({
   const handleMarkRead = useCallback(
     async (n: AppNotification) => {
       if (n.read) return;
+      // Optimistic update fires immediately via onMarkRead
+      onMarkRead(n.id);
       try {
         await notificationsApi.markRead(n.id);
-        onMarkRead(n.id);
       } catch {
-        // silently ignore — UI already updates optimistically on parent
+        // If API fails the optimistic state stays — acceptable for non-critical UX
       }
     },
     [onMarkRead]
   );
 
   const handleMarkAllRead = useCallback(async () => {
+    onMarkAllRead();
     try {
       await notificationsApi.markAllRead();
-      onMarkAllRead();
     } catch {
-      // silently ignore
+      // silent
     }
   }, [onMarkAllRead]);
 
   return (
-    // Backdrop — click outside to close
+    /* Invisible full-screen backdrop — click anywhere outside to close */
     <div className="fixed inset-0 z-[80]" onClick={onClose}>
-      {/* Panel — stop propagation so clicking inside doesn't close */}
+      {/* Panel — stop propagation so inside clicks don't close it */}
       <div
-        className="absolute right-3 top-16 md:right-4 md:top-4 w-80 bg-card border border-border rounded-xl shadow-xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
+        className={[
+          // Positioning: just below the bell button on all screen sizes
+          "fixed right-3 top-[60px] md:right-5 md:top-[68px]",
+          "z-[81]",
+          "w-80",
+          // Surface
+          "bg-card border border-border",
+          "rounded-2xl",
+          "shadow-xl shadow-black/15",
+          "backdrop-blur-sm",
+          "overflow-hidden",
+          // Entrance animation
+          "animate-panel-slide",
+        ].join(" ")}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b">
-          <span className="text-sm font-semibold">Notifications</span>
+        {/* ── Header ── */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border/60">
+          <div className="flex items-center gap-2">
+            <Bell size={14} className="text-primary" />
+            <span className="text-sm font-semibold tracking-tight">Notifications</span>
+            {unreadCount > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full bg-primary/15 text-primary text-[10px] font-bold leading-none">
+                {unreadCount}
+              </span>
+            )}
+          </div>
           {unreadCount > 0 && (
             <button
               onClick={handleMarkAllRead}
-              className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
+              className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-primary transition-colors"
               title="Mark all as read"
             >
-              <CheckCheck size={13} />
+              <CheckCheck size={12} />
               Mark all read
             </button>
           )}
         </div>
 
-        {/* List */}
-        <div className="max-h-[360px] overflow-y-auto divide-y divide-border">
+        {/* ── List ── */}
+        <div className="max-h-[380px] overflow-y-auto divide-y divide-border/50">
           {notifications.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 gap-2 text-muted-foreground">
-              <Bell size={28} strokeWidth={1.5} />
-              <p className="text-sm">No notifications yet</p>
+            <div className="flex flex-col items-center justify-center py-12 gap-3 text-muted-foreground">
+              <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center">
+                <Bell size={22} strokeWidth={1.5} />
+              </div>
+              <p className="text-sm font-medium">All caught up!</p>
+              <p className="text-xs opacity-70">No notifications yet</p>
             </div>
           ) : (
-            notifications.map((n) => (
+            notifications.map((n, i) => (
               <button
                 key={n.id}
                 onClick={() => handleMarkRead(n)}
-                className={`w-full text-left flex items-start gap-3 px-4 py-3 transition-colors ${
+                style={{ animationDelay: `${i * 30}ms` }}
+                className={[
+                  "w-full text-left flex items-start gap-3 px-4 py-3",
+                  "transition-colors duration-150",
                   n.read
-                    ? "hover:bg-muted/50 opacity-60"
-                    : "bg-primary/5 hover:bg-primary/10"
-                }`}
+                    ? "hover:bg-muted/40 opacity-55"
+                    : "bg-primary/[0.04] hover:bg-primary/[0.09]",
+                ].join(" ")}
               >
-                <NotificationIcon type={n.type} />
+                {/* Type icon */}
+                <div className={`mt-0.5 w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
+                  n.read ? "bg-muted/60" : "bg-primary/10"
+                }`}>
+                  <NotificationIcon type={n.type} />
+                </div>
+
+                {/* Message + time */}
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm leading-snug ${n.read ? "text-muted-foreground" : "text-foreground font-medium"}`}>
+                  <p className={`text-[13px] leading-snug ${
+                    n.read ? "text-muted-foreground font-normal" : "text-foreground font-medium"
+                  }`}>
                     {n.message}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
+                  <p className="text-[11px] text-muted-foreground mt-0.5 opacity-80">
                     {relativeTime(n.created_at)}
                   </p>
                 </div>
-                {!n.read && (
-                  <span className="mt-1.5 w-2 h-2 rounded-full bg-primary shrink-0" />
-                )}
-                {n.read && (
-                  <Check size={13} className="mt-1 text-muted-foreground shrink-0" />
-                )}
+
+                {/* Read indicator */}
+                <div className="mt-1.5 shrink-0">
+                  {n.read ? (
+                    <Check size={12} className="text-muted-foreground/50" />
+                  ) : (
+                    <span className="block w-2 h-2 rounded-full bg-primary shadow-sm shadow-primary/40" />
+                  )}
+                </div>
               </button>
             ))
           )}
         </div>
+
+        {/* ── Footer tip ── */}
+        {notifications.length > 0 && (
+          <div className="px-4 py-2 border-t border-border/40 text-center">
+            <p className="text-[10px] text-muted-foreground/60">
+              Showing last {notifications.length} notification{notifications.length !== 1 ? "s" : ""}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

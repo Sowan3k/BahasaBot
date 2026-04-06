@@ -11,6 +11,7 @@ import { AppSidebar } from "@/components/nav/AppSidebar";
 import { CourseGenerationProvider } from "@/lib/course-generation-context";
 import { CourseGenerationProgress } from "@/components/courses/CourseGenerationProgress";
 import { OnboardingModal } from "@/components/onboarding/OnboardingModal";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { profileApi } from "@/lib/api";
 
 /**
@@ -92,6 +93,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         <main className="flex-1 min-w-0 overflow-y-auto flex flex-col pt-14 md:pt-0">
           {children}
         </main>
+        {/* Floating notification bell — fixed top-right on all screen sizes */}
+        <NotificationBell />
         {/* Floating progress card — overlays all pages while a course generates */}
         <CourseGenerationProgress />
         {/* Onboarding modal — shown once on first login, dismissed only after completion */}
