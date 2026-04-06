@@ -11,15 +11,20 @@
  *   Desktop (md+): top-5 right-5   — floating above the main content area
  *   z-[55] — above the mobile header (z-50), below the mobile drawer (z-[70])
  *
- * The NotificationPopover renders its panel as `absolute right-0 mt-3` relative
- * to this fixed container, so no additional positioning needed on the panel.
+ * Hidden on:
+ *   /chatbot/*  — conflicts with the "New chat" button in the chatbot header
+ *   /settings/* — not needed in settings pages (user preference)
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { notificationsApi } from "@/lib/api";
 import type { AppNotification } from "@/lib/types";
 import { NotificationPopover, type NotificationItem } from "@/components/ui/notification-popover";
+
+/** Pages where the floating bell is hidden to avoid visual conflicts. */
+const HIDDEN_ON = ["/chatbot", "/settings"];
 
 const POLL_INTERVAL_MS = 60_000;
 
@@ -45,6 +50,7 @@ function toPopoverItem(n: AppNotification): NotificationItem {
 
 export function NotificationBell() {
   const { status } = useSession();
+  const pathname = usePathname();
   const [items, setItems] = useState<AppNotification[]>([]);
   const pollerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -100,7 +106,9 @@ export function NotificationBell() {
 
   // ── Render ────────────────────────────────────────────────────────────────
 
-  if (status !== "authenticated") return null;
+  // Hide on pages where the floating bell conflicts or isn't wanted
+  const isHidden = HIDDEN_ON.some((p) => pathname?.startsWith(p));
+  if (status !== "authenticated" || isHidden) return null;
 
   return (
     /* Fixed container — the popover panel is absolute relative to this */
