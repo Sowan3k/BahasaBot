@@ -281,28 +281,45 @@ _Status: ✅ Complete_
 ---
 
 ## Phase 15 — Admin Control Panel
-_Status: ✅ Complete_
+_Status: ✅ Complete + Verified (2026-04-06)_
 
-**Goal:** Give admin users a protected dashboard to monitor system usage and view evaluation feedback.
+**Goal:** Give admin users a protected dashboard to monitor system usage, manage users, and view evaluation feedback.
 
 ### Backend
-- [x] backend/services/admin_service.py — get_stats(), get_all_users(), get_feedback_responses(), deactivate_user()
-- [x] backend/routers/admin.py — GET /api/admin/stats (admin only)
-- [x] backend/routers/admin.py — GET /api/admin/users (admin only, paginated)
-- [x] backend/routers/admin.py — GET /api/admin/feedback (admin only, paginated)
-- [x] backend/routers/admin.py — PATCH /api/admin/users/{id}/deactivate (admin only)
-- [x] Role check: require_admin dependency raises HTTP 403 for non-admin users
-- [x] Seed: ADMIN_EMAIL env var — registering with that email auto-grants role='admin'
+- [x] backend/services/admin_service.py — get_stats(), get_all_users() (+ search filter), get_feedback_responses(), deactivate_user(), delete_user() (bcrypt pw verify), reset_user_data() (bcrypt pw verify), get_user_analytics()
+- [x] backend/models/analytics.py — TokenUsageLog + ActivityLog ORM models (token_usage_logs, activity_logs tables)
+- [x] backend/utils/analytics.py — log_tokens() + log_activity() fire-and-forget helpers (try/except, never block requests)
+- [x] backend/db/migrations/versions/20260406_0900_analytics_tables.py — Alembic migration applied
+- [x] backend/services/gemini_service.py — _invoke_with_retry returns (text, input_tokens, output_tokens); generate_text_with_usage() added
+- [x] Activity logging wired into: langchain_service (chatbot), course_service (course_gen), quiz.py (standalone_quiz), courses.py (module_quiz)
+- [x] backend/routers/admin.py — GET /api/admin/stats
+- [x] backend/routers/admin.py — GET /api/admin/users?search=&page=&limit= (paginated + searchable)
+- [x] backend/routers/admin.py — GET /api/admin/users/{id} (full profile + 8 stat counts + recent_courses)
+- [x] backend/routers/admin.py — GET /api/admin/users/{id}/analytics?days=7-90
+- [x] backend/routers/admin.py — GET /api/admin/feedback (paginated)
+- [x] backend/routers/admin.py — PATCH /api/admin/users/{id}/deactivate
+- [x] backend/routers/admin.py — DELETE /api/admin/users/{id} (admin_password body required)
+- [x] backend/routers/admin.py — POST /api/admin/users/{id}/reset (admin_password body required)
+- [x] require_admin dependency — raises HTTP 403 for non-admin; self-target guards → 400
+- [x] ADMIN_EMAIL env var — auto-grants role='admin' on first registration
 - [x] Register admin router in backend/main.py
 
 ### Frontend
-- [x] frontend/app/(dashboard)/admin/page.tsx — stats overview (total users, quiz pass rate, course count, feedback count, avg rating)
-- [x] frontend/app/(dashboard)/admin/users/page.tsx — paginated user table with BPS level, XP, status, deactivate button
-- [x] frontend/app/(dashboard)/admin/feedback/page.tsx — feedback cards with star rating, relevance badge, open text, aggregate distribution chart
-- [x] Sidebar: Admin link shown only if user.role === 'admin' (fetched from /api/profile/)
-- [x] Route protection: each admin page fetches profile on mount and redirects non-admin to /dashboard
-- [x] frontend/lib/api.ts — adminApi (getStats, getUsers, deactivateUser, getFeedback)
-- [x] frontend/lib/types.ts — AdminStats, AdminUser, AdminFeedbackItem, AdminFeedbackResponse
+- [x] frontend/app/(dashboard)/admin/page.tsx — stats overview (6 stat cards) + section nav cards
+- [x] frontend/app/(dashboard)/admin/users/page.tsx — paginated user table, debounced search, BPS badge, deactivate button
+- [x] frontend/app/(dashboard)/admin/users/[userId]/page.tsx — profile card + 8 StatPills + recharts LineChart (daily tokens) + BarChart (daily events) + feature breakdown bars + ConfirmModal for delete/reset with admin password field + day-range selector (7/14/30/60/90d)
+- [x] frontend/app/(dashboard)/admin/feedback/page.tsx — feedback cards, star ratings, aggregate distribution chart
+- [x] Sidebar: Admin link (ShieldCheck icon) shown only when role === 'admin'
+- [x] Route protection: all admin pages redirect non-admin to /dashboard
+- [x] frontend/lib/api.ts — adminApi (getStats, getUsers, getUserDetail, getUserAnalytics, deactivateUser, deleteUser, resetUserData, getFeedback)
+- [x] frontend/lib/types.ts — AdminStats, AdminUser, AdminUserDetail, AdminUserAnalytics, AdminFeedbackItem, AdminFeedbackResponse
+
+### Verified (2026-04-06)
+- [x] All 9 admin endpoints return correct responses (smoke-tested end-to-end)
+- [x] Activity logging confirmed: quiz submit → `standalone_quiz: 1` in activity_logs immediately
+- [x] Password guards: wrong pw → 403, self-target → 400, non-admin → 403
+- [x] Analytics NullType bug fixed: `func.cast(type_=None)` → `datetime.now(utc) - timedelta(days=days)`
+- [x] TypeScript: zero errors after LucideIcon prop type fix
 
 ---
 

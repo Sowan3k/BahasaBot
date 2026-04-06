@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-05 (Phase 15 — Admin Analytics)
+## Last Updated: 2026-04-06 (Phase 15 Debug + Verified)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -23,7 +23,7 @@ _Update this file at the end of every session_
 | Forgot Password (Phase 12) | ✅ Complete | Resend email, token hashing, 15-min TTL; Google account guard; 2 frontend pages |
 | User Profile + Settings (Phase 13) | ✅ Complete | GET + PATCH /api/profile/, change-password endpoint; /settings hub + /profile + /password + /about pages; Settings in sidebar |
 | Onboarding Flow (Phase 14) | ✅ Complete | 5-step modal (Welcome → NativeLang → Goal → Tour → Journey CTA); triggered on first login via layout.tsx; PATCH /api/profile/ with onboarding_completed=true on finish |
-| Admin Control Panel (Phase 15) | ✅ Complete + Analytics | /api/admin/* with require_admin guard; stats, users (search + detail + delete + reset + analytics), feedback; admin password verification on destructive actions; 5 frontend pages; recharts LineChart + BarChart for token/activity data |
+| Admin Control Panel (Phase 15) | ✅ Complete + Verified | /api/admin/* fully tested; stats, users (search + detail + delete + reset + analytics), feedback; password guards verified; recharts LineChart + BarChart confirmed working; analytics bug fixed (NullType → timedelta) |
 
 ## Missing / Broken
 - `frontend/app/(dashboard)/quiz/module/[moduleId]/results/page.tsx` — **stub only** (returns `<div>Module Quiz Results — TODO</div>`). Score + per-question breakdown + Continue/Retry button not yet implemented.
@@ -31,6 +31,38 @@ _Update this file at the end of every session_
 
 ## Known Pre-existing Issue (not caused by recent changes)
 - Module quiz cache-vs-submission misalignment: if a quiz attempt fails (0%) the cache clears and Gemini regenerates new questions. If the user re-submits using answers from the *first* GET, they score 0% again. Mitigation: frontend should re-fetch GET before showing quiz form if previous submission failed. This is a UI flow issue, not a backend bug.
+
+---
+
+## What Was Done This Session (2026-04-06 — Phase 15 Debug + Full Test Pass)
+
+### Bugs Found and Fixed
+
+- **Analytics 500 error — NullType**: `get_user_analytics()` used `func.cast(f"{days} days", type_=None)` which generates a `NullType` column that PostgreSQL/asyncpg rejects. First fix attempt with `Interval` type also failed because asyncpg can't accept a raw string `"30 days"`. Final fix: replaced with `datetime.now(timezone.utc) - timedelta(days=days)` — asyncpg handles Python datetime objects correctly.
+- **Backend serving stale code**: Old uvicorn process (PID from previous session) was holding port 8000. New process couldn't bind and silently fell through. Fixed by identifying PID via `netstat -ano`, killing it, and restarting cleanly.
+- **TypeScript errors in admin pages**: `StatCard` and `StatPill` components used `React.ComponentType<{ size?: number; ... }>` for icon props, which conflicted with Lucide's `ForwardRefExoticComponent` (its `size` accepts `string | number`). Fixed by importing and using `LucideIcon` type directly.
+- **Dead branch TS error in VocabularyTable**: `source_type === "quiz"` was always false (type is `"chatbot" | "course"`). Branch removed.
+
+### Test Results (all pass)
+
+| Endpoint | Result |
+|---|---|
+| `GET /api/admin/stats` | ✅ 16 users, 6 courses, 42.9% quiz pass rate |
+| `GET /api/admin/users?search=sowan` | ✅ Returns filtered results correctly |
+| `GET /api/admin/users/{id}` | ✅ Full profile + 8 activity stat counts |
+| `GET /api/admin/users/{id}/analytics?days=7` | ✅ 7-item daily array, activity logged after quiz |
+| `GET /api/admin/users/{id}/analytics?days=14/30/90` | ✅ Correct array lengths |
+| `POST /api/admin/users/{id}/reset` (wrong password) | ✅ HTTP 403 |
+| `POST /api/admin/users/{id}/reset` (own account) | ✅ HTTP 400 |
+| `PATCH /api/admin/users/{id}/deactivate` (own account) | ✅ HTTP 400 |
+| Activity logging end-to-end | ✅ Quiz submit → `standalone_quiz: 1` logged immediately |
+| TypeScript `npx tsc --noEmit` | ✅ Zero errors |
+
+### Files Modified This Session
+- **`backend/services/admin_service.py`** — analytics query fix: `func.cast(NullType)` → `datetime.now(utc) - timedelta(days=days)`
+- **`frontend/app/(dashboard)/admin/page.tsx`** — `LucideIcon` type fix
+- **`frontend/app/(dashboard)/admin/users/[userId]/page.tsx`** — `LucideIcon` type fix
+- **`frontend/components/dashboard/VocabularyTable.tsx`** — removed dead `source_type === "quiz"` branch
 
 ---
 
