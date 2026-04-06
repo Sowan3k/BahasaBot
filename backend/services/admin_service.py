@@ -453,15 +453,16 @@ async def get_user_analytics(db: AsyncSession, user_id: uuid.UUID, days: int = 3
 
     Raises ValueError if user not found.
     """
-    from datetime import date, timedelta
-    from sqlalchemy import cast, Date as DateType
+    from datetime import date, datetime, timedelta, timezone
+    from sqlalchemy import cast, Date as DateType, text
 
     # Verify user exists
     result = await db.execute(select(User.id).where(User.id == user_id))
     if result.scalar_one_or_none() is None:
         raise ValueError(f"User {user_id} not found")
 
-    cutoff = func.now() - func.cast(f"{days} days", type_=None)
+    # Use Python timedelta so asyncpg receives a proper datetime object
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
 
     # ── Token usage totals ────────────────────────────────────────────────────
     tok_totals = await db.execute(
@@ -497,10 +498,10 @@ async def get_user_analytics(db: AsyncSession, user_id: uuid.UUID, days: int = 3
         )
         .where(
             TokenUsageLog.user_id == user_id,
-            TokenUsageLog.created_at >= func.now() - func.cast(f"{days} days", type_=None),
+            TokenUsageLog.created_at >= cutoff,
         )
-        .group_by("day")
-        .order_by("day")
+        .group_by(text("day"))
+        .order_by(text("day"))
     )
     daily_tokens_raw = {str(row.day): int(row.total) for row in daily_tok.all()}
 
@@ -525,10 +526,10 @@ async def get_user_analytics(db: AsyncSession, user_id: uuid.UUID, days: int = 3
         )
         .where(
             ActivityLog.user_id == user_id,
-            ActivityLog.created_at >= func.now() - func.cast(f"{days} days", type_=None),
+            ActivityLog.created_at >= cutoff,
         )
-        .group_by("day")
-        .order_by("day")
+        .group_by(text("day"))
+        .order_by(text("day"))
     )
     daily_activity_raw = {str(row.day): int(row.count) for row in daily_act.all()}
 
