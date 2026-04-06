@@ -431,3 +431,32 @@ export interface AdminFeedbackResponse {
   avg_rating: number | null;
   rating_distribution: Record<number, number>;
 }
+
+/** GET /api/admin/users/{userId} — full user detail */
+export interface AdminUserDetail {
+  id: string;
+  name: string;
+  email: string;
+  role: "user" | "admin";
+  provider: "email" | "google";
+  is_active: boolean;
+  proficiency_level: ProficiencyLevel;
+  native_language: string | null;
+  learning_goal: string | null;
+  profile_picture_url: string | null;
+  streak_count: number;
+  xp_total: number;
+  onboarding_completed: boolean;
+  created_at: string;
+  stats: {
+    courses_count: number;
+    classes_completed: number;
+    vocab_count: number;
+    grammar_count: number;
+    module_quiz_attempts: number;
+    standalone_quiz_attempts: number;
+    chat_sessions: number;
+    weak_points: number;
+  };
+  recent_courses: { id: string; title: string; topic: string; created_at: string }[];
+}

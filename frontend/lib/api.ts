@@ -9,6 +9,7 @@ import type {
   AdminFeedbackResponse,
   AdminStats,
   AdminUser,
+  AdminUserDetail,
   ChangePasswordPayload,
   ChangePasswordResponse,
   ClassCompleteResponse,
@@ -211,16 +212,33 @@ export const adminApi = {
   getStats: () =>
     apiClient.get<AdminStats>("/api/admin/stats"),
 
-  /** Paginated list of all users. */
-  getUsers: (page = 1, limit = 20) =>
+  /** Paginated + searchable list of all users. */
+  getUsers: (page = 1, limit = 20, search = "") =>
     apiClient.get<PaginatedResponse<AdminUser>>("/api/admin/users", {
-      params: { page, limit },
+      params: { page, limit, search },
     }),
+
+  /** Full profile + activity stats for a single user. */
+  getUserDetail: (userId: string) =>
+    apiClient.get<AdminUserDetail>(`/api/admin/users/${userId}`),
 
   /** Deactivate a user account by ID. */
   deactivateUser: (userId: string) =>
     apiClient.patch<{ id: string; is_active: boolean }>(
       `/api/admin/users/${userId}/deactivate`
+    ),
+
+  /** Permanently delete a user account. Requires admin password confirmation. */
+  deleteUser: (userId: string, adminPassword: string) =>
+    apiClient.delete<void>(`/api/admin/users/${userId}`, {
+      data: { admin_password: adminPassword },
+    }),
+
+  /** Reset all learning data for a user. Requires admin password confirmation. */
+  resetUserData: (userId: string, adminPassword: string) =>
+    apiClient.post<{ id: string; email: string; proficiency_level: string }>(
+      `/api/admin/users/${userId}/reset`,
+      { admin_password: adminPassword }
     ),
 
   /** Paginated evaluation feedback responses with aggregate stats. */

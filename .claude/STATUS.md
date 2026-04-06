@@ -23,7 +23,7 @@ _Update this file at the end of every session_
 | Forgot Password (Phase 12) | ✅ Complete | Resend email, token hashing, 15-min TTL; Google account guard; 2 frontend pages |
 | User Profile + Settings (Phase 13) | ✅ Complete | GET + PATCH /api/profile/, change-password endpoint; /settings hub + /profile + /password + /about pages; Settings in sidebar |
 | Onboarding Flow (Phase 14) | ✅ Complete | 5-step modal (Welcome → NativeLang → Goal → Tour → Journey CTA); triggered on first login via layout.tsx; PATCH /api/profile/ with onboarding_completed=true on finish |
-| Admin Control Panel (Phase 15) | ✅ Complete | /api/admin/* with require_admin guard (403); stats, users, feedback endpoints; ADMIN_EMAIL auto-seeds admin role on register; 3 frontend pages + conditional sidebar link |
+| Admin Control Panel (Phase 15) | ✅ Complete + Enhanced | /api/admin/* with require_admin guard; stats, users (search + detail + delete + reset), feedback endpoints; admin password verification on destructive actions; 4 frontend pages |
 
 ## Missing / Broken
 - `frontend/app/(dashboard)/quiz/module/[moduleId]/results/page.tsx` — **stub only** (returns `<div>Module Quiz Results — TODO</div>`). Score + per-question breakdown + Continue/Retry button not yet implemented.

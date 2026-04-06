@@ -6,18 +6,26 @@ All functions are called from backend/routers/admin.py.
 
 Functions:
   get_stats()              — aggregate system stats (users, courses, quiz pass rate, feedback)
-  get_all_users()          — paginated list of all users
+  get_all_users()          — paginated + searchable list of all users
+  get_user_detail()        — full profile + activity stats for one user
   get_feedback_responses() — paginated evaluation feedback with user name + email
   deactivate_user()        — set user.is_active = False
+  delete_user()            — permanently delete user account (admin password required)
+  reset_user_data()        — clear all learning data, reset BPS level (admin password required)
 """
 
 import uuid
 
+import bcrypt
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.models.chatbot import ChatSession
 from backend.models.course import Course
 from backend.models.evaluation import EvaluationFeedback
+from backend.models.journey import LearningRoadmap
+from backend.models.notification import Notification
+from backend.models.progress import GrammarLearned, UserProgress, VocabularyLearned, WeakPoint
 from backend.models.quiz import ModuleQuizAttempt, StandaloneQuizAttempt
 from backend.models.user import User
 from backend.utils.logger import get_logger
@@ -80,19 +88,33 @@ async def get_stats(db: AsyncSession) -> dict:
 # ── Users ─────────────────────────────────────────────────────────────────────
 
 
-async def get_all_users(db: AsyncSession, page: int, limit: int) -> dict:
+async def get_all_users(db: AsyncSession, page: int, limit: int, search: str = "") -> dict:
     """
     Return a paginated list of all users for the admin user management table.
 
     Fields returned: id, name, email, proficiency_level, role, is_active,
                      streak_count, xp_total, created_at
+
+    Optional search: filters by name OR email (case-insensitive ILIKE).
     """
     offset = (page - 1) * limit
 
-    total = await db.scalar(select(func.count()).select_from(User))
+    base_query = select(User)
+    count_query = select(func.count()).select_from(User)
+
+    if search.strip():
+        pattern = f"%{search.strip()}%"
+        filter_clause = or_(
+            User.name.ilike(pattern),
+            User.email.ilike(pattern),
+        )
+        base_query = base_query.where(filter_clause)
+        count_query = count_query.where(filter_clause)
+
+    total = await db.scalar(count_query)
 
     result = await db.execute(
-        select(User)
+        base_query
         .order_by(User.created_at.desc())
         .offset(offset)
         .limit(limit)
@@ -207,3 +229,205 @@ async def deactivate_user(db: AsyncSession, user_id: uuid.UUID) -> dict:
         raise
 
     return {"id": str(user.id), "is_active": user.is_active}
+
+
+# ── User detail ───────────────────────────────────────────────────────────────
+
+
+async def get_user_detail(db: AsyncSession, user_id: uuid.UUID) -> dict:
+    """
+    Return full profile + activity statistics for a single user.
+
+    Raises ValueError if user not found.
+    """
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise ValueError(f"User {user_id} not found")
+
+    # Activity counts
+    courses_count = await db.scalar(
+        select(func.count()).select_from(Course).where(Course.user_id == user_id)
+    )
+    vocab_count = await db.scalar(
+        select(func.count()).select_from(VocabularyLearned).where(VocabularyLearned.user_id == user_id)
+    )
+    grammar_count = await db.scalar(
+        select(func.count()).select_from(GrammarLearned).where(GrammarLearned.user_id == user_id)
+    )
+    module_quiz_count = await db.scalar(
+        select(func.count()).select_from(ModuleQuizAttempt).where(ModuleQuizAttempt.user_id == user_id)
+    )
+    standalone_quiz_count = await db.scalar(
+        select(func.count()).select_from(StandaloneQuizAttempt).where(StandaloneQuizAttempt.user_id == user_id)
+    )
+    chat_session_count = await db.scalar(
+        select(func.count()).select_from(ChatSession).where(ChatSession.user_id == user_id)
+    )
+    weak_points_count = await db.scalar(
+        select(func.count()).select_from(WeakPoint).where(WeakPoint.user_id == user_id)
+    )
+    classes_completed = await db.scalar(
+        select(func.count()).select_from(UserProgress)
+        .where(UserProgress.user_id == user_id, UserProgress.class_id.isnot(None))
+    )
+
+    # Last 5 courses
+    courses_result = await db.execute(
+        select(Course.id, Course.title, Course.topic, Course.created_at)
+        .where(Course.user_id == user_id)
+        .order_by(Course.created_at.desc())
+        .limit(5)
+    )
+    recent_courses = [
+        {"id": str(r.id), "title": r.title, "topic": r.topic, "created_at": r.created_at.isoformat()}
+        for r in courses_result.all()
+    ]
+
+    return {
+        "id": str(user.id),
+        "name": user.name,
+        "email": user.email,
+        "role": user.role,
+        "provider": user.provider,
+        "is_active": user.is_active,
+        "proficiency_level": user.proficiency_level,
+        "native_language": user.native_language,
+        "learning_goal": user.learning_goal,
+        "profile_picture_url": user.profile_picture_url,
+        "streak_count": user.streak_count,
+        "xp_total": user.xp_total,
+        "onboarding_completed": user.onboarding_completed,
+        "created_at": user.created_at.isoformat(),
+        "stats": {
+            "courses_count": courses_count or 0,
+            "classes_completed": classes_completed or 0,
+            "vocab_count": vocab_count or 0,
+            "grammar_count": grammar_count or 0,
+            "module_quiz_attempts": module_quiz_count or 0,
+            "standalone_quiz_attempts": standalone_quiz_count or 0,
+            "chat_sessions": chat_session_count or 0,
+            "weak_points": weak_points_count or 0,
+        },
+        "recent_courses": recent_courses,
+    }
+
+
+# ── Delete user ───────────────────────────────────────────────────────────────
+
+
+async def delete_user(db: AsyncSession, user_id: uuid.UUID, admin_user: User, admin_password: str) -> None:
+    """
+    Permanently delete a user account and all associated data.
+
+    Admin must supply their own password for confirmation.
+    Raises PermissionError on wrong password, ValueError if target not found.
+    All related rows are removed via CASCADE foreign keys.
+    """
+    # Verify admin password
+    if admin_user.password_hash is None or not bcrypt.checkpw(
+        admin_password.encode("utf-8"), admin_user.password_hash.encode("utf-8")
+    ):
+        raise PermissionError("Incorrect admin password")
+
+    result = await db.execute(select(User).where(User.id == user_id))
+    target = result.scalar_one_or_none()
+    if target is None:
+        raise ValueError(f"User {user_id} not found")
+
+    try:
+        await db.delete(target)
+        await db.commit()
+        logger.info("Admin deleted user", target_id=str(user_id), email=target.email,
+                    admin_id=str(admin_user.id))
+    except Exception as exc:
+        await db.rollback()
+        logger.error("Failed to delete user", user_id=str(user_id), error=str(exc))
+        raise
+
+
+# ── Reset user learning data ──────────────────────────────────────────────────
+
+
+async def reset_user_data(db: AsyncSession, user_id: uuid.UUID, admin_user: User, admin_password: str) -> dict:
+    """
+    Clear all learning data for a user and reset their BPS level to BPS-1.
+
+    Keeps the user account (email, name, password) intact.
+    Admin must supply their own password for confirmation.
+
+    Clears:
+      - courses (cascades to modules, classes, user_progress)
+      - vocabulary_learned, grammar_learned, weak_points
+      - module_quiz_attempts, standalone_quiz_attempts
+      - chat_sessions (cascades to chat_messages)
+      - learning_roadmaps (cascades to roadmap_activity_completions)
+      - notifications
+
+    Resets user columns: proficiency_level, streak_count, xp_total.
+    """
+    # Verify admin password
+    if admin_user.password_hash is None or not bcrypt.checkpw(
+        admin_password.encode("utf-8"), admin_user.password_hash.encode("utf-8")
+    ):
+        raise PermissionError("Incorrect admin password")
+
+    result = await db.execute(select(User).where(User.id == user_id))
+    target = result.scalar_one_or_none()
+    if target is None:
+        raise ValueError(f"User {user_id} not found")
+
+    try:
+        # Delete courses (cascades to modules → classes → user_progress)
+        courses = await db.execute(select(Course).where(Course.user_id == user_id))
+        for course in courses.scalars().all():
+            await db.delete(course)
+
+        # Delete vocab / grammar / weak points
+        for model in (VocabularyLearned, GrammarLearned, WeakPoint):
+            rows = await db.execute(select(model).where(model.user_id == user_id))
+            for row in rows.scalars().all():
+                await db.delete(row)
+
+        # Delete quiz attempts
+        for model in (ModuleQuizAttempt, StandaloneQuizAttempt):
+            rows = await db.execute(select(model).where(model.user_id == user_id))
+            for row in rows.scalars().all():
+                await db.delete(row)
+
+        # Delete chat sessions (cascades to chat_messages)
+        sessions = await db.execute(select(ChatSession).where(ChatSession.user_id == user_id))
+        for session in sessions.scalars().all():
+            await db.delete(session)
+
+        # Delete roadmaps (cascades to roadmap_activity_completions)
+        roadmaps = await db.execute(select(LearningRoadmap).where(LearningRoadmap.user_id == user_id))
+        for roadmap in roadmaps.scalars().all():
+            await db.delete(roadmap)
+
+        # Delete notifications
+        notifs = await db.execute(select(Notification).where(Notification.user_id == user_id))
+        for notif in notifs.scalars().all():
+            await db.delete(notif)
+
+        # Reset user profile columns
+        target.proficiency_level = "BPS-1"
+        target.streak_count = 0
+        target.xp_total = 0
+        db.add(target)
+
+        await db.commit()
+        logger.info("Admin reset user data", target_id=str(user_id), email=target.email,
+                    admin_id=str(admin_user.id))
+    except Exception as exc:
+        await db.rollback()
+        logger.error("Failed to reset user data", user_id=str(user_id), error=str(exc))
+        raise
+
+    return {
+        "id": str(target.id),
+        "email": target.email,
+        "proficiency_level": target.proficiency_level,
+        "streak_count": target.streak_count,
+        "xp_total": target.xp_total,
+    }
