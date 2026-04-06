@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-05 (Phase 15 — Admin Control Panel)
+## Last Updated: 2026-04-05 (Phase 15 — Admin Analytics)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -23,7 +23,7 @@ _Update this file at the end of every session_
 | Forgot Password (Phase 12) | ✅ Complete | Resend email, token hashing, 15-min TTL; Google account guard; 2 frontend pages |
 | User Profile + Settings (Phase 13) | ✅ Complete | GET + PATCH /api/profile/, change-password endpoint; /settings hub + /profile + /password + /about pages; Settings in sidebar |
 | Onboarding Flow (Phase 14) | ✅ Complete | 5-step modal (Welcome → NativeLang → Goal → Tour → Journey CTA); triggered on first login via layout.tsx; PATCH /api/profile/ with onboarding_completed=true on finish |
-| Admin Control Panel (Phase 15) | ✅ Complete + Enhanced | /api/admin/* with require_admin guard; stats, users (search + detail + delete + reset), feedback endpoints; admin password verification on destructive actions; 4 frontend pages |
+| Admin Control Panel (Phase 15) | ✅ Complete + Analytics | /api/admin/* with require_admin guard; stats, users (search + detail + delete + reset + analytics), feedback; admin password verification on destructive actions; 5 frontend pages; recharts LineChart + BarChart for token/activity data |
 
 ## Missing / Broken
 - `frontend/app/(dashboard)/quiz/module/[moduleId]/results/page.tsx` — **stub only** (returns `<div>Module Quiz Results — TODO</div>`). Score + per-question breakdown + Continue/Retry button not yet implemented.
@@ -31,6 +31,27 @@ _Update this file at the end of every session_
 
 ## Known Pre-existing Issue (not caused by recent changes)
 - Module quiz cache-vs-submission misalignment: if a quiz attempt fails (0%) the cache clears and Gemini regenerates new questions. If the user re-submits using answers from the *first* GET, they score 0% again. Mitigation: frontend should re-fetch GET before showing quiz form if previous submission failed. This is a UI flow issue, not a backend bug.
+
+---
+
+## What Was Done This Session (2026-04-05 — Phase 15 Analytics: Token Usage + Activity Tracking)
+
+### Phase 15 Analytics Extension
+
+- **`backend/models/analytics.py`** *(new)* — `TokenUsageLog` (token_usage_logs table: user_id, feature, input_tokens, output_tokens, total_tokens) + `ActivityLog` (activity_logs table: user_id, feature, duration_seconds); both indexed on user_id + created_at
+- **`backend/db/migrations/versions/20260406_0900_analytics_tables.py`** *(new)* — Alembic migration f1a2b3c4d5e6; creates both tables with indexes; applied via `alembic upgrade head`
+- **`backend/utils/analytics.py`** *(new)* — `log_tokens()` + `log_activity()` fire-and-forget helpers; wrapped in try/except with rollback so failures never crash user requests
+- **`backend/services/gemini_service.py`** — `_invoke_with_retry` now returns `(text, input_tokens, output_tokens)`; `generate_text_with_usage()` added; `generate_text()` + `generate_json()` updated to unpack tuple
+- **`backend/services/langchain_service.py`** — step 9 after chat response: `asyncio.create_task(log_activity(..., feature="chatbot"))` (fire-and-forget, no token count in streaming mode)
+- **`backend/services/course_service.py`** — after `save_course()` succeeds: `log_activity(..., feature="course_gen")`
+- **`backend/routers/quiz.py`** — after standalone quiz submit: `log_activity(..., feature="standalone_quiz")`
+- **`backend/routers/courses.py`** — after module quiz submit: `log_activity(..., feature="module_quiz")`
+- **`backend/services/admin_service.py`** — `get_user_analytics(db, user_id, days)`: queries both log tables, zero-fills missing days, returns daily arrays + totals + by_feature breakdowns
+- **`backend/routers/admin.py`** — `GET /api/admin/users/{user_id}/analytics?days=30` (7–90 days); added `DELETE /users/{user_id}` + `POST /users/{user_id}/reset` with `AdminPasswordBody` confirmation
+- **`frontend/app/(dashboard)/admin/users/[userId]/page.tsx`** *(new)* — user profile card + 8 StatPills + analytics section: day-range selector (7/14/30/60/90d), 4 summary stat cards, LineChart (daily tokens) + BarChart (daily events), feature breakdown horizontal bars, ConfirmModal for delete/reset with password field
+- **`frontend/app/(dashboard)/admin/page.tsx`** — fixed `LucideIcon` prop type (was `React.ComponentType<...>`, caused TS error)
+- **`frontend/components/dashboard/VocabularyTable.tsx`** — removed dead `source_type === "quiz"` branch (TS error)
+- **`frontend/lib/types.ts`** + **`frontend/lib/api.ts`** — added `AdminUserDetail`, `AdminUserAnalytics`; `adminApi.getUserDetail`, `getUserAnalytics`, `deleteUser`, `resetUserData`
 
 ---
 
