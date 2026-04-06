@@ -19,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { profileApi } from "@/lib/api";
 
 const BASE_NAV_ITEMS = [
@@ -84,7 +85,10 @@ export function AppSidebar() {
           <Image src="/Project Logo.png" width={28} height={28} alt="BahasaBot" className="rounded-md" />
           <span className="font-heading font-bold text-lg text-foreground">BahasaBot</span>
         </div>
-        <ThemeToggle />
+        <div className="flex items-center gap-1">
+          <NotificationBell />
+          <ThemeToggle />
+        </div>
       </header>
 
       {/* ── MOBILE: overlay backdrop ── */}
@@ -230,6 +234,7 @@ export function AppSidebar() {
                   </span>
                 </div>
               )}
+              <NotificationBell />
               <ThemeToggle />
               <button
                 onClick={() => signOut({ callbackUrl: "/login" })}
@@ -257,7 +262,8 @@ export function AppSidebar() {
                   <span className="text-xs font-medium text-muted-foreground truncate">{userName}</span>
                 </div>
               )}
-              <div className="px-3 py-1">
+              <div className="px-3 py-1 flex items-center gap-1">
+                <NotificationBell />
                 <ThemeToggle />
               </div>
               <button

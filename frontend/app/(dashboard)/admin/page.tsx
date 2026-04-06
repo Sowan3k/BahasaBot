@@ -25,8 +25,8 @@ const ADMIN_SECTIONS = [
     icon: Users,
     label: "User Management",
     description: "View all registered users, BPS levels, and deactivate accounts",
-    color: "text-blue-500",
-    bg: "bg-blue-500/10",
+    color: "text-primary",
+    bg: "bg-secondary",
   },
   {
     href: "/admin/feedback",
@@ -135,8 +135,8 @@ export default function AdminPage() {
             label="Total Users"
             value={stats.total_users}
             icon={Users}
-            color="text-blue-500"
-            bg="bg-blue-500/10"
+            color="text-primary"
+            bg="bg-secondary"
             sub={`${stats.active_users} active`}
           />
           <StatCard

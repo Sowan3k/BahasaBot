@@ -24,11 +24,11 @@ export function ShaderAnimation() {
       }
     `
 
-    // Botanical Garden palette
-    // Fern Green  #4a7c59  →  vec3(0.290, 0.486, 0.349)
-    // Marigold    #f9a620  →  vec3(0.976, 0.651, 0.125)
-    // Terracotta  #b7472a  →  vec3(0.718, 0.278, 0.165)
-    // Cream       #f5f3ed  →  vec3(0.961, 0.953, 0.929)
+    // BahasaBot Design System palette (dark-mode shader)
+    // Primary:    #8a9f7b  →  vec3(0.541, 0.624, 0.482)  — olive sage
+    // Accent:     #a18f5c  →  vec3(0.635, 0.561, 0.361)  — warm wheat (dark)
+    // Ring:       #9db18c  →  vec3(0.616, 0.694, 0.549)  — soft sage
+    // Background: #e4d7b0  →  vec3(0.894, 0.843, 0.690)  — cream (light streaks)
     const fragmentShader = `
       precision highp float;
       uniform vec2 resolution;
@@ -39,13 +39,13 @@ export function ShaderAnimation() {
         float t = time * 0.05;
         float lineWidth = 0.003;
 
-        vec3 fernGreen  = vec3(0.290, 0.486, 0.349);
-        vec3 marigold   = vec3(0.976, 0.651, 0.125);
-        vec3 terracotta = vec3(0.718, 0.278, 0.165);
-        vec3 cream      = vec3(0.961, 0.953, 0.929);
+        vec3 primary = vec3(0.541, 0.624, 0.482);   // #8a9f7b — olive sage
+        vec3 accent  = vec3(0.635, 0.561, 0.361);   // #a18f5c — warm wheat
+        vec3 ringCol = vec3(0.616, 0.694, 0.549);   // #9db18c — soft sage
+        vec3 bgLight = vec3(0.894, 0.843, 0.690);   // #e4d7b0 — cream
 
-        // Deep forest green background
-        vec3 color = vec3(0.050, 0.102, 0.063);
+        // Deep warm-brown background (darker than #3a3529 for depth)
+        vec3 color = vec3(0.102, 0.090, 0.067);
 
         for (int i = 0; i < 5; i++) {
           float fi = float(i);
@@ -56,10 +56,10 @@ export function ShaderAnimation() {
           float r2 = w / abs(fract(t - 0.02 + fi * 0.01) * 5.0 - length(uv) + mod(uv.x + uv.y, 0.2));
           float r3 = w / abs(fract(t - 0.03 + fi * 0.01) * 5.0 - length(uv) + mod(uv.x + uv.y, 0.2));
 
-          color += r0 * fernGreen
-                 + r1 * marigold
-                 + r2 * terracotta
-                 + r3 * cream * 0.4;
+          color += r0 * primary
+                 + r1 * accent
+                 + r2 * ringCol
+                 + r3 * bgLight * 0.4;
         }
 
         gl_FragColor = vec4(color, 1.0);
@@ -131,7 +131,7 @@ export function ShaderAnimation() {
     <div
       ref={containerRef}
       className="w-full h-full"
-      style={{ background: "#0d1a0f", overflow: "hidden" }}
+      style={{ background: "#1a160f", overflow: "hidden" }}
     />
   )
 }

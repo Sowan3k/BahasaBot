@@ -33,6 +33,7 @@ import type {
   UserProfile,
   VocabularyListResponse,
   WeakPointsResponse,
+  NotificationListResponse,
 } from "@/lib/types";
 
 const apiClient = axios.create({
@@ -253,4 +254,22 @@ export const adminApi = {
     apiClient.get<AdminFeedbackResponse>("/api/admin/feedback", {
       params: { page, limit },
     }),
+};
+
+// ── Notifications API (Phase 17) ──────────────────────────────────────────────
+
+export const notificationsApi = {
+  /** List the last 20 notifications with unread count. */
+  getNotifications: () =>
+    apiClient.get<NotificationListResponse>("/api/notifications/"),
+
+  /** Mark a single notification as read by its ID. */
+  markRead: (notificationId: string) =>
+    apiClient.post<{ id: string; read: boolean }>(
+      `/api/notifications/${notificationId}/read`
+    ),
+
+  /** Mark all notifications as read. */
+  markAllRead: () =>
+    apiClient.post<{ success: boolean }>("/api/notifications/read-all"),
 };

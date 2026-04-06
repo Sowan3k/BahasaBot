@@ -10,6 +10,7 @@ import Link from "next/link";
 import { standaloneQuizApi } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SpeakerButton } from "@/components/ui/SpeakerButton";
 import type {
   StandaloneQuizQuestion,
   StandaloneQuizResult,
@@ -25,10 +26,10 @@ const BPS_LABEL: Record<string, string> = {
 };
 
 const BPS_COLOR: Record<string, string> = {
-  "BPS-1": "text-slate-600",
-  "BPS-2": "text-blue-600",
-  "BPS-3": "text-emerald-600",
-  "BPS-4": "text-violet-600",
+  "BPS-1": "text-muted-foreground",
+  "BPS-2": "text-ring",
+  "BPS-3": "text-primary",
+  "BPS-4": "text-foreground",
 };
 
 export default function AdaptiveQuizPage() {
@@ -213,9 +214,10 @@ export default function AdaptiveQuizPage() {
                   </span>
                 </p>
                 {!qr.is_correct && (
-                  <p>
+                  <p className="flex items-center gap-1.5 flex-wrap">
                     <span className="text-muted-foreground">Correct answer: </span>
                     <span className="text-green-600 font-medium">{qr.correct_answer}</span>
+                    <SpeakerButton word={qr.correct_answer} size="xs" />
                   </p>
                 )}
                 {qr.explanation && (
@@ -255,13 +257,13 @@ export default function AdaptiveQuizPage() {
 
       {/* Question type legend */}
       <div className="flex flex-wrap gap-2 text-xs">
-        <span className="rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-400 px-2.5 py-1 font-medium">
+        <span className="rounded-full bg-secondary text-secondary-foreground px-2.5 py-1 font-medium">
           Multiple Choice
         </span>
-        <span className="rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 px-2.5 py-1 font-medium">
+        <span className="rounded-full bg-accent text-accent-foreground px-2.5 py-1 font-medium">
           Fill in Blank
         </span>
-        <span className="rounded-full bg-violet-500/10 text-violet-700 dark:text-violet-400 px-2.5 py-1 font-medium">
+        <span className="rounded-full bg-muted text-muted-foreground px-2.5 py-1 font-medium">
           Translation
         </span>
       </div>
@@ -312,15 +314,15 @@ export default function AdaptiveQuizPage() {
 const TYPE_BADGE: Record<string, { label: string; className: string }> = {
   mcq: {
     label: "Multiple Choice",
-    className: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
+    className: "bg-secondary text-secondary-foreground",
   },
   fill_in_blank: {
     label: "Fill in Blank",
-    className: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
+    className: "bg-accent text-accent-foreground",
   },
   translation: {
     label: "Translation",
-    className: "bg-violet-500/10 text-violet-700 dark:text-violet-400",
+    className: "bg-muted text-muted-foreground",
   },
 };
 

@@ -260,8 +260,8 @@ export default function ChatbotPage() {
 
       {/* ── Waves background — always visible ── */}
       <Waves
-        strokeColor="#4a7c59"
-        backgroundColor={theme === "dark" ? "#0d1a11" : "#f5f3ed"}
+        strokeColor={theme === "dark" ? "#8a9f7b" : "#8d9d4f"}
+        backgroundColor={theme === "dark" ? "#3a3529" : "#decea0"}
         pointerSize={0.5}
       />
 

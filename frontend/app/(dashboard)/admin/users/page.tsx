@@ -18,10 +18,10 @@ import { adminApi, profileApi } from "@/lib/api";
 import type { AdminUser, PaginatedResponse } from "@/lib/types";
 
 const BPS_COLORS: Record<string, string> = {
-  "BPS-1": "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-  "BPS-2": "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-  "BPS-3": "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
-  "BPS-4": "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+  "BPS-1": "bg-muted text-muted-foreground",
+  "BPS-2": "bg-secondary text-secondary-foreground",
+  "BPS-3": "bg-accent text-accent-foreground",
+  "BPS-4": "bg-primary text-primary-foreground",
 };
 
 export default function AdminUsersPage() {

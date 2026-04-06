@@ -21,7 +21,7 @@ interface Props {
 function scoreColor(score: number): string {
   if (score < 0.3) return "#ef4444"; // red-500
   if (score < 0.6) return "#f97316"; // orange-500
-  return "#f9a620";                  // marigold
+  return "#8d9d4f";                  // primary olive
 }
 
 interface ChartDatum {
@@ -73,7 +73,16 @@ export default function WeakPointsChart({ weakPoints }: Props) {
               `${value}%`,
               props.payload?.fullTopic ?? "Strength",
             ]}
-            cursor={{ fill: "hsl(var(--muted))" }}
+            cursor={{ fill: "var(--muted)" }}
+            contentStyle={{
+              backgroundColor: "var(--popover)",
+              border: "1px solid var(--border)",
+              borderRadius: "var(--radius)",
+              color: "var(--popover-foreground)",
+              fontSize: 12,
+            }}
+            itemStyle={{ color: "var(--popover-foreground)" }}
+            labelStyle={{ color: "var(--popover-foreground)", fontWeight: 600 }}
           />
           <Bar dataKey="strength" radius={[0, 4, 4, 0]}>
             {data.map((entry, index) => (
@@ -96,7 +105,7 @@ export default function WeakPointsChart({ weakPoints }: Props) {
           Needs work (30–60%)
         </span>
         <span className="flex items-center gap-1">
-          <span className="inline-block w-3 h-3 rounded-sm" style={{ backgroundColor: "#f9a620" }} />
+          <span className="inline-block w-3 h-3 rounded-sm" style={{ backgroundColor: "#8d9d4f" }} />
           Improving (60–80%)
         </span>
       </div>

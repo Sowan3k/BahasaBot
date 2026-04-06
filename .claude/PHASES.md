@@ -324,38 +324,43 @@ _Status: ✅ Complete + Verified (2026-04-06)_
 ---
 
 ## Phase 16 — Pronunciation Audio + SpeakerButton
-_Status: 🔲 Not started_
+_Status: ✅ Complete + Debugged_
 
 **Goal:** Add one-click Malay pronunciation to every vocabulary word across the app.
 
-- [ ] frontend/lib/hooks/usePronunciation.ts — Web Speech API hook: speak(word, lang='ms-MY') with fallback chain ms-MY → ms → default
-- [ ] frontend/components/ui/SpeakerButton.tsx — small speaker icon button that calls usePronunciation hook on click
-- [ ] frontend/components/chatbot/ChatMessage.tsx — add SpeakerButton to each VocabPill
-- [ ] frontend/app/(dashboard)/courses/[courseId]/modules/[moduleId]/classes/[classId]/page.tsx — add SpeakerButton next to each vocab word
-- [ ] frontend/components/quiz/QuizQuestion.tsx — add SpeakerButton next to Malay words in explanations
-- [ ] frontend/components/dashboard/VocabularyTable.tsx — add SpeakerButton in each vocab row
-- [ ] Test fallback: verify behaviour when ms-MY voice is unavailable
+- [x] frontend/lib/hooks/usePronunciation.ts — Web Speech API hook: speak(word, lang='ms-MY') with fallback chain ms-MY → ms → default; voiceschanged listener for Chrome async loading; rate=0.85
+- [x] frontend/components/ui/SpeakerButton.tsx — reusable Volume2 icon button; renders null when isSupported=false; stopPropagation on click; sizes: sm (14px) / xs (12px)
+- [x] frontend/components/chatbot/VocabularyHighlight.tsx — VocabPill rewritten: speaker button inline (uses shared hook instance, not SpeakerButton component); smart tooltip overflow positioning via getBoundingClientRect; delayed-hide (120ms) so mouse can travel pill → tooltip; speaker button inside tooltip (Volume2 12px, calls speak(malay)); arrow direction tracks vertical flip
+- [x] frontend/app/(dashboard)/courses/[courseId]/modules/[moduleId]/classes/[classId]/page.tsx — SpeakerButton (sm) beside each vocab word heading in VocabularySection
+- [x] frontend/app/(dashboard)/quiz/adaptive/page.tsx — SpeakerButton (xs) next to correct_answer in per-question results breakdown
+- [x] frontend/components/dashboard/VocabularyTable.tsx — SpeakerButton (xs) inline in Malay Word column
+- [x] TypeScript: zero errors after tsc --noEmit
+
+### Post-implementation bugs fixed (debug pass)
+- [x] Double hook instance: VocabPill was calling usePronunciation() AND rendering SpeakerButton (which also calls it) — fixed by inlining the outer button and removing the SpeakerButton import
+- [x] Dead variable: `const vh = window.innerHeight` in computePlacement was declared but never used — removed
+- [x] Arrow offset: `right-3`/`left-3` hardcoded offsets for flipped tooltip didn't align with pill center — simplified to always `left-1/2 -translate-x-1/2`
 
 ---
 
 ## Phase 17 — Notification System
-_Status: 🔲 Not started_
+_Status: ✅ Complete (2026-04-07)_
 
 **Goal:** In-app bell notifications for streaks, XP milestones, Journey reminders, and course completion.
 
 ### Backend
-- [ ] backend/routers/notifications.py — GET /api/notifications/ (last 20, with read status)
-- [ ] backend/routers/notifications.py — POST /api/notifications/{id}/read
-- [ ] backend/routers/notifications.py — POST /api/notifications/read-all
-- [ ] backend/services/gamification_service.py — create_notification() helper used by all milestone triggers
-- [ ] Register notifications router in backend/main.py
+- [x] backend/routers/notifications.py — GET /api/notifications/ (last 20, with read status)
+- [x] backend/routers/notifications.py — POST /api/notifications/{id}/read
+- [x] backend/routers/notifications.py — POST /api/notifications/read-all
+- [x] backend/services/gamification_service.py — create_notification() + create_notification_fire_and_forget() helpers
+- [x] Register notifications router + import Notification model in backend/main.py
 
 ### Frontend
-- [ ] frontend/components/notifications/NotificationBell.tsx — bell icon in top nav, unread count badge, click to toggle panel
-- [ ] frontend/components/notifications/NotificationPanel.tsx — dropdown list of last 10 notifications, mark read on click
-- [ ] frontend/app/(dashboard)/layout.tsx — render NotificationBell in top nav bar
-- [ ] frontend/lib/api.ts — add notificationsApi functions
-- [ ] frontend/lib/types.ts — add Notification interface
+- [x] frontend/components/notifications/NotificationBell.tsx — bell icon with unread badge, 60s polling, opens/closes panel
+- [x] frontend/components/notifications/NotificationPanel.tsx — dropdown list of last 20 notifications, per-type icons, mark read on click, mark-all-read button
+- [x] frontend/components/nav/AppSidebar.tsx — NotificationBell wired into mobile header bar + desktop sidebar footer (both collapsed and expanded states)
+- [x] frontend/lib/api.ts — notificationsApi (getNotifications, markRead, markAllRead)
+- [x] frontend/lib/types.ts — AppNotification interface, NotificationType union, NotificationListResponse
 
 ---
 

@@ -34,8 +34,8 @@ export default function BPSProgressBar({ level }: Props) {
             <div
               className={`h-2.5 rounded-full transition-colors ${
                 i <= currentIndex
-                  ? "bg-accent"
-                  : "bg-muted"
+                  ? "bg-primary"
+                  : "bg-border"
               }`}
             />
             <p

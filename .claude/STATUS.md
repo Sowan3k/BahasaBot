@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-06 (Phase 15 Debug + Verified)
+## Last Updated: 2026-04-07 (Phase 17 complete — Notification System)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -24,6 +24,8 @@ _Update this file at the end of every session_
 | User Profile + Settings (Phase 13) | ✅ Complete | GET + PATCH /api/profile/, change-password endpoint; /settings hub + /profile + /password + /about pages; Settings in sidebar |
 | Onboarding Flow (Phase 14) | ✅ Complete | 5-step modal (Welcome → NativeLang → Goal → Tour → Journey CTA); triggered on first login via layout.tsx; PATCH /api/profile/ with onboarding_completed=true on finish |
 | Admin Control Panel (Phase 15) | ✅ Complete + Verified | /api/admin/* fully tested; stats, users (search + detail + delete + reset + analytics), feedback; password guards verified; recharts LineChart + BarChart confirmed working; analytics bug fixed (NullType → timedelta) |
+| Pronunciation Audio (Phase 16) | ✅ Complete + Debugged | usePronunciation hook (ms-MY → ms → default fallback); SpeakerButton component; wired into VocabPills (chatbot), course class vocab cards, quiz results breakdown, dashboard vocabulary table; VocabPill tooltip: smart overflow positioning (getBoundingClientRect), delayed-hide, speaker button inside tooltip; 3 post-implementation bugs fixed (double hook, dead variable, wrong arrow offset) |
+| Notification System (Phase 17) | ✅ Complete | GET /api/notifications/ (last 20 + unread_count), POST mark-read, POST read-all; gamification_service.py with create_notification() + fire-and-forget wrapper; NotificationBell (60s polling, unread badge) + NotificationPanel (per-type icons, relative timestamps, mark-all-read); wired into AppSidebar mobile header + desktop footer (both collapsed/expanded) |
 
 ## Missing / Broken
 - `frontend/app/(dashboard)/quiz/module/[moduleId]/results/page.tsx` — **stub only** (returns `<div>Module Quiz Results — TODO</div>`). Score + per-question breakdown + Continue/Retry button not yet implemented.
@@ -31,6 +33,82 @@ _Update this file at the end of every session_
 
 ## Known Pre-existing Issue (not caused by recent changes)
 - Module quiz cache-vs-submission misalignment: if a quiz attempt fails (0%) the cache clears and Gemini regenerates new questions. If the user re-submits using answers from the *first* GET, they score 0% again. Mitigation: frontend should re-fetch GET before showing quiz form if previous submission failed. This is a UI flow issue, not a backend bug.
+
+---
+
+## What Was Done This Session (2026-04-07 — Phase 17: Notification System)
+
+### Files Created
+- **`backend/services/gamification_service.py`** — `create_notification(db, user_id, type, message)` + `create_notification_fire_and_forget()` non-blocking wrapper (try/except, never disrupts request).
+- **`backend/routers/notifications.py`** — 3 endpoints with Pydantic response schemas:
+  - `GET /api/notifications/` — last 20 newest-first, returns `{notifications, unread_count}`
+  - `POST /api/notifications/read-all` — registered before `/{id}/read` to avoid UUID path conflict
+  - `POST /api/notifications/{notification_id}/read` — 404 if not owned by caller
+- **`frontend/components/notifications/NotificationBell.tsx`** — bell icon + red badge; polls every 60s; refreshes on open; optimistic mark-read state updates.
+- **`frontend/components/notifications/NotificationPanel.tsx`** — dropdown with per-type icons (Flame/Star/Map/BookOpen/Trophy), relative timestamps, mark-all-read button, empty state. `fixed inset-0` backdrop closes on outside click.
+
+### Files Modified
+- **`backend/main.py`** — added `notifications` router import + `app.include_router(...)`; added `backend.models.notification` model import.
+- **`frontend/lib/types.ts`** — added `AppNotification`, `NotificationType`, `NotificationListResponse`.
+- **`frontend/lib/api.ts`** — added `notificationsApi` (`getNotifications`, `markRead`, `markAllRead`).
+- **`frontend/components/nav/AppSidebar.tsx`** — `NotificationBell` wired in 3 locations: mobile header bar, desktop collapsed footer, desktop expanded footer.
+
+### Test Results (2026-04-07)
+| Check | Result |
+|---|---|
+| `tsc --noEmit` (frontend) | ✅ 0 errors |
+| Python syntax check (all 3 backend files) | ✅ OK |
+| `GET /api/notifications/` (fresh user) | ✅ 200, unread_count=0 |
+| Seed 3 notifications via `create_notification()` | ✅ Logged + stored |
+| `GET /api/notifications/` after seed | ✅ 200, unread_count=3, items=3 |
+| `POST /api/notifications/{id}/read` | ✅ 200, read=True |
+| `GET` after single mark-read | ✅ unread_count=2 |
+| `POST /api/notifications/read-all` | ✅ 200, success=True |
+| `GET` after read-all | ✅ unread_count=0 |
+| Invalid Bearer token | ✅ 401 |
+
+---
+
+## What Was Done This Session (2026-04-06 — VocabPill Debug Pass)
+
+### Bugs Found and Fixed in `VocabularyHighlight.tsx`
+
+End-to-end debug pass over all Phase 16 + tooltip changes. Three bugs identified and fixed:
+
+| # | Bug | Root Cause | Fix |
+|---|-----|-----------|-----|
+| 1 | Double `usePronunciation` hook instances | `VocabPill` called the hook directly AND rendered `<SpeakerButton>` which also called it internally — two hook instances per pill, doubling `voiceschanged` event listeners | Removed `<SpeakerButton>` import from VocabularyHighlight; inlined the outer speaker button as a raw `<button>` using `speak`/`isSupported` already in scope from VocabPill's single hook call |
+| 2 | Unused `vh` variable in `computePlacement` | `const vh = window.innerHeight` declared but never read (dead code) | Removed the declaration |
+| 3 | Arrow misaligned on flipped tooltip | `right-3`/`left-3` (12px hardcoded) used as arrow offset in right/left-flipped cases — doesn't track actual pill center | Simplified `arrowX` to always `"left-1/2 -translate-x-1/2"` — clean, consistent |
+
+**Verification:** `npx tsc --noEmit` → zero errors; `/chatbot`, `/dashboard` compile clean (200) with no runtime errors in dev server log.
+
+---
+
+## What Was Done This Session (2026-04-06 — VocabPill Tooltip Fixes)
+
+### VocabPill — Overflow Fix + Speaker Button in Tooltip
+
+**File:** `frontend/components/chatbot/VocabularyHighlight.tsx`
+
+- **Tooltip overflow**: Added `computePlacement()` that calls `getBoundingClientRect()` on the pill ref on every hover open. Checks three cases: right-overflow (`alignRight: true` → `right-0`), left-overflow (`alignLeft: true` → `left-0`), top-overflow (`openBelow: true` → `top-full mt-1.5`). Arrow direction and horizontal alignment update to match.
+- **Delayed hide**: Replaced instant `setShowTooltip(false)` with a 120 ms `setTimeout` stored in `hideTimer` ref. Both the pill button and the tooltip itself call `openTooltip` on `mouseEnter` and `scheduleClose` on `mouseLeave` — mouse can travel pill → tooltip without flicker. Timer cleared on unmount.
+- **Speaker button inside tooltip**: `usePronunciation` hook called in VocabPill; tooltip content is now a flex row: meaning text + `Volume2` button (12px). `pointer-events-none` removed from tooltip so button is clickable. Button calls `speak(malay)` and has its own `onMouseEnter={openTooltip}` to prevent accidental close during interaction.
+- **Phase 16 SpeakerButton outside the pill** retained (not removed).
+
+---
+
+## What Was Done This Session (2026-04-06 — Phase 16: Pronunciation Audio)
+
+### Phase 16 — Pronunciation Audio + SpeakerButton
+
+- **`frontend/lib/hooks/usePronunciation.ts`** *(new)* — Web Speech API hook; `speak(word)` function with voice selection fallback chain: ms-MY → ms → default (lang hint). Uses `voiceschanged` listener for Chrome async voice loading. Rate: 0.85 (learner-friendly). Returns `{ speak, isSpeaking, isSupported }`.
+- **`frontend/components/ui/SpeakerButton.tsx`** *(new)* — Reusable Volume2 icon button; renders `null` when `isSupported === false` (no SSR issues); `e.stopPropagation()` prevents parent card/row click interference; two sizes: `sm` (14px) and `xs` (12px).
+- **`frontend/components/chatbot/VocabularyHighlight.tsx`** — `SpeakerButton` (xs) added after each VocabPill button. Outer `<span>` changed from `inline-block` to `inline-flex items-center` to align pill and speaker icon.
+- **`frontend/app/(dashboard)/courses/[courseId]/modules/[moduleId]/classes/[classId]/page.tsx`** — `SpeakerButton` (sm) added beside each vocab word heading in `VocabularySection`.
+- **`frontend/app/(dashboard)/quiz/adaptive/page.tsx`** — `SpeakerButton` (xs) added next to `correct_answer` in per-question results breakdown (only shown when answer is wrong, so user can hear the correct Malay word).
+- **`frontend/components/dashboard/VocabularyTable.tsx`** — `SpeakerButton` (xs) added inline in the Malay Word cell.
+- **TypeScript:** `npx tsc --noEmit` — zero errors.
 
 ---
 
@@ -372,6 +450,6 @@ All three Gemini prompts in `course_service.py` said "Use Malaysian Bahasa Melay
 ---
 
 ## Next Priority
-1. **Phase 16 — Pronunciation Audio** — `usePronunciation.ts` hook + `SpeakerButton.tsx`, wired into vocab pills, course class pages, quiz explanations, dashboard vocab table.
+1. **Phase 17 — Notification System** — bell icon, NotificationBell + NotificationPanel components, backend router + gamification_service.
 2. **Module Quiz Results Page** — implement `quiz/module/[moduleId]/results/page.tsx` (still a TODO stub).
 3. **Deploy** — push backend to Railway, frontend to Vercel, set all env vars, final smoke test.

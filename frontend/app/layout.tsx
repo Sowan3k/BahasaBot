@@ -1,14 +1,32 @@
-import { Inter, Space_Grotesk } from "next/font/google";
+import { Merriweather, Source_Serif_4, JetBrains_Mono } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { Providers } from "@/components/providers";
 import type { Metadata } from "next";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
-const spaceGrotesk = Space_Grotesk({
+// Body font — Merriweather (serif used as the default body typeface)
+const merriweather = Merriweather({
   subsets: ["latin"],
-  variable: "--font-heading",
+  variable: "--font-sans",
+  weight: ["300", "400", "700", "900"],
+  display: "swap",
+});
+
+// Heading font — Source Serif 4 for page titles, section headers
+const sourceSerif4 = Source_Serif_4({
+  subsets: ["latin"],
+  variable: "--font-serif",
+  weight: ["300", "400", "600", "700"],
+  style: ["normal", "italic"],
+  display: "swap",
+});
+
+// Monospace font — JetBrains Mono for code blocks, quiz answers
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
   weight: ["400", "500", "600", "700"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -37,7 +55,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={cn("font-sans", inter.variable, spaceGrotesk.variable)} suppressHydrationWarning>
+    <html
+      lang="en"
+      className={cn(
+        "font-sans",
+        merriweather.variable,
+        sourceSerif4.variable,
+        jetbrainsMono.variable,
+      )}
+      suppressHydrationWarning
+    >
       <head>
         {/* Inline script — runs before hydration to apply saved/system theme with no flash */}
         <script

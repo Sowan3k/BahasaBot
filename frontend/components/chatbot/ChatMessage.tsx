@@ -165,7 +165,7 @@ export default function ChatMessage({
       <div
         className={`rounded-2xl px-4 py-3 shadow-sm
           ${isUser
-            ? "max-w-sm bg-blue-600 text-white rounded-br-sm"
+            ? "max-w-sm bg-primary text-primary-foreground rounded-br-sm"
             : "max-w-2xl bg-card text-card-foreground border border-border rounded-bl-sm"
           }`}
       >

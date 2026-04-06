@@ -103,7 +103,7 @@ export default function ForgotPasswordPage() {
             className="text-center space-y-4"
           >
             <div className="flex justify-center">
-              <CheckCircle className="w-12 h-12 text-[#4a7c59]" />
+              <CheckCircle className="w-12 h-12 text-primary" />
             </div>
             <p className="text-white/80 text-sm leading-relaxed">
               If that email is registered, you&apos;ll receive a reset link shortly.
@@ -125,7 +125,7 @@ export default function ForgotPasswordPage() {
             animate={{ opacity: 1, y: 0 }}
             className="space-y-4"
           >
-            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg px-4 py-3 text-sm text-blue-300 text-center leading-relaxed">
+            <div className="bg-accent border border-border rounded-lg px-4 py-3 text-sm text-white/80 text-center leading-relaxed">
               This account uses <strong>Sign in with Google</strong>.
               To change your password, visit your Google account settings at{" "}
               <span className="underline">myaccount.google.com</span>.
@@ -198,7 +198,7 @@ export default function ForgotPasswordPage() {
               className="w-full relative group/button"
             >
               <div className="absolute inset-0 bg-white/10 rounded-lg blur-lg opacity-0 group-hover/button:opacity-60 transition-opacity duration-300" />
-              <div className="relative overflow-hidden bg-[#4a7c59] hover:bg-[#3d6b4a] text-white font-medium h-10 rounded-lg transition-all duration-300 flex items-center justify-center">
+              <div className="relative overflow-hidden bg-primary hover:opacity-90 text-primary-foreground font-medium h-10 rounded-lg transition-all duration-300 flex items-center justify-center">
                 <AnimatePresence mode="wait">
                   {isSubmitting ? (
                     <motion.div

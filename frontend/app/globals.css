@@ -2,87 +2,90 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Botanical Garden Theme ────────────────────────────────────────────────
-   Fern Green:  #4a7c59  →  hsl(138 25% 39%)   — primary / brand
-   Marigold:    #f9a620  →  hsl(37  95% 55%)   — accent / highlight
-   Terracotta:  #b7472a  →  hsl(12  63% 44%)   — destructive / warning
-   Cream:       #f5f3ed  →  hsl(45  29% 94%)   — background
+/* ── BahasaBot Design System ────────────────────────────────────────────────
+   Botanical / Olive palette
+   Primary:     #8d9d4f  — olive green
+   Accent:      #dbc894  — warm wheat
+   Background:  #e4d7b0  — cream parchment
+   Foreground:  #5c4b3e  — dark walnut
 ─────────────────────────────────────────────────────────────────────────── */
+
 @layer base {
   :root {
-    /* Backgrounds */
-    --background: 45 29% 94%;
-    --foreground: 138 30% 10%;
-
-    /* Cards / Popovers */
-    --card: 40 30% 97%;
-    --card-foreground: 138 30% 10%;
-    --popover: 45 30% 98%;
-    --popover-foreground: 138 30% 10%;
-
-    /* Primary — Fern Green */
-    --primary: 138 25% 39%;
-    --primary-foreground: 45 29% 94%;
-
-    /* Secondary — soft sage */
-    --secondary: 138 15% 86%;
-    --secondary-foreground: 138 25% 25%;
-
-    /* Muted */
-    --muted: 45 20% 89%;
-    --muted-foreground: 138 10% 45%;
-
-    /* Accent — Marigold */
-    --accent: 37 95% 55%;
-    --accent-foreground: 37 30% 10%;
-
-    /* Destructive — Terracotta */
-    --destructive: 12 63% 44%;
-    --destructive-foreground: 0 0% 98%;
-
-    /* Borders / Inputs / Ring */
-    --border: 138 15% 82%;
-    --input: 138 15% 82%;
-    --ring: 138 25% 39%;
-
-    --radius: 0.5rem;
+    --card: #e7dbbf;
+    --ring: #9db18c;
+    --input: #dbc894;
+    --muted: #decea0;
+    --accent: #dbc894;
+    --border: #b19681;
+    --radius: 0.425rem;
+    --chart-1: #9db18c;
+    --chart-2: #8a9f7b;
+    --chart-3: #bac9b4;
+    --chart-4: #71856a;
+    --chart-5: #5e6e58;
+    --popover: #f3ead2;
+    --primary: #8d9d4f;
+    --sidebar: #e2d1a2;
+    --secondary: #decea0;
+    --background: #e4d7b0;
+    --foreground: #5c4b3e;
+    --destructive: #d98b7e;
+    --shadow-blur: 2px;
+    --shadow-color: hsl(88 22% 35% / 0.15);
+    --sidebar-ring: #9db18c;
+    --shadow-spread: 0px;
+    --shadow-opacity: 0.15;
+    --sidebar-accent: #eae5d9;
+    --sidebar-border: #e5e0d4;
+    --card-foreground: #5c4b3e;
+    --shadow-offset-x: 3px;
+    --shadow-offset-y: 3px;
+    --sidebar-primary: #9db18c;
+    --muted-foreground: #85766a;
+    --accent-foreground: #5c4b3e;
+    --popover-foreground: #5c4b3e;
+    --primary-foreground: #fdfbf6;
+    --sidebar-foreground: #5c4b3e;
+    --secondary-foreground: #5c4b3e;
+    --destructive-foreground: #faf8f2;
+    --sidebar-accent-foreground: #5c4b3e;
+    --sidebar-primary-foreground: #fdfbf6;
   }
 
   .dark {
-    /* Backgrounds — deep forest */
-    --background: 138 30% 8%;
-    --foreground: 45 29% 92%;
-
-    /* Cards / Popovers */
-    --card: 138 25% 12%;
-    --card-foreground: 45 29% 92%;
-    --popover: 138 25% 10%;
-    --popover-foreground: 45 29% 92%;
-
-    /* Primary — lighter fern for dark bg */
-    --primary: 138 30% 60%;
-    --primary-foreground: 138 30% 8%;
-
-    /* Secondary */
-    --secondary: 138 15% 20%;
-    --secondary-foreground: 45 20% 85%;
-
-    /* Muted */
-    --muted: 138 10% 18%;
-    --muted-foreground: 138 10% 60%;
-
-    /* Accent — Marigold */
-    --accent: 37 80% 50%;
-    --accent-foreground: 37 30% 8%;
-
-    /* Destructive — Terracotta (lighter for dark bg) */
-    --destructive: 12 63% 55%;
-    --destructive-foreground: 0 0% 98%;
-
-    /* Borders / Inputs / Ring */
-    --border: 138 15% 20%;
-    --input: 138 15% 20%;
-    --ring: 138 30% 60%;
+    --card: #413c33;
+    --ring: #8a9f7b;
+    --input: #5a5345;
+    --muted: #4a4439;
+    --accent: #a18f5c;
+    --border: #5a5345;
+    --chart-1: #8a9f7b;
+    --chart-2: #9db18c;
+    --chart-3: #71856a;
+    --chart-4: #a18f5c;
+    --chart-5: #5e6e58;
+    --popover: #413c33;
+    --primary: #8a9f7b;
+    --sidebar: #3a3529;
+    --secondary: #5a5345;
+    --background: #3a3529;
+    --foreground: #ede4d4;
+    --destructive: #b5766a;
+    --sidebar-ring: #8a9f7b;
+    --sidebar-accent: #a18f5c;
+    --sidebar-border: #5a5345;
+    --card-foreground: #ede4d4;
+    --sidebar-primary: #8a9f7b;
+    --muted-foreground: #a8a096;
+    --accent-foreground: #2a2521;
+    --popover-foreground: #ede4d4;
+    --primary-foreground: #2a2521;
+    --sidebar-foreground: #ede4d4;
+    --secondary-foreground: #ede4d4;
+    --destructive-foreground: #f0e9db;
+    --sidebar-accent-foreground: #2a2521;
+    --sidebar-primary-foreground: #2a2521;
   }
 }
 
@@ -98,5 +101,30 @@
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-heading tracking-tight;
+  }
+  code, kbd, samp, pre {
+    @apply font-mono;
+  }
+
+  /* ── Theme-aware scrollbar ─────────────────────────────────────────────── */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--muted);
+    border-radius: var(--radius);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: var(--radius);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--muted-foreground);
+  }
+  /* Firefox */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) var(--muted);
   }
 }

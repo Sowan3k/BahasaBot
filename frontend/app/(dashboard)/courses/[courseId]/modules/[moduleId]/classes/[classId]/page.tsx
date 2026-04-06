@@ -13,6 +13,7 @@ import { coursesApi } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import type { ClassDetail, Course, VocabularyItem, ExampleSentence, SyllableBreakdown } from "@/lib/types";
+import { SpeakerButton } from "@/components/ui/SpeakerButton";
 
 // ── IPA syllable breakdown table ──────────────────────────────────────────────
 
@@ -55,7 +56,7 @@ function VocabularySection({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold tracking-tight">Vocabulary</h2>
+        <h2 className="text-lg font-semibold tracking-tight">Pronunciation</h2>
         <span className="text-xs text-muted-foreground">{items.length} words</span>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -64,9 +65,12 @@ function VocabularySection({
             key={i}
             className="rounded-lg border bg-card p-4 border-l-4 border-l-primary/60 space-y-2"
           >
-            {/* Word + saved indicator */}
+            {/* Word + speaker + saved indicator */}
             <div className="flex items-center justify-between gap-2">
-              <span className="font-semibold text-base text-primary">{item.word}</span>
+              <div className="flex items-center gap-1.5">
+                <span className="font-semibold text-base text-primary">{item.word}</span>
+                <SpeakerButton word={item.word} size="sm" />
+              </div>
               {isCompleted && (
                 <span className="text-xs text-green-500 font-medium flex-shrink-0">✓ saved</span>
               )}

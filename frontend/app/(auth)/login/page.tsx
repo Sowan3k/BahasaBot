@@ -230,7 +230,7 @@ export default function LoginPage() {
           className="w-full relative group/button mt-1"
         >
           <div className="absolute inset-0 bg-white/10 rounded-lg blur-lg opacity-0 group-hover/button:opacity-60 transition-opacity duration-300" />
-          <div className="relative overflow-hidden bg-[#4a7c59] hover:bg-[#3d6b4a] text-white font-medium h-10 rounded-lg transition-all duration-300 flex items-center justify-center">
+          <div className="relative overflow-hidden bg-primary hover:opacity-90 text-primary-foreground font-medium h-10 rounded-lg transition-all duration-300 flex items-center justify-center">
             <AnimatePresence mode="wait">
               {isLoading ? (
                 <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>

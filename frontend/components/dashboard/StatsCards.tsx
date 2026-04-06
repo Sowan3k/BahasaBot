@@ -23,13 +23,15 @@ export default function StatsCards({ stats }: Props) {
       value: stats.courses_created,
       description: "AI-generated courses",
       icon: <BookOpen className="h-4 w-4" />,
-      iconClass: "bg-accent/20 text-amber-700 border-accent/30 dark:text-amber-400",
+      // warm wheat accent — olive-parchment tone
+      iconClass: "bg-accent/20 text-foreground border-accent/40",
     },
     {
       label: "Modules Completed",
       value: stats.modules_completed,
       description: `of ${stats.courses_created > 0 ? "all" : "0"} modules`,
       icon: <BookCheck className="h-4 w-4" />,
+      // olive green primary
       iconClass: "bg-primary/10 text-primary border-primary/20",
     },
     {
@@ -37,20 +39,23 @@ export default function StatsCards({ stats }: Props) {
       value: stats.classes_completed,
       description: "individual lessons done",
       icon: <GraduationCap className="h-4 w-4" />,
-      iconClass: "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800",
+      // warm secondary (secondary is --decea0 wheat)
+      iconClass: "bg-secondary text-secondary-foreground border-border",
     },
     {
       label: "Quizzes Taken",
       value: stats.quizzes_taken,
       description: "module + adaptive quizzes",
       icon: <ClipboardList className="h-4 w-4" />,
-      iconClass: "bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800",
+      // chart-3 (light sage) bg + chart-4 (deep sage) icon — replaces off-theme purple
+      iconClass: "bg-chart-3/25 text-chart-4 border-chart-3/40 dark:bg-chart-3/15 dark:text-chart-3 dark:border-chart-3/25",
     },
     {
       label: "Vocabulary Learned",
       value: stats.vocabulary_count,
       description: "unique Malay words",
       icon: <Languages className="h-4 w-4" />,
+      // coral destructive — warm salmon
       iconClass: "bg-destructive/10 text-destructive border-destructive/20",
     },
     {
@@ -58,7 +63,8 @@ export default function StatsCards({ stats }: Props) {
       value: stats.grammar_count,
       description: "rules encountered",
       icon: <Pencil className="h-4 w-4" />,
-      iconClass: "bg-accent/20 text-amber-700 border-accent/30 dark:text-amber-400",
+      // chart-5 (darkest sage) for a distinct earthy tone
+      iconClass: "bg-chart-5/15 text-chart-5 border-chart-5/30 dark:bg-chart-5/20 dark:text-chart-3 dark:border-chart-5/35",
     },
   ];
 

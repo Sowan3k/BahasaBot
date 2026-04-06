@@ -40,10 +40,10 @@ import { adminApi, profileApi } from "@/lib/api";
 import type { AdminUserDetail, AdminUserAnalytics } from "@/lib/types";
 
 const BPS_COLORS: Record<string, string> = {
-  "BPS-1": "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-  "BPS-2": "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-  "BPS-3": "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
-  "BPS-4": "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+  "BPS-1": "bg-muted text-muted-foreground",
+  "BPS-2": "bg-secondary text-secondary-foreground",
+  "BPS-3": "bg-accent text-accent-foreground",
+  "BPS-4": "bg-primary text-primary-foreground",
 };
 
 const FEATURE_LABELS: Record<string, string> = {
@@ -382,7 +382,7 @@ export default function AdminUserDetailPage() {
           <h2 className="font-heading text-base font-semibold text-foreground mb-3">Learning Activity</h2>
           <div className="grid grid-cols-4 gap-3">
             <StatPill icon={BookOpen} label="Courses" value={user.stats.courses_count} color="text-green-500" />
-            <StatPill icon={BookOpen} label="Classes Done" value={user.stats.classes_completed} color="text-blue-500" />
+            <StatPill icon={BookOpen} label="Classes Done" value={user.stats.classes_completed} color="text-primary" />
             <StatPill icon={Brain} label="Words Learned" value={user.stats.vocab_count} color="text-purple-500" />
             <StatPill icon={Brain} label="Grammar Rules" value={user.stats.grammar_count} color="text-pink-500" />
             <StatPill icon={Brain} label="Module Quizzes" value={user.stats.module_quiz_attempts} color="text-amber-500" />
@@ -423,7 +423,7 @@ export default function AdminUserDetailPage() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
                   { label: "Total Tokens Used", value: tok!.total_tokens.toLocaleString(), icon: Zap, color: "text-yellow-500", bg: "bg-yellow-500/10" },
-                  { label: "Input Tokens", value: tok!.total_input_tokens.toLocaleString(), icon: Zap, color: "text-blue-500", bg: "bg-blue-500/10" },
+                  { label: "Input Tokens", value: tok!.total_input_tokens.toLocaleString(), icon: Zap, color: "text-ring", bg: "bg-secondary" },
                   { label: "Output Tokens", value: tok!.total_output_tokens.toLocaleString(), icon: Zap, color: "text-purple-500", bg: "bg-purple-500/10" },
                   { label: "Total Activities", value: act!.total_events.toLocaleString(), icon: BarChart2, color: "text-green-500", bg: "bg-green-500/10" },
                 ].map(({ label, value, icon: Icon, color, bg }) => (

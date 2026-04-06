@@ -73,8 +73,8 @@ function GrammarTable({
                   <span
                     className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
                       g.source_type === "chatbot"
-                        ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                        : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                        ? "bg-secondary text-secondary-foreground"
+                        : "bg-primary text-primary-foreground"
                     }`}
                   >
                     {g.source_name}
@@ -262,7 +262,7 @@ export default function DashboardPage() {
               {Array.from({ length: 6 }).map((_, i) => (
                 <div
                   key={i}
-                  className="rounded-lg border bg-card p-5 h-24 animate-pulse bg-muted/40"
+                  className="rounded-lg border bg-muted/40 p-5 h-24 animate-pulse"
                 />
               ))}
             </div>

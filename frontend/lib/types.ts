@@ -476,3 +476,25 @@ export interface AdminUserDetail {
   };
   recent_courses: { id: string; title: string; topic: string; created_at: string }[];
 }
+
+// ── Notifications (Phase 17) ───────────────────────────────────────────────────
+
+export type NotificationType =
+  | "streak_milestone"
+  | "xp_milestone"
+  | "journey_reminder"
+  | "course_complete"
+  | "phase_complete";
+
+export interface AppNotification {
+  id: string;
+  type: NotificationType | string;
+  message: string;
+  read: boolean;
+  created_at: string;
+}
+
+export interface NotificationListResponse {
+  notifications: AppNotification[];
+  unread_count: number;
+}

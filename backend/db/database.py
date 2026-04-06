@@ -10,12 +10,14 @@ Note: SYNC_DATABASE_URL (psycopg2) is used only by Alembic migrations.
 
 import os
 from collections.abc import AsyncGenerator
+from pathlib import Path
 
 from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
-load_dotenv()
+# Explicit path — database.py lives in backend/db/, .env is in backend/
+load_dotenv(Path(__file__).parent.parent / ".env")
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:

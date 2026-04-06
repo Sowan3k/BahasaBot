@@ -96,7 +96,7 @@ function ResetPasswordInner() {
           className="text-center space-y-4"
         >
           <div className="flex justify-center">
-            <CheckCircle className="w-12 h-12 text-[#4a7c59]" />
+            <CheckCircle className="w-12 h-12 text-primary" />
           </div>
           <p className="text-white/80 text-sm leading-relaxed">
             Password updated successfully!
@@ -213,7 +213,7 @@ function ResetPasswordInner() {
             className="w-full relative group/button mt-1"
           >
             <div className="absolute inset-0 bg-white/10 rounded-lg blur-lg opacity-0 group-hover/button:opacity-60 transition-opacity duration-300" />
-            <div className="relative overflow-hidden bg-[#4a7c59] hover:bg-[#3d6b4a] text-white font-medium h-10 rounded-lg transition-all duration-300 flex items-center justify-center">
+            <div className="relative overflow-hidden bg-primary hover:opacity-90 text-primary-foreground font-medium h-10 rounded-lg transition-all duration-300 flex items-center justify-center">
               <AnimatePresence mode="wait">
                 {isSubmitting ? (
                   <motion.div

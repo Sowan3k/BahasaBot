@@ -8,13 +8,14 @@ import os
 import time
 import uuid
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import sentry_sdk
 from dotenv import load_dotenv
 
-# load_dotenv() must run before any module that reads env vars at import time
-# (e.g. rate_limiter reads REDIS_URL, database reads DATABASE_URL).
-load_dotenv()
+# Use an explicit path so the .env is found regardless of the working directory
+# that uvicorn is launched from (project root vs backend/).
+load_dotenv(Path(__file__).parent / ".env")
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,18 +24,19 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from backend.middleware.rate_limiter import limiter
-from backend.routers import admin, auth, chatbot, courses, dashboard, profile, quiz
+from backend.routers import admin, auth, chatbot, courses, dashboard, notifications, profile, quiz
 from backend.utils.cache import close_redis, init_redis
 from backend.utils.logger import get_logger, setup_logging
 
 # Import all models so they are registered on Base.metadata at startup.
 # Required for Alembic autogenerate to pick up all tables.
-import backend.models.chatbot  # noqa: F401
-import backend.models.course   # noqa: F401
-import backend.models.document  # noqa: F401
-import backend.models.progress  # noqa: F401
-import backend.models.quiz      # noqa: F401
-import backend.models.user      # noqa: F401
+import backend.models.chatbot       # noqa: F401
+import backend.models.course        # noqa: F401
+import backend.models.document      # noqa: F401
+import backend.models.notification  # noqa: F401
+import backend.models.progress      # noqa: F401
+import backend.models.quiz          # noqa: F401
+import backend.models.user          # noqa: F401
 
 setup_logging()
 logger = get_logger(__name__)
@@ -157,6 +159,7 @@ app.include_router(quiz.router, prefix="/api/quiz", tags=["quiz"])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["dashboard"])
 app.include_router(profile.router, prefix="/api/profile", tags=["profile"])
 app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
+app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
 
 
 @app.get("/health", tags=["health"])
