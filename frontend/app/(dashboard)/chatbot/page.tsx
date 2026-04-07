@@ -15,12 +15,19 @@
  */
 
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import ChatMessage from "@/components/chatbot/ChatMessage";
-import { Waves } from "@/components/ui/waves";
 import { useTheme } from "@/lib/use-theme";
+
+// Lazy-load Waves — it pulls simplex-noise (~30 KB) which we don't need
+// on the critical render path. Renders a plain bg div until loaded.
+const Waves = dynamic(
+  () => import("@/components/ui/waves").then((m) => ({ default: m.Waves })),
+  { ssr: false, loading: () => <div className="absolute inset-0" /> }
+);
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 

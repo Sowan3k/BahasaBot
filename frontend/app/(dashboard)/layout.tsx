@@ -7,6 +7,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
+
+// Routes to prefetch as soon as the layout mounts (runs once per session).
+// Next.js will download the JS chunk for each route in the background so
+// sidebar navigation feels instant instead of waiting for a network fetch.
+const PREFETCH_ROUTES = [
+  "/chatbot",
+  "/dashboard",
+  "/courses",
+  "/quiz/adaptive",
+  "/games/spelling",
+  "/settings",
+];
 import { useQuery } from "@tanstack/react-query";
 import { AppSidebar } from "@/components/nav/AppSidebar";
 import { CourseGenerationProvider } from "@/lib/course-generation-context";
@@ -70,7 +82,15 @@ function OnboardingChecker({ onShowModal }: { onShowModal: () => void }) {
 // ── Main layout ───────────────────────────────────────────────────────────────
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // Prefetch all main sidebar routes on layout mount so their JS chunks
+  // are already cached when the user clicks a nav link.
+  useEffect(() => {
+    PREFETCH_ROUTES.forEach((route) => router.prefetch(route));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Stable reference so OnboardingChecker's useEffect does not re-fire
   // when MainLayout re-renders for unrelated reasons.
