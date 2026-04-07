@@ -111,6 +111,23 @@ async def send_message(
         message_preview=body.message[:60],
     )
 
+    # Award 5 XP for the first message of a new chatbot session; update streak
+    # on every message.  Redis key prevents double-awarding XP within a session.
+    # Fire-and-forget: any failure must never disrupt the SSE stream.
+    try:
+        from backend.services.gamification_service import record_learning_activity
+        from backend.utils.cache import cache_get, cache_set
+
+        chatbot_xp_key = f"gamif:chatbot_xp:{session_id}"
+        xp_already_awarded = await cache_get(chatbot_xp_key)
+        xp = 0 if xp_already_awarded else 5
+        if xp:
+            # Mark this session as XP-awarded for 48 h
+            await cache_set(chatbot_xp_key, "1", ttl=172800)
+        await record_learning_activity(user_id=current_user.id, db=db, xp_amount=xp)
+    except Exception:
+        pass
+
     return EventSourceResponse(event_generator())
 
 

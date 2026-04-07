@@ -5,18 +5,39 @@ import { cn } from "@/lib/utils";
 import { useTheme } from "@/lib/use-theme";
 
 interface ThemeToggleProps {
+  /** "pill" (default) — full w-16 h-8 toggle; "icon" — compact w-8 h-8 icon button */
+  variant?: "pill" | "icon";
   className?: string;
 }
 
-export function ThemeToggle({ className }: ThemeToggleProps) {
+export function ThemeToggle({ variant = "pill", className }: ThemeToggleProps) {
   const { theme, toggle } = useTheme();
   const isDark = theme === "dark";
+
+  if (variant === "icon") {
+    return (
+      <button
+        onClick={toggle}
+        aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+        className={cn(
+          "w-8 h-8 flex items-center justify-center rounded-lg transition-colors",
+          "text-muted-foreground hover:text-foreground hover:bg-muted",
+          className
+        )}
+      >
+        {isDark ? (
+          <Sun className="w-4 h-4" strokeWidth={1.5} />
+        ) : (
+          <Moon className="w-4 h-4" strokeWidth={1.5} />
+        )}
+      </button>
+    );
+  }
 
   return (
     <div
       className={cn(
         "flex w-16 h-8 p-1 rounded-full cursor-pointer transition-all duration-300",
-        // Use botanical theme tokens — warm muted bg with on-theme border
         isDark
           ? "bg-muted border border-border"
           : "bg-background border border-border",
@@ -29,13 +50,10 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
     >
       <div className="flex justify-between items-center w-full">
-        {/* Active indicator (left in dark, right in light) */}
         <div
           className={cn(
             "flex justify-center items-center w-6 h-6 rounded-full transition-transform duration-300",
-            isDark
-              ? "translate-x-0 bg-primary/30"
-              : "translate-x-8 bg-muted"
+            isDark ? "translate-x-0 bg-primary/30" : "translate-x-8 bg-muted"
           )}
         >
           {isDark ? (
@@ -44,7 +62,6 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
             <Sun className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
           )}
         </div>
-        {/* Inactive icon */}
         <div
           className={cn(
             "flex justify-center items-center w-6 h-6 rounded-full transition-transform duration-300",

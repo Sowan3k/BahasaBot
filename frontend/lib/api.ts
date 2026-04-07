@@ -34,6 +34,9 @@ import type {
   VocabularyListResponse,
   WeakPointsResponse,
   NotificationListResponse,
+  SpellingWord,
+  SpellingSubmitResponse,
+  SpellingPersonalBest,
 } from "@/lib/types";
 
 const apiClient = axios.create({
@@ -272,4 +275,29 @@ export const notificationsApi = {
   /** Mark all notifications as read. */
   markAllRead: () =>
     apiClient.post<{ success: boolean }>("/api/notifications/read-all"),
+};
+
+// ── Games API (Phase 19) ──────────────────────────────────────────────────────
+
+export const gamesApi = {
+  /** Fetch the next vocabulary word to spell. Returns 404 if not enough vocab. */
+  getSpellingWord: () => apiClient.get<SpellingWord>("/api/games/spelling/word"),
+
+  /** Submit a spelling attempt. Returns evaluation result + XP awarded. */
+  submitSpellingAnswer: (vocab_id: string, answer: string) =>
+    apiClient.post<SpellingSubmitResponse>("/api/games/spelling/submit", {
+      vocab_id,
+      answer,
+    }),
+
+  /** Save the final session score (called when a session is complete or quit). */
+  endSession: (words_correct: number, words_attempted: number) =>
+    apiClient.post<{ success: boolean }>("/api/games/spelling/session", {
+      words_correct,
+      words_attempted,
+    }),
+
+  /** Get the user's all-time personal best score. */
+  getPersonalBest: () =>
+    apiClient.get<SpellingPersonalBest>("/api/games/spelling/best"),
 };

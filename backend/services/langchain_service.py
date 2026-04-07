@@ -275,7 +275,6 @@ async def stream_chat_response(
             assistant_text=assistant_text,
             user_id=user_id,
             session_id=uuid.UUID(session_id),
-            db_factory=db,  # type: ignore[arg-type]
         )
     )
 
@@ -320,59 +319,62 @@ async def _extract_and_save(
     assistant_text: str,
     user_id: uuid.UUID,
     session_id: uuid.UUID,
-    db_factory: AsyncSession,
 ) -> None:
     """
     Background task — extract vocab/grammar from assistant response
     and persist them to the vocabulary_learned / grammar_learned tables.
 
-    Uses the passed db session directly (background tasks in FastAPI share the
-    same request-scoped session — this is safe as long as the task finishes
-    before the session is closed, which is acceptable for short extractions).
+    IMPORTANT: Opens its own independent DB session via AsyncSessionLocal.
+    Do NOT pass the request-scoped session here — asyncio.create_task() runs
+    this concurrently and the request session may be closed by the time this
+    executes, causing silent failures.
     """
-    try:
-        extracted = await extract_vocab_and_grammar(assistant_text)
+    from backend.db.database import AsyncSessionLocal
 
-        for item in extracted.get("vocabulary", []):
-            word_lower = item["word"].strip().lower()
-            existing = await db_factory.execute(
-                select(VocabularyLearned.id).where(
-                    VocabularyLearned.user_id == user_id,
-                    VocabularyLearned.word.ilike(word_lower),
-                )
-            )
-            if existing.scalar_one_or_none() is None:
-                db_factory.add(
-                    VocabularyLearned(
-                        user_id=user_id,
-                        word=item["word"].strip(),
-                        meaning=item["meaning"],
-                        source_type="chatbot",
-                        source_id=session_id,
+    async with AsyncSessionLocal() as db:
+        try:
+            extracted = await extract_vocab_and_grammar(assistant_text)
+
+            for item in extracted.get("vocabulary", []):
+                word_lower = item["word"].strip().lower()
+                existing = await db.execute(
+                    select(VocabularyLearned.id).where(
+                        VocabularyLearned.user_id == user_id,
+                        VocabularyLearned.word.ilike(word_lower),
                     )
                 )
+                if existing.scalar_one_or_none() is None:
+                    db.add(
+                        VocabularyLearned(
+                            user_id=user_id,
+                            word=item["word"].strip(),
+                            meaning=item["meaning"],
+                            source_type="chatbot",
+                            source_id=session_id,
+                        )
+                    )
 
-        for item in extracted.get("grammar", []):
-            grammar = GrammarLearned(
-                user_id=user_id,
-                rule=item["rule"],
-                example=item["example"],
-                source_type="chatbot",
-                source_id=session_id,
+            for item in extracted.get("grammar", []):
+                grammar = GrammarLearned(
+                    user_id=user_id,
+                    rule=item["rule"],
+                    example=item["example"],
+                    source_type="chatbot",
+                    source_id=session_id,
+                )
+                db.add(grammar)
+
+            await db.commit()
+
+            v_count = len(extracted.get("vocabulary", []))
+            g_count = len(extracted.get("grammar", []))
+            logger.info(
+                "Vocab/grammar extracted and saved",
+                session_id=str(session_id),
+                vocab_count=v_count,
+                grammar_count=g_count,
             )
-            db_factory.add(grammar)
 
-        await db_factory.commit()
-
-        v_count = len(extracted.get("vocabulary", []))
-        g_count = len(extracted.get("grammar", []))
-        logger.info(
-            "Vocab/grammar extracted",
-            session_id=str(session_id),
-            vocab_count=v_count,
-            grammar_count=g_count,
-        )
-
-    except Exception as exc:
-        logger.error("Background extraction failed", error=str(exc))
-        await db_factory.rollback()
+        except Exception as exc:
+            logger.error("Background extraction failed", error=str(exc))
+            await db.rollback()

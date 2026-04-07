@@ -262,6 +262,14 @@ async def complete_class(
         )
     if "error" in result:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=result["error"])
+
+    # Award 10 XP + update streak for completing a class — fire-and-forget
+    try:
+        from backend.services.gamification_service import record_learning_activity
+        await record_learning_activity(user_id=current_user.id, db=db, xp_amount=10)
+    except Exception:
+        pass
+
     return ClassCompleteResponse(**result)
 
 
@@ -365,6 +373,14 @@ async def submit_module_quiz_endpoint(
     try:
         from backend.utils.analytics import log_activity
         await log_activity(db, user_id=current_user.id, feature="module_quiz", duration_seconds=0)
+    except Exception:
+        pass
+
+    # Award 25 XP on a passing quiz (≥70%) + update streak — fire-and-forget
+    try:
+        from backend.services.gamification_service import record_learning_activity
+        xp = 25 if result.get("passed", False) else 0
+        await record_learning_activity(user_id=current_user.id, db=db, xp_amount=xp)
     except Exception:
         pass
 

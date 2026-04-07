@@ -24,7 +24,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from backend.middleware.rate_limiter import limiter
-from backend.routers import admin, auth, chatbot, courses, dashboard, notifications, profile, quiz
+from backend.routers import admin, auth, chatbot, courses, dashboard, games, notifications, profile, quiz
 from backend.utils.cache import close_redis, init_redis
 from backend.utils.logger import get_logger, setup_logging
 
@@ -160,6 +160,7 @@ app.include_router(dashboard.router, prefix="/api/dashboard", tags=["dashboard"]
 app.include_router(profile.router, prefix="/api/profile", tags=["profile"])
 app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
 app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
+app.include_router(games.router, prefix="/api/games", tags=["games"])
 
 
 @app.get("/health", tags=["health"])

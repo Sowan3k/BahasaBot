@@ -252,6 +252,8 @@ export interface DashboardStats {
   vocabulary_count: number;
   grammar_count: number;
   proficiency_level: ProficiencyLevel;
+  streak_count: number;
+  xp_total: number;
 }
 
 export interface VocabularyEntry {
@@ -497,4 +499,29 @@ export interface AppNotification {
 export interface NotificationListResponse {
   notifications: AppNotification[];
   unread_count: number;
+}
+
+// ── Games — Spelling Practice (Phase 19) ──────────────────────────────────────
+
+export interface SpellingWord {
+  id: string;
+  word: string;
+  meaning: string;
+  ipa: string | null;
+  source_type: string;
+}
+
+export interface SpellingSubmitResponse {
+  correct: boolean;
+  /** True when the answer is off by exactly one character (edit-distance 1). */
+  almost: boolean;
+  correct_word: string;
+  ipa: string | null;
+  meaning: string;
+  xp_awarded: number;
+}
+
+export interface SpellingPersonalBest {
+  best_correct: number;
+  best_attempted: number;
 }

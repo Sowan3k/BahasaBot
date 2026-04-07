@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-07 (Phase 17 complete — Notification System)
+## Last Updated: 2026-04-07 (Phase 19 complete — Spelling Practice Game v2 + vocab pipeline fix)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -10,11 +10,11 @@ _Update this file at the end of every session_
 | AI Chatbot Tutor | ✅ Complete + Verified | SSE streaming, LangChain, RAG — Malaysian Malay + IPA in prompt; markdown rendering; session persistence; native_language injected into system prompt |
 | Course Generator | ✅ Complete + English-medium fix | Lesson content in English; Malay words taught inline; Malaysian BM only |
 | Quiz | ✅ Complete + English-medium fix | Question text explicitly English; Malay vocabulary uses Malaysian BM; IPA in explanations |
-| Dashboard | ✅ Complete + Vocab Delete | All 6 endpoints verified — vocab/grammar/progress/weak-points/quiz-history |
+| Dashboard | ✅ Complete + Vocab Delete | All 6 endpoints verified — vocab/grammar/progress/weak-points/quiz-history; streak + XP now included |
 | Production Hardening | ✅ Complete + Rate Limiter Fix | Rate limiter falls back to in-memory on Redis timeout (no more 500s) |
 | IPA Pronunciation | ✅ Full stack verified | Courses: IPA in all vocab items. Chatbot: /ko.soŋ/, /tə.ri.ma ka.sɪh/. Quiz: IPA in explanations |
-| Chatbot UI | ✅ Complete | react-markdown rendering, VocabPill extraction, Malaysia flag avatar, session persistence in sessionStorage |
-| Dark Mode | ✅ Complete | Class-based Tailwind dark mode, ThemeToggle pill in sidebar, no-FOUC inline script |
+| Chatbot UI | ✅ Complete + Logo fix | react-markdown rendering, VocabPill extraction, Malaysia flag avatar; welcome screen now shows BahasaBot logo (was broken 🇲🇾 emoji showing as "MY" on Windows) |
+| Dark Mode | ✅ Complete + Repositioned | ThemeToggle moved to top-right of sidebar header row (industry standard); icon variant added for collapsed/mobile |
 | UI Polish | ✅ Complete | Space Grotesk font, botanical color palette, glowing dashboard cards, animated auth pages |
 | Local Dev Launcher | ✅ Complete | `start-bahasabot.bat` launches both frontend + backend; PM2 config removed from root |
 | Background Course Generation | ✅ Complete | Non-blocking modal; floating progress card; BackgroundTasks + Redis job state; React Query polling |
@@ -24,8 +24,12 @@ _Update this file at the end of every session_
 | User Profile + Settings (Phase 13) | ✅ Complete | GET + PATCH /api/profile/, change-password endpoint; /settings hub + /profile + /password + /about pages; Settings in sidebar |
 | Onboarding Flow (Phase 14) | ✅ Complete | 5-step modal (Welcome → NativeLang → Goal → Tour → Journey CTA); triggered on first login via layout.tsx; PATCH /api/profile/ with onboarding_completed=true on finish |
 | Admin Control Panel (Phase 15) | ✅ Complete + Verified | /api/admin/* fully tested; stats, users (search + detail + delete + reset + analytics), feedback; password guards verified; recharts LineChart + BarChart confirmed working; analytics bug fixed (NullType → timedelta) |
-| Pronunciation Audio (Phase 16) | ✅ Complete + Debugged | usePronunciation hook (ms-MY → ms → default fallback); SpeakerButton component; wired into VocabPills (chatbot), course class vocab cards, quiz results breakdown, dashboard vocabulary table; VocabPill tooltip: smart overflow positioning (getBoundingClientRect), delayed-hide, speaker button inside tooltip; 3 post-implementation bugs fixed (double hook, dead variable, wrong arrow offset) |
-| Notification System (Phase 17) | ✅ Complete | GET /api/notifications/ (last 20 + unread_count), POST mark-read, POST read-all; gamification_service.py with create_notification() + fire-and-forget wrapper; NotificationBell (60s polling, unread badge) + NotificationPanel (per-type icons, relative timestamps, mark-all-read); wired into AppSidebar mobile header + desktop footer (both collapsed/expanded) |
+| Pronunciation Audio (Phase 16) | ✅ Complete + Debugged | usePronunciation hook (ms-MY → ms → default fallback); SpeakerButton component; wired into VocabPills (chatbot), course class vocab cards, quiz results breakdown, dashboard vocabulary table; 3 post-implementation bugs fixed |
+| Notification System (Phase 17) | ✅ Complete | GET /api/notifications/ (last 20 + unread_count), POST mark-read, POST read-all; NotificationBell (60s polling, unread badge) + NotificationPanel; floating global icon in layout.tsx |
+| Gamification — Streak + XP (Phase 18) | ✅ Complete | record_learning_activity() in gamification_service.py; Redis-keyed daily streak; XP awards: class=10, quiz pass=25, chatbot session=5; milestone notifications (streak 3/7/14/30, every 100 XP); wired into 4 routers (courses, quiz, chatbot); StreakBadge + XPBar components; dashboard +2 stat cards; sidebar footer shows streak+XP |
+| Sidebar Polish | ✅ Complete | Double divider removed (no border-b on logo area); ThemeToggle repositioned to header row; footer items centered except XP bar; collapsed tooltips use theme-aware bg-popover |
+| Spelling Practice Game (Phase 19) | ✅ Complete + v2 redesign | Leitner-box word selection; Levenshtein fuzzy matching; Start screen → 3-2-1 countdown → 10s per-word timer (green→yellow→red pulse) → Time's Up screen with Next/Start Over; combo multiplier; session summary; keyboard shortcuts (Enter/Space/Escape); personal best; Games link in sidebar |
+| Chatbot vocab pipeline fix | ✅ Fixed | _extract_and_save() now opens its own AsyncSessionLocal session — asyncio.create_task with request-scoped session was silently failing after SSE stream ended; vocab/grammar now reliably saved after every chatbot response |
 
 ## Missing / Broken
 - `frontend/app/(dashboard)/quiz/module/[moduleId]/results/page.tsx` — **stub only** (returns `<div>Module Quiz Results — TODO</div>`). Score + per-question breakdown + Continue/Retry button not yet implemented.
@@ -33,6 +37,95 @@ _Update this file at the end of every session_
 
 ## Known Pre-existing Issue (not caused by recent changes)
 - Module quiz cache-vs-submission misalignment: if a quiz attempt fails (0%) the cache clears and Gemini regenerates new questions. If the user re-submits using answers from the *first* GET, they score 0% again. Mitigation: frontend should re-fetch GET before showing quiz form if previous submission failed. This is a UI flow issue, not a backend bug.
+
+---
+
+## What Was Done This Session (2026-04-07 — Phase 19 v2: Game redesign + vocab pipeline fix)
+
+### Critical Bug Fix — Chatbot vocab extraction
+- **`backend/services/langchain_service.py`** — `_extract_and_save()` was called via `asyncio.create_task()` using the request-scoped DB session. After the SSE stream ended, FastAPI closed the session. The background task then ran against a closed session, silently rolled back, and saved nothing. Fix: `_extract_and_save()` now opens its own `async with AsyncSessionLocal()` session, fully independent of the request lifecycle. `db_factory` parameter removed. Call site updated to pass only `assistant_text, user_id, session_id`.
+
+### Spelling Game v2 — Full redesign
+- **`frontend/components/games/SpellingGame.tsx`** — New state machine: `start → countdown → loading → ready → submitted/timeout → summary`
+  - **Start screen**: "Ready to be tested?" with 4-rule card strip (audio/timer/combo/session), personal best display, "Let's Go!" CTA button
+  - **3-2-1 countdown**: animated `zoom-in-50` number (700ms per tick); transitions directly to first word fetch
+  - **10-second per-word timer**: shrinking progress bar + countdown number; color transitions green→yellow→red; red pulsing at ≤3s; auto-triggers `handleTimeout()` when `timeLeft === 0`
+  - **Time's Up screen**: `Clock` icon, correct word + IPA + replay button, "Start Over" and "Next Word →" side-by-side buttons
+  - **Keyboard**: `Enter` starts game from start screen; `Escape` returns to start screen from anywhere; `Space` replays audio; `Enter` advances in submitted/timeout phases
+  - Timer cleanup: `stopTimer()` called in every branch that exits `ready` phase; `useEffect(() => () => stopTimer(), [])` cleanup on unmount
+
+### Icon fix
+- Empty vocab state icon changed from 📚 emoji to `<BookOpen className="w-8 h-8 text-primary" />` inside `bg-primary/10` circle — matches app theme
+
+### Test Results (2026-04-07)
+| Check | Result |
+|---|---|
+| `tsc --noEmit` | ✅ 0 errors |
+| Direct DB check — user vocab rows | ✅ 164 rows confirmed |
+| `get_next_word()` with real user ID | ✅ Returns word |
+| GET /api/games/spelling/word (live API, JWT) | ✅ 200 — word="sembilan" |
+| POST /submit correct | ✅ correct=True, xp=2 |
+| POST /submit almost (1 char off) | ✅ correct=False, almost=True |
+| POST /submit wrong | ✅ correct=False, almost=False |
+| GET /best | ✅ 200 |
+
+---
+
+## What Was Done This Session (2026-04-07 — Phase 19: Spelling Practice Game)
+
+### Backend — New Files
+- **`backend/services/spelling_service.py`** *(new)* — `get_next_word()`: weighted random selection (wrong words ×3); `_levenshtein()`: O(n) DP edit-distance; `_extract_ipa()`: regex IPA extractor from meaning strings; `evaluate_answer()`: exact/almost/incorrect outcomes + Redis wrong-list; `save_session_score()`: upsert best-run-per-day; `get_personal_best()`.
+- **`backend/routers/games.py`** *(new)* — 4 endpoints with Pydantic schemas: `GET /api/games/spelling/word`, `POST /api/games/spelling/submit` (+2 XP via record_learning_activity), `POST /api/games/spelling/session`, `GET /api/games/spelling/best`.
+- **`backend/main.py`** — added `games` router import + `app.include_router(..., prefix="/api/games")`.
+
+### Frontend — New Files
+- **`frontend/components/games/SpellingGame.tsx`** *(new)* — full game component: auto-play audio (usePronunciation, 350ms delay), combo multiplier display (×1/×1.5/×2), fuzzy "Almost!" yellow feedback, session summary modal (10 words: accuracy, XP, peak combo, mastered vs. review lists), keyboard shortcuts (Enter=submit/next, Space=replay audio), personal best footer.
+- **`frontend/app/(dashboard)/games/spelling/page.tsx`** *(new)* — page wrapper with 3-tip how-to strip (Listen/Type/Combos) + `<SpellingGame />`.
+
+### Frontend — Modified Files
+- **`frontend/lib/types.ts`** — added `SpellingWord`, `SpellingSubmitResponse`, `SpellingPersonalBest` interfaces.
+- **`frontend/lib/api.ts`** — added `gamesApi` (getSpellingWord, submitSpellingAnswer, endSession, getPersonalBest); moved game types import to top-of-file block.
+- **`frontend/components/nav/AppSidebar.tsx`** — added `Gamepad2` icon import + `Games` nav item (`href=/games/spelling`) between Quiz and Settings.
+
+### Test Results (2026-04-07)
+| Check | Result |
+|---|---|
+| `tsc --noEmit` (frontend) | ✅ 0 errors |
+| Python syntax check (spelling_service.py, games.py, main.py) | ✅ OK |
+| Levenshtein unit tests (5 cases) | ✅ All pass |
+| IPA extraction unit tests (3 cases) | ✅ All pass |
+| Router import + 4-route check | ✅ Confirmed |
+| games router mounted in main app | ✅ /api/games/spelling/* confirmed |
+
+---
+
+## What Was Done This Session (2026-04-07 — Phase 18: Gamification + Sidebar + Chatbot fixes)
+
+### Backend — Gamification
+- **`backend/services/gamification_service.py`** — added `record_learning_activity(user_id, db, xp_amount)`:  Redis-keyed daily streak (key `gamif:streak:<uid>`, 48h TTL); streak increments if last activity was yesterday, resets to 1 if older/missing; XP added to `users.xp_total`; milestone notifications at streak 3/7/14/30 and every 100 XP.
+- **`backend/routers/courses.py`** — wired gamification into `complete_class` (+10 XP) and `submit_module_quiz_endpoint` (+25 XP if passed).
+- **`backend/routers/quiz.py`** — wired into `submit_adaptive_quiz` (+25 XP if score_percent ≥ 70).
+- **`backend/routers/chatbot.py`** — wired into `send_message`; 5 XP on first message of each session (Redis dedup key `gamif:chatbot_xp:<session_id>`, 48h TTL); streak updated every message.
+- **`backend/services/progress_service.py`** — `get_dashboard_summary()` now includes `streak_count` and `xp_total` in the `stats` dict.
+
+### Frontend — Gamification
+- **`frontend/lib/types.ts`** — `DashboardStats` extended with `streak_count: number` + `xp_total: number`.
+- **`frontend/components/gamification/StreakBadge.tsx`** *(new)* — `Flame` icon + count, `sm`/`md` size prop.
+- **`frontend/components/gamification/XPBar.tsx`** *(new)* — XP total + progress bar to next 100 XP milestone.
+- **`frontend/components/dashboard/StatsCards.tsx`** — 2 new cards (Day Streak, Total XP); grid updated to `lg:grid-cols-4`.
+
+### Frontend — Sidebar Polish
+- **`frontend/components/ui/theme-toggle.tsx`** — added `variant="icon"` (compact `w-8 h-8` icon button for collapsed/mobile).
+- **`frontend/components/nav/AppSidebar.tsx`** — full redesign:
+  - `border-b` removed from logo area (single `border-t` divider above footer only)
+  - `ThemeToggle variant="pill"` moved to top-right of logo header row (industry standard)
+  - `ThemeToggle variant="icon"` in collapsed footer and mobile header
+  - Expanded footer: `flex flex-col items-center` — avatar, streak+XP inline row, and buttons all centered; XP bar is `w-full` (exception)
+  - Streak (🔥) + XP (⭐) displayed inline with `|` divider; no redundant labels
+  - All tooltips use `bg-popover border border-border shadow-md` (theme-aware, not hardcoded dark)
+
+### Chatbot Welcome Screen Fix
+- **`frontend/app/(dashboard)/chatbot/page.tsx`** — replaced `🇲🇾` emoji (renders as "MY" on Windows) with `<Image src="/Project Logo.png" />` in the `EmptyState` welcome card. The logo shows a branded 64×64 rounded avatar with `ring-2 ring-primary/20`.
 
 ---
 

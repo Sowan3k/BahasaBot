@@ -233,6 +233,8 @@ async def get_dashboard_summary(user_id: UUID, db: AsyncSession) -> dict:
     user_result = await db.execute(select(User).where(User.id == user_id))
     user = user_result.scalar_one_or_none()
     proficiency_level: str = user.proficiency_level if user else "BPS-1"
+    streak_count: int = user.streak_count if user else 0
+    xp_total: int = user.xp_total if user else 0
 
     # ── Aggregate counts ──────────────────────────────────────────────────────
     courses_created: int = (
@@ -297,6 +299,8 @@ async def get_dashboard_summary(user_id: UUID, db: AsyncSession) -> dict:
         "vocabulary_count": vocabulary_count,
         "grammar_count": grammar_count,
         "proficiency_level": proficiency_level,
+        "streak_count": streak_count,
+        "xp_total": xp_total,
     }
 
     # ── Recent items ──────────────────────────────────────────────────────────

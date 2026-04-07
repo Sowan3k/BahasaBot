@@ -365,44 +365,71 @@ _Status: ✅ Complete (2026-04-07)_
 ---
 
 ## Phase 18 — Gamification (Streak + XP)
-_Status: 🔲 Not started_
+_Status: ✅ Complete (2026-04-07)_
 
 **Goal:** Duolingo-inspired streak counter and XP system to motivate daily learning.
 
 ### Backend
-- [ ] backend/services/gamification_service.py — update_streak(user_id), award_xp(user_id, amount), check_milestones(user_id)
-- [ ] Wire update_streak() + award_xp() into: course class completion, quiz submission, chatbot message send, spelling game word correct
-- [ ] Milestone triggers: 3/7/14/30 day streaks → create notification; every 100 XP → create notification
-- [ ] GET /api/dashboard/ — include streak_count and xp_total in response
+- [x] backend/services/gamification_service.py — record_learning_activity(user_id, db, xp_amount): Redis daily streak key + XP update + milestone notifications
+- [x] Wire gamification into: course class completion (+10 XP), module quiz pass (+25 XP), standalone quiz pass (+25 XP), chatbot session (+5 XP, Redis-deduped per session_id)
+- [x] Milestone triggers: 3/7/14/30 day streaks → streak_milestone notification; every 100 XP → xp_milestone notification
+- [x] GET /api/dashboard/ — streak_count and xp_total now included in stats dict
 
 ### Frontend
-- [ ] frontend/components/gamification/StreakBadge.tsx — flame icon + streak count, shown in sidebar and dashboard
-- [ ] frontend/components/gamification/XPBar.tsx — XP total display with progress toward next 100 XP milestone
-- [ ] frontend/components/dashboard/StatsCards.tsx — add streak and XP stat cards
-- [ ] frontend/app/(dashboard)/layout.tsx or sidebar — render StreakBadge in sidebar footer
+- [x] frontend/components/gamification/StreakBadge.tsx — Flame icon + count, sm/md size prop
+- [x] frontend/components/gamification/XPBar.tsx — XP total + progress bar to next 100 XP milestone
+- [x] frontend/components/dashboard/StatsCards.tsx — 2 new cards (Day Streak, Total XP); grid → lg:grid-cols-4
+- [x] frontend/components/nav/AppSidebar.tsx — streak + XP inline in sidebar footer (expanded + collapsed states)
+
+### Also completed this phase (Sidebar + Chatbot polish)
+- [x] ThemeToggle: added variant="icon" compact button; repositioned to top-right of sidebar header row
+- [x] Sidebar: removed double divider (border-b from logo area); footer items centered except XP bar
+- [x] Chatbot welcome screen: replaced broken 🇲🇾 emoji (shows as "MY" on Windows) with BahasaBot logo image
 
 ---
 
 ## Phase 19 — Spelling Practice Game
-_Status: 🔲 Not started_
+_Status: ✅ Complete + v2 redesign (2026-04-07)_
 
 **Goal:** Gamified spelling practice using the user's own learned vocabulary.
 
 ### Backend
-- [ ] backend/services/spelling_service.py — get_next_word(user_id): picks from vocabulary_learned, prioritises least recently practiced
-- [ ] backend/routers/games.py — GET /api/games/spelling/word (returns word + meaning + IPA)
-- [ ] backend/routers/games.py — POST /api/games/spelling/submit (correct: award XP, save score; incorrect: return correct spelling + IPA)
-- [ ] backend/services/gamification_service.py — award 2 XP on correct spelling answer
-- [ ] Register games router in backend/main.py
+- [x] backend/services/spelling_service.py — get_next_word(user_id): Leitner-box-inspired weighted selection (wrong words ×3 priority); _levenshtein() for fuzzy matching; _extract_ipa() for IPA from meaning string; seen-word ring buffer (last 10) via Redis; min threshold lowered to 1 word; save_session_score() upsert-best-run-per-day; get_personal_best()
+- [x] backend/routers/games.py — GET /api/games/spelling/word, POST /api/games/spelling/submit (fuzzy: correct/almost/incorrect), POST /api/games/spelling/session (save score), GET /api/games/spelling/best
+- [x] XP wired into submit handler via record_learning_activity() — +2 XP on correct answer (streak also updated)
+- [x] Register games router in backend/main.py (prefix="/api/games")
+- [x] **Bug fix**: backend/services/langchain_service.py — _extract_and_save() now opens its own AsyncSessionLocal() instead of reusing request-scoped session; chatbot vocab/grammar now reliably persisted
 
-### Frontend
-- [ ] frontend/app/(dashboard)/games/spelling/page.tsx — main game page
-- [ ] frontend/components/games/SpellingGame.tsx — game component: auto-play pronunciation on load, text input, submit, result display
-- [ ] On correct: celebration animation, show +2 XP, load next word automatically after 1.5s
-- [ ] On incorrect: reveal correct spelling with IPA, meaning, Retry or Skip button
-- [ ] Session score counter shown throughout game (X correct / Y attempted)
-- [ ] Add Games → Spelling link in sidebar
-- [ ] frontend/lib/api.ts — add gamesApi functions
+### Frontend — v1 (initial)
+- [x] frontend/app/(dashboard)/games/spelling/page.tsx — page wrapper with 3-tip how-to strip
+- [x] frontend/lib/api.ts — gamesApi (getSpellingWord, submitSpellingAnswer, endSession, getPersonalBest)
+- [x] frontend/lib/types.ts — SpellingWord, SpellingSubmitResponse, SpellingPersonalBest
+- [x] Games → Spelling link added to AppSidebar (Gamepad2 icon, href=/games/spelling)
+
+### Frontend — v2 redesign (challenge + engagement update)
+- [x] frontend/components/games/SpellingGame.tsx — full state machine rewrite:
+  - **Start screen**: "Ready to be tested?" + 4-rule strip + personal best + "Let's Go!" CTA
+  - **3-2-1 countdown**: zoom-in animated number (700ms/tick) before first word
+  - **10-second per-word timer**: shrinking bar (green→yellow→red) + countdown number; red pulsing at ≤3s; auto-submits as wrong on timeout
+  - **Time's Up screen**: shows correct word + IPA + replay button + "Start Over" / "Next Word →" buttons
+  - **Combo multiplier**: ×1→×1.5→×2 with Flame icon; resets on wrong/timeout
+  - **Fuzzy "Almost!" feedback**: yellow state for edit-distance 1
+  - **Session summary**: accuracy %, XP earned, peak combo, mastered vs. review word lists
+  - **Keyboard**: Enter=start/submit/advance; Space=replay audio; Escape=return to start screen
+  - Empty state icon updated from 📚 emoji to themed BookOpen Lucide icon
+
+### Test Results (2026-04-07)
+| Check | Result |
+|---|---|
+| `tsc --noEmit` (frontend) | ✅ 0 errors |
+| Python syntax check (spelling_service.py, games.py, langchain_service.py) | ✅ OK |
+| Levenshtein unit tests | ✅ All 5 pass |
+| IPA extraction unit tests | ✅ All 3 pass |
+| Live API test — GET /word (real user JWT) | ✅ 200, word="sembilan" |
+| Live API test — POST /submit correct | ✅ correct=True, xp=2 |
+| Live API test — POST /submit almost | ✅ correct=False, almost=True |
+| Live API test — POST /submit wrong | ✅ correct=False, almost=False |
+| Live API test — GET /best | ✅ 200 |
 
 ---
 

@@ -348,8 +348,14 @@ function EmptyState() {
     <div className="flex flex-col items-center justify-center h-full text-center py-12">
       {/* Glass card keeps content readable over the wave animation */}
       <div className="rounded-2xl px-8 py-8 backdrop-blur-sm bg-card/70 border border-primary/20 shadow-sm max-w-lg w-full mx-4">
-        <div className="w-16 h-16 rounded-full bg-primary/15 flex items-center justify-center mb-4 mx-auto">
-          <span className="text-3xl">🇲🇾</span>
+        <div className="w-16 h-16 rounded-2xl overflow-hidden mb-4 mx-auto shadow-sm ring-2 ring-primary/20">
+          <Image
+            src="/Project Logo.png"
+            width={64}
+            height={64}
+            alt="BahasaBot"
+            className="w-full h-full object-cover"
+          />
         </div>
         <h2 className="text-xl font-semibold tracking-tight mb-1">Selamat datang! Welcome!</h2>
         <p className="text-sm text-muted-foreground leading-relaxed mb-6 max-w-sm mx-auto">

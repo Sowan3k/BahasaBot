@@ -92,6 +92,13 @@ async def submit_adaptive_quiz(
             await log_activity(db, user_id=current_user.id, feature="standalone_quiz", duration_seconds=0)
         except Exception:
             pass
+        # Award 25 XP on a passing score (≥70%) + update streak — fire-and-forget
+        try:
+            from backend.services.gamification_service import record_learning_activity
+            xp = 25 if result.get("score_percent", 0) >= 70 else 0
+            await record_learning_activity(user_id=current_user.id, db=db, xp_amount=xp)
+        except Exception:
+            pass
         return StandaloneQuizResultResponse(**result)
     except Exception as exc:
         logger.exception(

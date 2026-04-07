@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, BookCheck, GraduationCap, ClipboardList, Languages, Pencil } from "lucide-react";
+import { BookOpen, BookCheck, GraduationCap, ClipboardList, Languages, Pencil, Flame, Star } from "lucide-react";
 import type { DashboardStats } from "@/lib/types";
 import { GlowingEffect } from "@/components/ui/glowing-effect";
 
@@ -66,10 +66,24 @@ export default function StatsCards({ stats }: Props) {
       // chart-5 (darkest sage) for a distinct earthy tone
       iconClass: "bg-chart-5/15 text-chart-5 border-chart-5/30 dark:bg-chart-5/20 dark:text-chart-3 dark:border-chart-5/35",
     },
+    {
+      label: "Day Streak",
+      value: stats.streak_count,
+      description: "consecutive learning days",
+      icon: <Flame className="h-4 w-4" />,
+      iconClass: "bg-orange-500/10 text-orange-500 border-orange-500/20",
+    },
+    {
+      label: "Total XP",
+      value: stats.xp_total,
+      description: "experience points earned",
+      icon: <Star className="h-4 w-4" />,
+      iconClass: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
+    },
   ];
 
   return (
-    <ul className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+    <ul className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
       {cards.map((card) => (
         <li key={card.label} className="list-none">
           <div className="relative h-full rounded-[1.25rem] border-[0.75px] border-border p-2">
