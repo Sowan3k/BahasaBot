@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 
 import { dashboardApi } from "@/lib/api";
 import type {
@@ -14,12 +15,16 @@ import type {
   WeakPointEntry,
 } from "@/lib/types";
 
-import BPSProgressBar from "@/components/dashboard/BPSProgressBar";
-import QuizHistoryTable from "@/components/dashboard/QuizHistoryTable";
-import StatsCards from "@/components/dashboard/StatsCards";
-import VocabularyTable from "@/components/dashboard/VocabularyTable";
-import WeakPointsChart from "@/components/dashboard/WeakPointsChart";
-import { GlowingEffect } from "@/components/ui/glowing-effect";
+// Heavy components loaded asynchronously — keeps initial bundle small
+const BPSProgressBar = dynamic(() => import("@/components/dashboard/BPSProgressBar"), { ssr: false });
+const QuizHistoryTable = dynamic(() => import("@/components/dashboard/QuizHistoryTable"), { ssr: false });
+const StatsCards = dynamic(() => import("@/components/dashboard/StatsCards"), { ssr: false });
+const VocabularyTable = dynamic(() => import("@/components/dashboard/VocabularyTable"), { ssr: false });
+const WeakPointsChart = dynamic(() => import("@/components/dashboard/WeakPointsChart"), { ssr: false });
+const GlowingEffect = dynamic(
+  () => import("@/components/ui/glowing-effect").then((m) => ({ default: m.GlowingEffect })),
+  { ssr: false, loading: () => null }
+);
 
 // ── Simple inline grammar table ───────────────────────────────────────────────
 

@@ -9,11 +9,20 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { coursesApi } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { CourseGenerationModal } from "@/components/courses/CourseGenerationModal";
+import dynamic from "next/dynamic";
 import { useCourseGeneration } from "@/lib/course-generation-context";
-import { SVGFollower } from "@/components/ui/svg-follower";
 import { useTheme } from "@/lib/use-theme";
 import type { CourseSummary } from "@/lib/types";
+
+// Heavy components — code-split to avoid blocking the initial bundle
+const CourseGenerationModal = dynamic(
+  () => import("@/components/courses/CourseGenerationModal").then((m) => ({ default: m.CourseGenerationModal })),
+  { ssr: false }
+);
+const SVGFollower = dynamic(
+  () => import("@/components/ui/svg-follower").then((m) => ({ default: m.SVGFollower })),
+  { ssr: false, loading: () => null }
+);
 
 // Theme-matched colour palettes for the SVG trail animation.
 // Spans the full tonal range — light sparkles, warm pops, mid greens, dark anchors —
