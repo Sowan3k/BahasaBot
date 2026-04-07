@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -30,7 +30,7 @@ type LoginForm = z.infer<typeof loginSchema>;
 // ── Shared helper: store tokens in NextAuth session ─────────────────────────
 
 async function storeSession(data: TokenResponse): Promise<boolean> {
-  const result = await signIn("jwt", {
+  const credentials = {
     accessToken: data.access_token,
     refreshToken: data.refresh_token,
     userId: data.user.id,
@@ -40,7 +40,13 @@ async function storeSession(data: TokenResponse): Promise<boolean> {
     provider: data.user.provider,
     createdAt: String(data.user.created_at),
     redirect: false,
-  });
+  };
+  // Retry once — first attempt can fail if CSRF token is still loading
+  let result = await signIn("jwt", credentials);
+  if (result?.error) {
+    await new Promise((r) => setTimeout(r, 600));
+    result = await signIn("jwt", credentials);
+  }
   return !result?.error;
 }
 
@@ -50,6 +56,7 @@ export default function LoginPage() {
   const router = useRouter();
   const [authError, setAuthError] = useState<string | null>(null);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
 
@@ -70,8 +77,8 @@ export default function LoginPage() {
       );
       const ok = await storeSession(tokenData);
       if (!ok) { setAuthError("Sign in failed. Please try again."); return; }
+      setRedirecting(true);
       router.push("/dashboard");
-      router.refresh();
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         const detail: string = err.response?.data?.detail ?? "";
@@ -104,8 +111,8 @@ export default function LoginPage() {
       );
       const ok = await storeSession(data);
       if (!ok) { setAuthError("Google sign-in failed. Please try again."); return; }
+      setRedirecting(true);
       router.push("/dashboard");
-      router.refresh();
     } catch {
       setAuthError("Google sign-in failed. Please try again.");
     } finally {
@@ -113,43 +120,53 @@ export default function LoginPage() {
     }
   }
 
+  const googleBtnRef = useRef<HTMLDivElement>(null);
+
   const isLoading = isSubmitting || googleLoading;
 
   // ── Render ───────────────────────────────────────────────────────────────
 
-  return (
-    <AuthCard>
-      {/* Header */}
-      <div className="text-center space-y-1 mb-6">
+  // Full-screen loading overlay shown while navigating to dashboard after sign-in
+  if (redirecting) {
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-background">
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: "spring", duration: 0.8 }}
-          className="mx-auto w-14 h-14 flex items-center justify-center"
+          transition={{ type: "spring", duration: 0.5 }}
+          className="relative w-14 h-14 rounded-2xl shadow-lg"
         >
-          <Image src="/Project Logo.png" alt="BahasaBot" width={56} height={56} priority className="object-contain" />
+          <Image src="/Logo new only box (1).svg" alt="BahasaBot" fill sizes="56px" className="object-contain" />
         </motion.div>
+        <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm text-muted-foreground">Signing you in…</p>
+      </div>
+    );
+  }
 
-        <motion.h1
-          initial={{ opacity: 0, y: 8 }}
+  return (
+    <AuthCard>
+      {/* Header */}
+      <div className="mb-8">
+        <motion.h2
+          initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-b from-white to-white/80"
+          className="text-2xl font-bold text-white tracking-tight"
         >
-          Welcome Back
-        </motion.h1>
+          Welcome back
+        </motion.h2>
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-          className="text-white/55 text-xs"
+          transition={{ delay: 0.1 }}
+          className="text-white/45 text-sm mt-1.5"
         >
-          Sign in to continue learning
+          Sign in to continue your Malay journey
         </motion.p>
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-2.5">
         {/* Email */}
         {(() => {
           const { onBlur: emailOnBlur, ...emailRest } = register("email");
@@ -253,45 +270,59 @@ export default function LoginPage() {
         </motion.button>
 
         {/* Divider */}
-        <div className="flex items-center gap-3 my-1">
-          <div className="flex-1 border-t border-white/8" />
-          <motion.span
-            className="text-xs text-white/35"
-            animate={{ opacity: [0.7, 0.9, 0.7] }}
-            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-          >
-            or
-          </motion.span>
-          <div className="flex-1 border-t border-white/8" />
+        <div className="flex items-center gap-3 pt-0.5">
+          <div className="flex-1 border-t border-white/[0.08]" />
+          <span className="text-[11px] text-white/30 tracking-wide uppercase">or</span>
+          <div className="flex-1 border-t border-white/[0.08]" />
         </div>
 
-        {/* Google sign-in — uses GoogleLogin component for credential (id_token) flow */}
-        <div className="flex justify-center">
-          <GoogleLogin
-            onSuccess={handleGoogleSuccess}
-            onError={() => setAuthError("Google sign-in failed. Please try again.")}
-            useOneTap={false}
-            text="signin_with"
-            shape="rectangular"
-            theme="filled_black"
-          />
+        {/* Google sign-in — hidden real button + custom themed overlay */}
+        <div className="relative">
+          {/* Hidden GoogleLogin — handles actual OAuth credential flow */}
+          <div
+            ref={googleBtnRef}
+            className="absolute opacity-0 pointer-events-none"
+            style={{ width: 1, height: 1, overflow: "hidden" }}
+          >
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={() => setAuthError("Google sign-in failed. Please try again.")}
+              useOneTap={false}
+              text="signin_with"
+              shape="rectangular"
+              theme="filled_black"
+              size="large"
+              width="340"
+            />
+          </div>
+
+          {/* Visible themed button */}
+          <button
+            type="button"
+            disabled={isLoading}
+            onClick={() => googleBtnRef.current?.querySelector<HTMLElement>("div[role=button], iframe")?.click()}
+            className="w-full flex items-center justify-center gap-3 h-10 rounded-lg
+                       border border-white/15 bg-white/[0.06] hover:bg-white/10
+                       text-white/75 hover:text-white text-sm font-medium
+                       transition-all duration-200 disabled:opacity-40"
+          >
+            <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            </svg>
+            Continue with Google
+          </button>
         </div>
 
         {/* Register link */}
-        <motion.p
-          className="text-center text-xs text-white/50 mt-2"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-        >
+        <p className="text-center text-xs text-white/40 pt-1">
           Don&apos;t have an account?{" "}
-          <Link href="/register" className="relative inline-block group/signup">
-            <span className="relative z-10 text-white group-hover/signup:text-white/70 transition-colors duration-300 font-medium">
-              Create one
-            </span>
-            <span className="absolute bottom-0 left-0 w-0 h-[1px] bg-white group-hover/signup:w-full transition-all duration-300" />
+          <Link href="/register" className="text-white/70 hover:text-white transition-colors duration-200 font-medium underline underline-offset-2 decoration-white/30 hover:decoration-white/70">
+            Create one
           </Link>
-        </motion.p>
+        </p>
       </form>
     </AuthCard>
   );

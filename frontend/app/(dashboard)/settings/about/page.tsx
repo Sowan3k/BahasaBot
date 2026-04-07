@@ -27,12 +27,12 @@ export default function AboutPage() {
       {/* App identity card */}
       <div className="rounded-xl border border-border bg-card p-6 flex flex-col items-center text-center gap-3">
         <Image
-          src="/Project Logo.png"
+          src="/Logo new (1).svg"
           alt="BahasaBot"
-          width={72}
-          height={72}
+          width={252}
+          height={80}
           priority
-          className="rounded-2xl object-contain"
+          className="object-contain"
         />
         <div>
           <h2 className="font-heading text-xl font-bold text-foreground">BahasaBot</h2>

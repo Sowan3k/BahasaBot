@@ -243,7 +243,9 @@ export default function ChatbotPage() {
       {/* ── Header ── */}
       <header className="flex items-center justify-between px-4 py-3 bg-card border-b shrink-0 relative z-10">
         <div className="flex items-center gap-2">
-          <Image src="/Project Logo.png" width={28} height={28} alt="BahasaBot" className="rounded-full select-none" />
+          <div className="relative w-7 h-7 flex-shrink-0 select-none">
+            <Image src="/Logo new only box (1).svg" alt="BahasaBot" fill sizes="28px" className="object-contain" />
+          </div>
           <div>
             <p className="text-sm font-semibold tracking-tight leading-tight">AI Tutor</p>
             <p className="text-xs text-muted-foreground leading-tight">Bahasa Melayu</p>
@@ -261,7 +263,7 @@ export default function ChatbotPage() {
       {/* ── Waves background — always visible ── */}
       <Waves
         strokeColor={theme === "dark" ? "#8a9f7b" : "#8d9d4f"}
-        backgroundColor={theme === "dark" ? "#3a3529" : "#decea0"}
+        backgroundColor={theme === "dark" ? "#25221a" : "#decea0"}
         pointerSize={0.5}
       />
 
@@ -348,13 +350,13 @@ function EmptyState() {
     <div className="flex flex-col items-center justify-center h-full text-center py-12">
       {/* Glass card keeps content readable over the wave animation */}
       <div className="rounded-2xl px-8 py-8 backdrop-blur-sm bg-card/70 border border-primary/20 shadow-sm max-w-lg w-full mx-4">
-        <div className="w-16 h-16 rounded-2xl overflow-hidden mb-4 mx-auto shadow-sm ring-2 ring-primary/20">
+        <div className="mb-4 mx-auto">
           <Image
-            src="/Project Logo.png"
-            width={64}
-            height={64}
+            src="/Logo new (1).svg"
+            width={189}
+            height={60}
             alt="BahasaBot"
-            className="w-full h-full object-cover"
+            className="object-contain"
           />
         </div>
         <h2 className="text-xl font-semibold tracking-tight mb-1">Selamat datang! Welcome!</h2>

@@ -4,9 +4,10 @@
 // 15 questions: 6 MCQ + 6 fill-in-blank + 3 translation, personalised to user's weak points.
 // Scores server-side; recalculates BPS proficiency level after submission.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
+import { Brain, ChartBar, Sparkles, CheckCircle2 } from "lucide-react";
 import { standaloneQuizApi } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +32,99 @@ const BPS_COLOR: Record<string, string> = {
   "BPS-3": "text-primary",
   "BPS-4": "text-foreground",
 };
+
+// ── Quiz generating animation ─────────────────────────────────────────────────
+// Shown while Gemini generates the quiz (may take 5–15 s if not Redis-cached).
+// Steps advance every 3 s to show realistic progress and keep the user informed.
+
+const STEPS = [
+  { icon: Brain,        text: "Analyzing your learning history…"        },
+  { icon: ChartBar,     text: "Identifying your weak points…"            },
+  { icon: Sparkles,     text: "Generating personalized questions…"       },
+  { icon: CheckCircle2, text: "Finalizing your quiz…"                    },
+] as const;
+
+function QuizGeneratingLoader() {
+  const [activeStep, setActiveStep] = useState(0);
+
+  // Advance one step every 3 s, but never exceed STEPS.length - 1
+  useEffect(() => {
+    const id = setInterval(() => {
+      setActiveStep((prev) => Math.min(prev + 1, STEPS.length - 1));
+    }, 3000);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[480px] max-w-sm mx-auto px-6 gap-10">
+
+      {/* Spinning ring + icon ------------------------------------------------ */}
+      <div className="relative w-20 h-20 flex-shrink-0">
+        {/* Static background ring */}
+        <div className="absolute inset-0 rounded-full border-4 border-primary/15" />
+        {/* Spinning progress arc */}
+        <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-primary animate-spin" />
+        {/* Inner icon pulsing */}
+        <div className="absolute inset-2 rounded-full bg-primary/10 flex items-center justify-center">
+          <Brain className="w-7 h-7 text-primary animate-pulse" />
+        </div>
+      </div>
+
+      {/* Step list ----------------------------------------------------------- */}
+      <div className="w-full space-y-3">
+        {STEPS.map(({ icon: Icon, text }, i) => {
+          const done    = i < activeStep;
+          const active  = i === activeStep;
+          const pending = i > activeStep;
+          return (
+            <div
+              key={i}
+              className={`flex items-center gap-3 transition-all duration-500 ${
+                pending ? "opacity-30" : "opacity-100"
+              }`}
+            >
+              {/* Step indicator */}
+              <div
+                className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-colors duration-500 ${
+                  done
+                    ? "bg-primary text-primary-foreground"
+                    : active
+                    ? "bg-primary/15 text-primary ring-2 ring-primary/30"
+                    : "bg-muted text-muted-foreground"
+                }`}
+              >
+                {done ? (
+                  <CheckCircle2 className="w-4 h-4" />
+                ) : (
+                  <Icon className={`w-4 h-4 ${active ? "animate-pulse" : ""}`} />
+                )}
+              </div>
+
+              {/* Step text */}
+              <span
+                className={`text-sm transition-colors duration-500 ${
+                  done    ? "text-muted-foreground line-through decoration-muted-foreground/50" :
+                  active  ? "text-foreground font-medium"  :
+                            "text-muted-foreground"
+                }`}
+              >
+                {text}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Caption */}
+      <p className="text-xs text-muted-foreground text-center leading-relaxed">
+        Personalizing 15 questions based on your vocabulary,
+        grammar, and past quiz performance. This may take a few seconds.
+      </p>
+    </div>
+  );
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function AdaptiveQuizPage() {
   const queryClient = useQueryClient();
@@ -91,16 +185,7 @@ export default function AdaptiveQuizPage() {
   // ── Loading state ────────────────────────────────────────────────────────────
 
   if (isLoading) {
-    return (
-      <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
-        <div className="h-6 w-40 rounded bg-muted animate-pulse" />
-        <div className="h-8 w-64 rounded bg-muted animate-pulse" />
-        <div className="h-4 w-80 rounded bg-muted animate-pulse" />
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="h-28 rounded-lg border bg-muted animate-pulse" />
-        ))}
-      </div>
-    );
+    return <QuizGeneratingLoader />;
   }
 
   // ── Error state ──────────────────────────────────────────────────────────────

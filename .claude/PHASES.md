@@ -147,6 +147,9 @@ _Status: ✅ Complete — deployment pending_
 - [x] JWT expiry verified — access token 30 min, refresh token 7 days
 - [x] Deployment config — backend/Procfile + backend/railway.toml; frontend/vercel.json updated
 - [x] Environment variables audit — added missing GOOGLE_CLIENT_ID to .env.example
+- [x] Frontend session cache — `getCachedSession()` in `frontend/lib/api.ts`; 60s TTL eliminates repeated `/api/auth/session` lookups on every API request
+- [x] Profile fetch deduplication — `AppSidebar` + `OnboardingChecker` both use `useQuery(["profile"])` so React Query deduplicates to a single `/api/profile/` call per stale window (was 2 per page load)
+- [x] Login `router.refresh()` race condition removed — was triggering middleware re-run before session cookie was stable, causing transient login error flash
 - [ ] Final end-to-end test of all features (manual — deploy and smoke-test)
 
 ---
@@ -433,6 +436,43 @@ _Status: ✅ Complete + v2 redesign (2026-04-07)_
 
 ---
 
+## Phase 23 — UI/UX Overhaul (2026-04-07)
+_Status: ✅ Complete_
+
+**Goal:** Polish the visual design to industry-standard level.
+
+### Auth Pages — Split-screen redesign
+- [x] `components/ui/auth-card.tsx` — full rewrite: split-screen layout (branding left / glass form right), ShaderAnimation fills entire background, desktop lg+ shows large icon + "BahasaBot" wordmark + feature bullets on left, right panel is 460px glass surface with `bg-black/50 backdrop-blur-2xl border-l border-white/[0.07]`
+- [x] Login + Register headers simplified to clean page-specific heading ("Welcome back" / "Create account") — branding moved to left panel
+- [x] All auth pages (forgot-password, reset-password): box logo replaces wide SVG in 56×56 contexts
+- [x] Browser autofill white-background override: global CSS in globals.css (`-webkit-box-shadow: 0 0 0 1000px rgba(0,0,0,0.35) inset !important`)
+- [x] storeSession() retry logic: one 600ms retry on NextAuth CSRF race condition
+
+### Dark Palette — Unified depth hierarchy
+- [x] Sidebar: `#1c1a13` → Background: `#25221a` → Card: `#2e2b22` → Muted: `#363228` → Border: `#3d3a2e`
+- [x] `bg-sidebar` token applied to AppSidebar (desktop aside + mobile drawer) via `--sidebar` CSS var
+- [x] Chatbot Waves `backgroundColor` updated from `#3a3529` to `#25221a`
+
+### Logo — Box logo for icon contexts
+- [x] `Logo new only box (1).svg` (886×872 square icon) used everywhere a square container was previously hacking the wide SVG
+- [x] Collapsed sidebar, chatbot header icon, login/register/forgot/reset icon contexts, favicon all updated
+- [x] Sidebar nav icon opacity: `text-sidebar-foreground/60` hover → `text-sidebar-foreground` (more legible on very dark sidebar)
+
+### Dashboard tiles
+- [x] WeakPointsChart: removed recharts, replaced with inline CSS rows (type badge + topic + h-1.5 bar + score% + status label)
+- [x] QuizHistoryTable: summary row with trend icon + score ring + type badge + pass/fail inline
+
+### Spelling Game
+- [x] Exit button added to all active phases (countdown, timeout, main game) — calls resetSession(), no endSession() call so stats not saved on exit
+
+### Quiz
+- [x] Standalone quiz loading: animated 4-step progress screen with pulsing brain icon and step indicators
+
+### Shader background
+- [x] Background color updated to `#14120a` (darker, matches new palette)
+
+---
+
 ## Phase 20 — My Journey (Learning Roadmap)
 _Status: 🔲 Not started_
 
@@ -500,6 +540,9 @@ _Status: 🔲 Not started_
 _Status: 🔲 Not started_
 
 **Goal:** Make the app feel polished and demo-ready.
+
+### Auth UX
+- [x] Login page — redirect loading overlay (logo + spinner + "Signing you in…") shown immediately after sign-in succeeds while dashboard loads
 
 ### Loading Skeletons
 - [ ] frontend/components/dashboard/ — add skeleton states to all dashboard components (StatsCards, VocabularyTable, WeakPointsChart)

@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
+import { useQuery } from "@tanstack/react-query";
 import { AppSidebar } from "@/components/nav/AppSidebar";
 import { CourseGenerationProvider } from "@/lib/course-generation-context";
 import { CourseGenerationProgress } from "@/components/courses/CourseGenerationProgress";
@@ -39,36 +40,29 @@ function SessionWatcher() {
 }
 
 /**
- * Fetches the user profile once after the session is authenticated and
- * signals the parent layout to show the onboarding modal if
- * onboarding_completed === false.
+ * Checks onboarding_completed from the shared profile query and signals the
+ * parent layout to show the onboarding modal if needed.
  *
- * Uses a ref flag so the check only fires once per mount, even if
- * the session object re-renders (e.g., during token refresh).
+ * Uses the same query key ["profile"] as AppSidebar — React Query deduplicates
+ * the fetch so only one /api/profile/ request is made per staleTime window.
  */
 function OnboardingChecker({ onShowModal }: { onShowModal: () => void }) {
   const { status } = useSession();
-  const hasChecked = useRef(false);
+  const hasTriggered = useRef(false);
+
+  const { data } = useQuery({
+    queryKey: ["profile"],
+    queryFn: () => profileApi.getProfile().then((r) => r.data),
+    enabled: status === "authenticated",
+    staleTime: 60_000,
+  });
 
   useEffect(() => {
-    // Only run once and only after session is confirmed authenticated.
-    // The JWT is attached to API requests via the apiClient interceptor,
-    // so we must wait until status === "authenticated".
-    if (status !== "authenticated" || hasChecked.current) return;
-    hasChecked.current = true;
-
-    profileApi
-      .getProfile()
-      .then((res) => {
-        if (!res.data.onboarding_completed) {
-          onShowModal();
-        }
-      })
-      .catch(() => {
-        // Silently swallow — a failed profile fetch must never block the dashboard.
-        // The onboarding will be shown on the next successful session.
-      });
-  }, [status, onShowModal]);
+    if (data && !hasTriggered.current && !data.onboarding_completed) {
+      hasTriggered.current = true;
+      onShowModal();
+    }
+  }, [data, onShowModal]);
 
   return null;
 }

@@ -46,10 +46,32 @@ const apiClient = axios.create({
   },
 });
 
+// ── Session cache — avoids a /api/auth/session round-trip on every request ────
+// The access token refreshes every 29 minutes; caching for 60s is safe and
+// eliminates the N-concurrent-session-lookups pattern on first page load.
+
+type CachedSession = Awaited<ReturnType<typeof getSession>>;
+let _sessionCache: { value: CachedSession; expiresAt: number } | null = null;
+const SESSION_CACHE_TTL_MS = 60_000; // 1 minute
+
+async function getCachedSession(): Promise<CachedSession> {
+  if (_sessionCache && Date.now() < _sessionCache.expiresAt) {
+    return _sessionCache.value;
+  }
+  const session = await getSession();
+  _sessionCache = { value: session, expiresAt: Date.now() + SESSION_CACHE_TTL_MS };
+  return session;
+}
+
+/** Call this on sign-out or after a new sign-in so the cache is refreshed. */
+export function invalidateSessionCache() {
+  _sessionCache = null;
+}
+
 // ── Request interceptor — attach Bearer token ─────────────────────────────────
 
 apiClient.interceptors.request.use(async (config) => {
-  const session = await getSession();
+  const session = await getCachedSession();
 
   // Refresh token expired (or never existed) — sign out before the call
   if ((session as any)?.error === "RefreshTokenExpired") {
@@ -71,7 +93,8 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
-      // Fallback: token is still rejected after refresh — sign out.
+      // Clear stale session cache before signing out.
+      invalidateSessionCache();
       await signOut({ redirect: true, callbackUrl: "/login" });
     }
     return Promise.reject(error);

@@ -1,103 +1,108 @@
 "use client";
 
 /**
- * AuthCard — animated glass card shell used by both /login and /register.
+ * AuthCard — split-screen auth layout
  *
- * Features:
- *  - Full-screen ShaderAnimation background (Three.js GLSL)
- *  - 3D tilt on mouse move (framer-motion)
- *  - Traveling light-beam border animation (top → right → bottom → left)
- *  - Glass card surface (bg-black/50 backdrop-blur)
+ * Desktop (lg+):
+ *   LEFT  — transparent branding panel over ShaderAnimation background
+ *   RIGHT — fixed-width glass form panel (460px)
+ *
+ * Mobile:
+ *   Full-width glass panel + compact brand bar at top
  */
 
-import { motion, useMotionValue, useTransform } from "framer-motion";
+import Image from "next/image";
 import { ShaderAnimation } from "@/components/ui/shader-animation";
 
+const FEATURES = [
+  "Chat freely with an AI Malay tutor",
+  "Generate custom courses on any topic",
+  "Adaptive quizzes targeting your weak areas",
+  "Track vocabulary, streaks & XP over time",
+];
+
 export function AuthCard({ children }: { children: React.ReactNode }) {
-  const mouseX = useMotionValue(0);
-  const mouseY = useMotionValue(0);
-  const rotateX = useTransform(mouseY, [-300, 300], [10, -10]);
-  const rotateY = useTransform(mouseX, [-300, 300], [-10, 10]);
-
-  function handleMouseMove(e: React.MouseEvent) {
-    const rect = e.currentTarget.getBoundingClientRect();
-    mouseX.set(e.clientX - rect.left - rect.width / 2);
-    mouseY.set(e.clientY - rect.top - rect.height / 2);
-  }
-
-  function handleMouseLeave() {
-    mouseX.set(0);
-    mouseY.set(0);
-  }
-
   return (
-    <div className="min-h-screen w-screen bg-black relative overflow-hidden flex items-center justify-center">
-      {/* Shader background — fills the entire screen behind the card */}
+    <div className="min-h-screen w-screen relative overflow-hidden flex">
+
+      {/* ── Full-screen shader background ── */}
       <div className="absolute inset-0">
         <ShaderAnimation />
       </div>
 
-      {/* Card wrapper — handles 3D tilt */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-        className="w-full max-w-sm relative z-10 px-4"
-        style={{ perspective: 1500 }}
-      >
-        <motion.div
-          style={{ rotateX, rotateY }}
-          onMouseMove={handleMouseMove}
-          onMouseLeave={handleMouseLeave}
-        >
-          <div className="relative group">
-            {/* Traveling border beams */}
-            <div className="absolute -inset-[1px] rounded-2xl overflow-hidden pointer-events-none">
-              {/* Top */}
-              <motion.div
-                className="absolute top-0 left-0 h-[2px] w-[50%] bg-gradient-to-r from-transparent via-white to-transparent"
-                animate={{ left: ["-50%", "100%"], opacity: [0.3, 0.65, 0.3] }}
-                transition={{
-                  left: { duration: 2.5, ease: "easeInOut", repeat: Infinity, repeatDelay: 1 },
-                  opacity: { duration: 1.2, repeat: Infinity, repeatType: "mirror" },
-                }}
-              />
-              {/* Right */}
-              <motion.div
-                className="absolute top-0 right-0 h-[50%] w-[2px] bg-gradient-to-b from-transparent via-white to-transparent"
-                animate={{ top: ["-50%", "100%"], opacity: [0.3, 0.65, 0.3] }}
-                transition={{
-                  top: { duration: 2.5, ease: "easeInOut", repeat: Infinity, repeatDelay: 1, delay: 0.6 },
-                  opacity: { duration: 1.2, repeat: Infinity, repeatType: "mirror", delay: 0.6 },
-                }}
-              />
-              {/* Bottom */}
-              <motion.div
-                className="absolute bottom-0 right-0 h-[2px] w-[50%] bg-gradient-to-r from-transparent via-white to-transparent"
-                animate={{ right: ["-50%", "100%"], opacity: [0.3, 0.65, 0.3] }}
-                transition={{
-                  right: { duration: 2.5, ease: "easeInOut", repeat: Infinity, repeatDelay: 1, delay: 1.2 },
-                  opacity: { duration: 1.2, repeat: Infinity, repeatType: "mirror", delay: 1.2 },
-                }}
-              />
-              {/* Left */}
-              <motion.div
-                className="absolute bottom-0 left-0 h-[50%] w-[2px] bg-gradient-to-b from-transparent via-white to-transparent"
-                animate={{ bottom: ["-50%", "100%"], opacity: [0.3, 0.65, 0.3] }}
-                transition={{
-                  bottom: { duration: 2.5, ease: "easeInOut", repeat: Infinity, repeatDelay: 1, delay: 1.8 },
-                  opacity: { duration: 1.2, repeat: Infinity, repeatType: "mirror", delay: 1.8 },
-                }}
+      {/* ── LEFT: Branding panel — desktop only ── */}
+      <div className="hidden lg:flex flex-1 items-center justify-center relative z-10 p-16 select-none">
+        {/* Subtle dark gradient so content stays readable against the shader */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-black/20 to-transparent pointer-events-none" />
+
+        <div className="relative flex flex-col items-start gap-10 max-w-xs">
+
+          {/* Icon + wordmark as CSS text (no SVG filter hacks) */}
+          <div className="flex flex-col gap-4">
+            <div className="relative w-16 h-16 flex-shrink-0">
+              <Image
+                src="/Logo new only box (1).svg"
+                alt="BahasaBot"
+                fill
+                sizes="64px"
+                priority
+                className="object-contain"
               />
             </div>
-
-            {/* Glass card surface */}
-            <div className="relative bg-black/50 backdrop-blur-xl rounded-2xl border border-white/[0.07] shadow-2xl overflow-hidden p-6">
-              {children}
+            <div>
+              <h1 className="text-5xl font-bold text-white tracking-tight leading-none">
+                BahasaBot
+              </h1>
+              <p className="text-white/40 text-lg mt-3 leading-snug">
+                Your personal Bahasa Melayu tutor
+              </p>
             </div>
           </div>
-        </motion.div>
-      </motion.div>
+
+          {/* Feature list */}
+          <ul className="flex flex-col gap-4">
+            {FEATURES.map((f) => (
+              <li key={f} className="flex items-center gap-3.5 text-white/55 text-[15px]">
+                <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0 shadow-[0_0_6px_1px_rgba(138,159,123,0.7)]" />
+                {f}
+              </li>
+            ))}
+          </ul>
+
+          {/* Subtle tagline */}
+          <p className="text-white/20 text-xs tracking-widest uppercase">
+            BahasaBot · Final Year Project · USM
+          </p>
+        </div>
+      </div>
+
+      {/* ── RIGHT: Glass form panel ── */}
+      <div
+        className="relative z-10 w-full lg:w-[460px] flex-shrink-0 flex flex-col
+                   min-h-screen bg-black/50 backdrop-blur-2xl
+                   border-l border-white/[0.07] overflow-y-auto"
+      >
+        {/* Mobile-only compact brand bar */}
+        <div className="lg:hidden flex items-center gap-2.5 px-8 pt-10">
+          <div className="relative w-8 h-8 flex-shrink-0">
+            <Image
+              src="/Logo new only box (1).svg"
+              fill
+              sizes="32px"
+              alt="BahasaBot"
+              className="object-contain"
+            />
+          </div>
+          <span className="text-white font-bold text-sm tracking-tight">BahasaBot</span>
+        </div>
+
+        {/* Form — vertically centered in remaining space */}
+        <div className="flex-1 flex flex-col justify-center px-8 py-10">
+          <div className="w-full max-w-[340px] mx-auto">
+            {children}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

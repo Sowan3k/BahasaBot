@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-07 (Phase 19 complete — Spelling Practice Game v2 + vocab pipeline fix)
+## Last Updated: 2026-04-08 (UI overhaul — split-screen auth, dark palette, box logo, Google button, shader tuning)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -30,6 +30,8 @@ _Update this file at the end of every session_
 | Sidebar Polish | ✅ Complete | Double divider removed (no border-b on logo area); ThemeToggle repositioned to header row; footer items centered except XP bar; collapsed tooltips use theme-aware bg-popover |
 | Spelling Practice Game (Phase 19) | ✅ Complete + v2 redesign | Leitner-box word selection; Levenshtein fuzzy matching; Start screen → 3-2-1 countdown → 10s per-word timer (green→yellow→red pulse) → Time's Up screen with Next/Start Over; combo multiplier; session summary; keyboard shortcuts (Enter/Space/Escape); personal best; Games link in sidebar |
 | Chatbot vocab pipeline fix | ✅ Fixed | _extract_and_save() now opens its own AsyncSessionLocal session — asyncio.create_task with request-scoped session was silently failing after SSE stream ended; vocab/grammar now reliably saved after every chatbot response |
+| Frontend Performance Optimizations | ✅ Complete | Session cache in api.ts (60s TTL, eliminates /api/auth/session round-trip on every API call); profile fetch deduplication via shared useQuery(['profile']) key in AppSidebar + OnboardingChecker; login router.refresh() race condition removed; redirect loading overlay added |
+| UI Overhaul (2026-04-08) | ✅ Complete | Split-screen auth (branding left, glass form right); unified dark olive palette (#25221a bg, #1c1a13 sidebar, #2e2b22 card); box logo across all icon contexts; autofill CSS fix; quiz generating loader; WeakPoints + QuizHistory tile redesign; spelling game exit button; chatbot Waves color fix; sidebar bg-sidebar token; custom themed Google button (hides iframe, uses ref click); shader intensity reduced; left panel gradient overlay; storeSession() CSRF retry |
 
 ## Missing / Broken
 - `frontend/app/(dashboard)/quiz/module/[moduleId]/results/page.tsx` — **stub only** (returns `<div>Module Quiz Results — TODO</div>`). Score + per-question breakdown + Continue/Retry button not yet implemented.
@@ -37,6 +39,45 @@ _Update this file at the end of every session_
 
 ## Known Pre-existing Issue (not caused by recent changes)
 - Module quiz cache-vs-submission misalignment: if a quiz attempt fails (0%) the cache clears and Gemini regenerates new questions. If the user re-submits using answers from the *first* GET, they score 0% again. Mitigation: frontend should re-fetch GET before showing quiz form if previous submission failed. This is a UI flow issue, not a backend bug.
+
+---
+
+## What Was Done This Session (2026-04-07 — Frontend performance optimizations)
+
+### Root causes identified
+1. **Transient "login error" flash** — `router.refresh()` was called immediately after `router.push("/dashboard")`, causing a race where the middleware re-ran before the NextAuth session cookie was fully stable, briefly surfacing an error state.
+2. **No loading feedback during redirect** — after successful sign-in, the login form stayed visible until the full dashboard rendered, with no visual indicator.
+3. **`getSession()` on every API call** — `apiClient` interceptor was calling `getSession()` (a `/api/auth/session` network hop) before every single request. On a page that fires 5 concurrent API calls, that's 5 parallel session lookups.
+4. **Duplicate profile API calls** — both `AppSidebar` and `OnboardingChecker` in `layout.tsx` independently called `profileApi.getProfile()` on every page mount (2 separate network requests for identical data).
+
+### Fixes
+
+#### `frontend/app/(auth)/login/page.tsx`
+- Removed `router.refresh()` from both email and Google sign-in success paths — eliminates the middleware race condition that caused the transient login error.
+- Added `redirecting` boolean state; set to `true` immediately after `storeSession()` succeeds.
+- When `redirecting === true`, renders a full-screen loading overlay (logo + spinner + "Signing you in…") instead of the login form, giving instant visual feedback.
+
+#### `frontend/lib/api.ts`
+- Added `getCachedSession()` — module-level cache wrapping `getSession()` with a 60-second TTL. The first API call in a window fetches the real session; subsequent calls within 60 s return instantly from the in-memory cache.
+- Added `invalidateSessionCache()` export — called from the 401 response interceptor to force a fresh session lookup on token failure.
+- `tsc --noEmit`: ✅ 0 errors.
+
+#### `frontend/components/nav/AppSidebar.tsx`
+- Replaced `useEffect + profileApi.getProfile()` with `useQuery({ queryKey: ["profile"], staleTime: 60_000 })`.
+- Simplified sidebar collapsed state initialization to a lazy `useState(() => localStorage.getItem(...))` — removes a second `useEffect` that was only needed for the old `setCollapsed` approach.
+
+#### `frontend/app/(dashboard)/layout.tsx` — `OnboardingChecker`
+- Replaced `useEffect + useRef + profileApi.getProfile()` with `useQuery({ queryKey: ["profile"], staleTime: 60_000 })`.
+- **Result**: `AppSidebar` and `OnboardingChecker` now share the same React Query key — only **one** `/api/profile/` request fires per page load (down from 2); subsequent navigations within the stale window hit the cache instantly.
+
+### Test Results (2026-04-07)
+| Check | Result |
+|---|---|
+| `tsc --noEmit` | ✅ 0 errors |
+| Login error flash | ✅ No longer occurs — `router.refresh()` removed |
+| Redirect loading overlay | ✅ Shows immediately after sign-in button press |
+| Profile API calls per page load | ✅ 1 (down from 2) — confirmed by shared query key dedup |
+| Session lookup per API call | ✅ Cached after first call — no extra /api/auth/session round-trips |
 
 ---
 
@@ -543,6 +584,49 @@ All three Gemini prompts in `course_service.py` said "Use Malaysian Bahasa Melay
 ---
 
 ## Next Priority
-1. **Phase 17 — Notification System** — bell icon, NotificationBell + NotificationPanel components, backend router + gamification_service.
-2. **Module Quiz Results Page** — implement `quiz/module/[moduleId]/results/page.tsx` (still a TODO stub).
+1. **Phase 20 — My Journey (Learning Roadmap)** — next major unbuilt feature.
+2. **Module Quiz Results Page** — `quiz/module/[moduleId]/results/page.tsx` still a TODO stub.
 3. **Deploy** — push backend to Railway, frontend to Vercel, set all env vars, final smoke test.
+
+---
+
+## What Was Done This Session (2026-04-08 — UI/UX Overhaul)
+
+### Auth Pages — Split-screen layout
+- **`frontend/components/ui/auth-card.tsx`** — full rewrite: split-screen layout with `ShaderAnimation` filling entire background; LEFT panel (lg+) has dark gradient overlay + box logo 64px + CSS "BahasaBot" heading + subtitle + feature bullet list + tagline; RIGHT panel is `w-[460px]` `bg-black/50 backdrop-blur-2xl border-l border-white/[0.07]` glass surface; mobile shows compact brand bar + full-width form
+- **`frontend/app/(auth)/login/page.tsx`** — header simplified to "Welcome back" h2 + subtitle only (branding on left panel); `storeSession()` retry: 600ms retry on NextAuth CSRF race condition; custom themed Google button using ref-click relay over hidden `<GoogleLogin>`; `useRef` added for googleBtnRef
+- **`frontend/app/(auth)/register/page.tsx`** — same header + Google button pattern as login; `useRef` added
+- **`frontend/app/(auth)/forgot-password/page.tsx`** — box logo replaces wide SVG in 56×56 context
+- **`frontend/app/(auth)/reset-password/page.tsx`** — box logo replaces wide SVG in 56×56 context
+
+### Dark Palette — Unified depth hierarchy
+- **`frontend/app/globals.css`** — complete dark mode CSS var overhaul:
+  - `--background: #25221a` (was `#3a3529`)
+  - `--card: #2e2b22` (was `#413c33`)
+  - `--muted: #363228`, `--border: #3d3a2e`, `--input: #3d3a2e`
+  - `--sidebar: #1c1a13` (was `#3a3529` = same as background, now distinct)
+  - Browser autofill override: `-webkit-box-shadow: 0 0 0 1000px rgba(0,0,0,0.35) inset !important`
+
+### Logo — Box logo for all icon contexts
+- `frontend/public/Logo new only box (1).svg` (886×872 square) used in: collapsed sidebar, chatbot header, login/register redirecting overlay, forgot/reset password, favicon
+- Wide horizontal logo `Logo new (1).svg` kept for: sidebar expanded, mobile drawer, onboarding, about page, chatbot EmptyState
+- **`frontend/app/layout.tsx`** — favicon updated to box logo SVG
+
+### Sidebar
+- **`frontend/components/nav/AppSidebar.tsx`** — `bg-card` → `bg-sidebar` on both desktop aside + mobile drawer; collapsed logo uses box logo directly (no scale hack); nav icon color `text-sidebar-foreground/60` hover `text-sidebar-foreground` for better legibility on dark sidebar
+
+### Shader
+- **`frontend/components/ui/shader-animation.tsx`** — color multipliers reduced (`×0.7`, `×0.5`, `×0.6`, `×0.15`) to prevent overexposure; background color `#14120a`
+
+### Chatbot
+- **`frontend/app/(dashboard)/chatbot/page.tsx`** — Waves `backgroundColor` `#3a3529` → `#25221a`
+
+### Spelling Game
+- **`frontend/components/games/SpellingGame.tsx`** — Exit button added to countdown, timeout, and main game phases; calls `resetSession()` which skips `endSession()` so stats not saved on exit; `X` icon imported from lucide-react
+
+### Dashboard tiles
+- **`frontend/components/dashboard/WeakPointsChart.tsx`** — removed recharts; pure CSS rows with type badge + topic + h-1.5 progress bar + score% + status label; summary pills; CTA link
+- **`frontend/components/dashboard/QuizHistoryTable.tsx`** — summary row with trend icon + avg score + pass rate; score ring; type badge + pass/fail; loading skeleton
+
+### Quiz
+- **`frontend/app/(dashboard)/quiz/adaptive/page.tsx`** — `QuizGeneratingLoader` component: 4-step animated progress screen with pulsing brain icon, step indicators, spinning arc border

@@ -44,8 +44,8 @@ export function ShaderAnimation() {
         vec3 ringCol = vec3(0.616, 0.694, 0.549);   // #9db18c — soft sage
         vec3 bgLight = vec3(0.894, 0.843, 0.690);   // #e4d7b0 — cream
 
-        // Deep warm-brown background (darker than #3a3529 for depth)
-        vec3 color = vec3(0.102, 0.090, 0.067);
+        // Dark olive base (#14120a) — matches new dark palette
+        vec3 color = vec3(0.078, 0.071, 0.039);
 
         for (int i = 0; i < 5; i++) {
           float fi = float(i);
@@ -56,10 +56,10 @@ export function ShaderAnimation() {
           float r2 = w / abs(fract(t - 0.02 + fi * 0.01) * 5.0 - length(uv) + mod(uv.x + uv.y, 0.2));
           float r3 = w / abs(fract(t - 0.03 + fi * 0.01) * 5.0 - length(uv) + mod(uv.x + uv.y, 0.2));
 
-          color += r0 * primary
-                 + r1 * accent
-                 + r2 * ringCol
-                 + r3 * bgLight * 0.4;
+          color += r0 * primary   * 0.7
+                 + r1 * accent    * 0.5
+                 + r2 * ringCol   * 0.6
+                 + r3 * bgLight   * 0.15;
         }
 
         gl_FragColor = vec4(color, 1.0);
@@ -131,7 +131,7 @@ export function ShaderAnimation() {
     <div
       ref={containerRef}
       className="w-full h-full"
-      style={{ background: "#1a160f", overflow: "hidden" }}
+      style={{ background: "#14120a", overflow: "hidden" }}
     />
   )
 }

@@ -33,18 +33,9 @@ export const metadata: Metadata = {
   title: "BahasaBot — Learn Bahasa Melayu",
   description: "AI-powered Bahasa Melayu language learning platform",
   icons: {
-    icon: [
-      { url: "/Project Logo.png", sizes: "16x16", type: "image/png" },
-      { url: "/Project Logo.png", sizes: "32x32", type: "image/png" },
-      { url: "/Project Logo.png", sizes: "48x48", type: "image/png" },
-      { url: "/Project Logo.png", sizes: "96x96", type: "image/png" },
-      { url: "/Project Logo.png", sizes: "192x192", type: "image/png" },
-      { url: "/Project Logo.png", sizes: "512x512", type: "image/png" },
-    ],
-    apple: [
-      { url: "/Project Logo.png", sizes: "180x180", type: "image/png" },
-    ],
-    shortcut: "/Project Logo.png",
+    icon: [{ url: "/Logo new only box (1).svg", type: "image/svg+xml" }],
+    apple: [{ url: "/Logo new only box (1).svg" }],
+    shortcut: "/Logo new only box (1).svg",
   },
 };
 

@@ -4,7 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   ChevronLeft,
   ChevronRight,
@@ -34,36 +35,31 @@ const BASE_NAV_ITEMS = [
 ] as const;
 
 export function AppSidebar() {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() =>
+    typeof window !== "undefined" && localStorage.getItem("sidebar-collapsed") === "true"
+  );
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [streakCount, setStreakCount] = useState(0);
-  const [xpTotal, setXpTotal] = useState(0);
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
 
-  useEffect(() => {
-    if (localStorage.getItem("sidebar-collapsed") === "true") {
-      setCollapsed(true);
-    }
-  }, []);
+  // Persist collapsed state
+  const handleCollapse = (value: boolean) => {
+    setCollapsed(value);
+    localStorage.setItem("sidebar-collapsed", String(value));
+  };
 
-  useEffect(() => {
-    localStorage.setItem("sidebar-collapsed", String(collapsed));
-  }, [collapsed]);
+  // Shared profile query — same key as OnboardingChecker in layout.tsx.
+  // React Query deduplicates concurrent calls: only one /api/profile/ request fires per staleTime window.
+  const { data: profileData } = useQuery({
+    queryKey: ["profile"],
+    queryFn: () => profileApi.getProfile().then((r) => r.data),
+    enabled: status === "authenticated",
+    staleTime: 60_000,
+  });
 
-  useEffect(() => {
-    if (session?.user) {
-      profileApi
-        .getProfile()
-        .then((res) => {
-          setIsAdmin(res.data.role === "admin");
-          setStreakCount(res.data.streak_count ?? 0);
-          setXpTotal(res.data.xp_total ?? 0);
-        })
-        .catch(() => {});
-    }
-  }, [session?.user]);
+  const isAdmin = profileData?.role === "admin";
+  const streakCount = profileData?.streak_count ?? 0;
+  const xpTotal = profileData?.xp_total ?? 0;
 
   const navItems = isAdmin
     ? [...BASE_NAV_ITEMS, { label: "Admin", href: "/admin", icon: ShieldCheck } as const]
@@ -93,9 +89,8 @@ export function AppSidebar() {
         >
           <Menu size={20} />
         </button>
-        <div className="flex items-center gap-2">
-          <Image src="/Project Logo.png" width={28} height={28} alt="BahasaBot" className="rounded-md" />
-          <span className="font-heading font-bold text-lg text-foreground">BahasaBot</span>
+        <div className="flex items-center">
+          <Image src="/Logo new (1).svg" width={113} height={36} alt="BahasaBot" className="object-contain" />
         </div>
         {/* Theme toggle lives in the mobile header — right side */}
         <ThemeToggle variant="icon" />
@@ -111,14 +106,13 @@ export function AppSidebar() {
 
       {/* ── MOBILE: slide-in drawer ── */}
       <div
-        className={`md:hidden fixed inset-y-0 left-0 z-[70] w-64 bg-card border-r flex flex-col transition-transform duration-300 ease-in-out ${
+        className={`md:hidden fixed inset-y-0 left-0 z-[70] w-64 bg-sidebar border-r flex flex-col transition-transform duration-300 ease-in-out ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         <div className="flex items-center justify-between px-4 h-14 border-b shrink-0">
-          <div className="flex items-center gap-2.5">
-            <Image src="/Project Logo.png" width={28} height={28} alt="BahasaBot" className="rounded-lg" />
-            <span className="font-heading font-bold text-lg">BahasaBot</span>
+          <div className="flex items-center">
+            <Image src="/Logo new (1).svg" width={126} height={40} alt="BahasaBot" className="object-contain" />
           </div>
           <button
             onClick={() => setMobileOpen(false)}
@@ -140,7 +134,7 @@ export function AppSidebar() {
                 className={`flex items-center gap-3 py-2.5 px-3 rounded-lg text-sm font-medium transition-colors ${
                   active
                     ? "bg-primary/15 text-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-muted/40"
                 }`}
               >
                 <Icon size={18} className="shrink-0" />
@@ -183,7 +177,7 @@ export function AppSidebar() {
 
       {/* ── DESKTOP: collapsible sidebar ── */}
       <aside
-        className={`hidden md:flex flex-col h-full bg-card border-r flex-shrink-0 transition-all duration-300 ease-in-out ${
+        className={`hidden md:flex flex-col h-full bg-sidebar border-r flex-shrink-0 transition-all duration-300 ease-in-out ${
           collapsed ? "w-[60px]" : "w-60"
         }`}
       >
@@ -195,15 +189,14 @@ export function AppSidebar() {
         >
           {collapsed ? (
             <Link href="/dashboard" className="flex items-center justify-center">
-              <Image src="/Project Logo.png" width={32} height={32} alt="BahasaBot" className="rounded-lg" />
+              <div className="relative w-8 h-8 flex-shrink-0">
+                <Image src="/Logo new only box (1).svg" alt="BahasaBot" fill sizes="32px" className="object-contain" />
+              </div>
             </Link>
           ) : (
             <>
-              <Link href="/dashboard" className="flex items-center gap-2.5 min-w-0">
-                <Image src="/Project Logo.png" width={30} height={30} alt="BahasaBot" className="rounded-lg shrink-0" />
-                <span className="font-heading font-bold text-lg text-foreground leading-none truncate">
-                  BahasaBot
-                </span>
+              <Link href="/dashboard" className="flex items-center min-w-0">
+                <Image src="/Logo new (1).svg" width={126} height={40} alt="BahasaBot" className="object-contain" />
               </Link>
               {/* Theme toggle — top-right of header (industry standard placement) */}
               <ThemeToggle variant="pill" className="shrink-0 ml-2" />
@@ -226,7 +219,7 @@ export function AppSidebar() {
                   } ${
                     active
                       ? "bg-primary/15 text-primary"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-muted/40"
                   }`}
                 >
                   <Icon size={18} className="shrink-0" />
@@ -294,7 +287,7 @@ export function AppSidebar() {
               </button>
               {/* Expand */}
               <button
-                onClick={() => setCollapsed(false)}
+                onClick={() => handleCollapse(false)}
                 title="Expand sidebar"
                 className="w-8 h-7 flex items-center justify-center rounded-md border border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
               >
@@ -352,7 +345,7 @@ export function AppSidebar() {
 
               {/* Collapse — centered */}
               <button
-                onClick={() => setCollapsed(true)}
+                onClick={() => handleCollapse(true)}
                 className="flex items-center gap-1.5 py-1 px-2 rounded-lg text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
               >
                 <ChevronLeft size={13} strokeWidth={2.5} />

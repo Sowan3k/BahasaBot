@@ -135,12 +135,12 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
           >
             <div className="flex justify-center py-2">
               <Image
-                src="/Project Logo.png"
+                src="/Logo new (1).svg"
                 alt="BahasaBot"
-                width={80}
-                height={80}
+                width={201}
+                height={64}
                 priority
-                className="rounded-2xl object-contain"
+                className="object-contain"
               />
             </div>
           </OnboardingStep>

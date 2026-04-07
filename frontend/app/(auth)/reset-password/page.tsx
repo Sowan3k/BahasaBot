@@ -266,10 +266,10 @@ export default function ResetPasswordPage() {
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: "spring", duration: 0.8 }}
-          className="mx-auto w-14 h-14 flex items-center justify-center"
+          className="mx-auto flex justify-center"
         >
           <Image
-            src="/Project Logo.png"
+            src="/Logo new only box (1).svg"
             alt="BahasaBot"
             width={56}
             height={56}

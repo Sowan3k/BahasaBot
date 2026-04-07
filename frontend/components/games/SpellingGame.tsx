@@ -22,7 +22,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Volume2, Zap, Trophy, RotateCcw, CheckCircle2, XCircle,
-  AlertCircle, Flame, BookOpen, Clock, Play, ChevronRight,
+  AlertCircle, Flame, BookOpen, Clock, Play, ChevronRight, X,
 } from "lucide-react";
 import { gamesApi } from "@/lib/api";
 import type { SpellingWord, SpellingSubmitResponse, SpellingPersonalBest } from "@/lib/types";
@@ -67,7 +67,7 @@ function SessionSummary({
   const isPersonalBest = personalBest !== null && wordsCorrect > personalBest.best_correct;
 
   return (
-    <div className="flex flex-col items-center gap-6 py-4 w-full max-w-md mx-auto animate-in fade-in slide-in-from-bottom-4 duration-400">
+    <div className="flex flex-col items-center gap-5 py-6 px-4 w-full max-w-md mx-auto animate-in fade-in slide-in-from-bottom-4 duration-400">
       <div className="text-center">
         <div className="text-5xl mb-2">{accuracy >= 80 ? "🎉" : accuracy >= 60 ? "👍" : "💪"}</div>
         <h2 className="text-2xl font-bold">Session Complete!</h2>
@@ -423,7 +423,7 @@ export function SpellingGame() {
   // ── Empty vocab ───────────────────────────────────────────────────────────
   if (phase === "empty") {
     return (
-      <div className="flex flex-col items-center gap-4 py-12 text-center max-w-sm mx-auto">
+      <div className="flex flex-col items-center justify-center min-h-full gap-4 py-8 px-4 text-center max-w-sm mx-auto">
         <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
           <BookOpen className="w-8 h-8 text-primary" />
         </div>
@@ -437,53 +437,102 @@ export function SpellingGame() {
     );
   }
 
-  // ── Start screen ─────────────────────────────────────────────────────────
+  // ── Start screen — full-height game lobby ─────────────────────────────────
   if (phase === "start") {
     return (
-      <div className="flex flex-col items-center gap-6 py-8 w-full max-w-sm mx-auto animate-in fade-in duration-300">
-        {/* Icon */}
-        <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center ring-4 ring-primary/20">
-          <Zap className="w-10 h-10 text-primary" />
+      <div className="min-h-full flex flex-col animate-in fade-in duration-300">
+
+        {/* ── Minimal page title ── */}
+        <div className="flex-shrink-0 flex items-center gap-2 px-6 py-4">
+          <BookOpen className="w-4 h-4 text-primary" />
+          <span className="text-sm font-semibold">Spelling Practice</span>
+          <span className="text-muted-foreground text-sm hidden sm:inline">
+            · Test yourself on vocabulary you have already learned
+          </span>
         </div>
 
-        {/* Headline */}
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-1">Ready to be tested?</h2>
-          <p className="text-muted-foreground text-sm">
-            You get <span className="font-semibold text-foreground">10 seconds</span> per word.
-            Type the correct spelling before time runs out!
-          </p>
-        </div>
+        {/* ── Centred lobby content ── */}
+        <div className="flex-1 flex items-center justify-center p-6">
+          <div className="w-full max-w-sm space-y-6">
 
-        {/* Rules */}
-        <div className="w-full space-y-2">
-          {[
-            { icon: <Volume2 className="w-4 h-4 text-primary" />, text: "Audio plays automatically — listen carefully." },
-            { icon: <Clock className="w-4 h-4 text-yellow-500" />, text: "10 seconds per word. Don't think too long!" },
-            { icon: <Flame className="w-4 h-4 text-orange-500" />, text: "Build combos for consecutive correct answers." },
-            { icon: <Trophy className="w-4 h-4 text-yellow-500" />, text: `${SESSION_SIZE} words per round. Beat your personal best!` },
-          ].map(({ icon, text }, i) => (
-            <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-muted/40 text-sm">
-              <span className="mt-0.5 flex-shrink-0">{icon}</span>
-              <span>{text}</span>
+            {/* Icon */}
+            <div className="flex justify-center">
+              <div className="w-16 h-16 rounded-2xl bg-primary/15 flex items-center justify-center ring-1 ring-primary/20">
+                <Zap className="w-8 h-8 text-primary" />
+              </div>
             </div>
-          ))}
+
+            {/* Heading */}
+            <div className="text-center">
+              <h1 className="text-2xl font-bold mb-1">Ready to be tested?</h1>
+              <p className="text-sm text-muted-foreground">
+                Listen to the word and type its correct Malay spelling.
+              </p>
+            </div>
+
+            {/* Quick stats grid */}
+            <div className="grid grid-cols-3 gap-2 text-center">
+              {[
+                { value: SESSION_SIZE, label: "words / round",  color: "text-foreground" },
+                { value: "10s",        label: "per word",        color: "text-yellow-500" },
+                { value: "×2",         label: "max combo",       color: "text-orange-500" },
+              ].map(({ value, label, color }) => (
+                <div key={label} className="rounded-xl border bg-card py-3">
+                  <div className={`text-xl font-bold ${color}`}>{value}</div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Rules — two compact rows */}
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2.5">
+                <Volume2 className="w-4 h-4 text-primary flex-shrink-0" />
+                <span>
+                  Audio plays automatically —{" "}
+                  <kbd className="px-1.5 py-0.5 rounded border bg-muted font-mono text-[11px] text-foreground">Space</kbd>{" "}
+                  to replay
+                </span>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <Flame className="w-4 h-4 text-orange-500 flex-shrink-0" />
+                <span>Consecutive correct answers build your combo multiplier</span>
+              </div>
+            </div>
+
+            {/* Personal best */}
+            {personalBest && personalBest.best_correct > 0 ? (
+              <div className="flex items-center justify-center gap-2 py-2 rounded-xl bg-yellow-500/8 border border-yellow-500/20">
+                <Trophy className="w-4 h-4 text-yellow-500" />
+                <span className="text-sm text-muted-foreground">
+                  Personal best:{" "}
+                  <span className="font-semibold text-foreground">
+                    {personalBest.best_correct}/{personalBest.best_attempted}
+                  </span>{" "}
+                  correct
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center gap-2 py-2 rounded-xl bg-muted/50 border border-border">
+                <Trophy className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">No record yet — set your first score!</span>
+              </div>
+            )}
+
+            {/* CTA */}
+            <Button onClick={startCountdown} size="lg" className="w-full gap-2 text-base">
+              <Play className="w-5 h-5" />
+              Let&apos;s Go!
+            </Button>
+
+            {/* Keyboard hints */}
+            <p className="text-center text-xs text-muted-foreground">
+              <kbd className="px-1.5 py-0.5 rounded border bg-muted font-mono text-[11px] text-foreground">Enter</kbd> to start ·{" "}
+              <kbd className="px-1.5 py-0.5 rounded border bg-muted font-mono text-[11px] text-foreground">Esc</kbd> to return here anytime
+            </p>
+
+          </div>
         </div>
-
-        {/* Personal best */}
-        {personalBest && personalBest.best_correct > 0 && (
-          <p className="text-xs text-muted-foreground flex items-center gap-1">
-            <Trophy className="w-3.5 h-3.5 text-yellow-500" />
-            Your best: {personalBest.best_correct}/{personalBest.best_attempted} words correct
-          </p>
-        )}
-
-        {/* CTA */}
-        <Button onClick={startCountdown} size="lg" className="w-full text-base gap-2">
-          <Play className="w-5 h-5" />
-          Let&apos;s Go!
-        </Button>
-        <p className="text-xs text-muted-foreground">Press Enter to start · Escape to return here anytime</p>
       </div>
     );
   }
@@ -491,13 +540,23 @@ export function SpellingGame() {
   // ── 3-2-1 Countdown ──────────────────────────────────────────────────────
   if (phase === "countdown") {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 py-20 animate-in fade-in duration-200">
-        <p className="text-muted-foreground text-sm uppercase tracking-widest">Get ready…</p>
-        <div
-          key={countdownNum}
-          className="text-8xl font-black text-primary animate-in zoom-in-50 duration-200"
-        >
-          {countdownNum}
+      <div className="flex flex-col min-h-full animate-in fade-in duration-200">
+        <div className="flex justify-start px-4 pt-3">
+          <button
+            onClick={resetSession}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-destructive transition-colors px-2 py-1 rounded-lg hover:bg-muted"
+          >
+            <X className="w-3.5 h-3.5" /> Exit
+          </button>
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 py-8">
+          <p className="text-muted-foreground text-sm uppercase tracking-widest">Get ready…</p>
+          <div
+            key={countdownNum}
+            className="text-8xl font-black text-primary animate-in zoom-in-50 duration-200"
+          >
+            {countdownNum}
+          </div>
         </div>
       </div>
     );
@@ -506,7 +565,16 @@ export function SpellingGame() {
   // ── Timeout screen ────────────────────────────────────────────────────────
   if (phase === "timeout") {
     return (
-      <div className="flex flex-col items-center gap-5 w-full max-w-md mx-auto animate-in fade-in duration-200">
+      <div className="flex flex-col items-center gap-4 w-full max-w-md mx-auto px-4 py-4 animate-in fade-in duration-200">
+        {/* Exit button */}
+        <div className="w-full flex justify-start -mb-1">
+          <button
+            onClick={resetSession}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-destructive transition-colors px-2 py-1 rounded-lg hover:bg-muted"
+          >
+            <X className="w-3.5 h-3.5" /> Exit game
+          </button>
+        </div>
         {/* Timer bar — fully depleted */}
         <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
           <div className="h-full w-0 rounded-full bg-red-500" />
@@ -560,7 +628,19 @@ export function SpellingGame() {
   const isUrgent = timeLeft <= 3;
 
   return (
-    <div className="flex flex-col items-center gap-5 w-full max-w-md mx-auto">
+    <div className="flex flex-col items-center gap-4 w-full max-w-md mx-auto px-4 py-4 md:py-6">
+
+      {/* Exit bar */}
+      <div className="w-full flex items-center justify-between">
+        <button
+          onClick={resetSession}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-destructive transition-colors px-2 py-1 rounded-lg hover:bg-muted"
+          title="Exit game — stats will not be saved"
+        >
+          <X className="w-3.5 h-3.5" /> Exit game
+        </button>
+        <span className="text-[10px] text-muted-foreground/60">stats saved only on completion</span>
+      </div>
 
       {/* Session header */}
       <div className="w-full flex items-center justify-between text-sm">
