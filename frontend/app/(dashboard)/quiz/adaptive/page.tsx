@@ -7,7 +7,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { Brain, ChartBar, Sparkles, CheckCircle2 } from "lucide-react";
+import { Brain, ChartBar, Sparkles, CheckCircle2, BookOpen, Target, BarChart2, ArrowRight } from "lucide-react";
 import { standaloneQuizApi } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -124,17 +124,93 @@ function QuizGeneratingLoader() {
   );
 }
 
+// ── Lobby screen ──────────────────────────────────────────────────────────────
+// Shown before the quiz generates — prevents accidental API calls.
+
+function QuizLobby({ onStart }: { onStart: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[480px] max-w-sm mx-auto px-6 gap-8 animate-in fade-in duration-300">
+
+      {/* Icon */}
+      <div className="w-16 h-16 rounded-2xl bg-primary/15 flex items-center justify-center ring-1 ring-primary/20">
+        <Brain className="w-8 h-8 text-primary" />
+      </div>
+
+      {/* Heading */}
+      <div className="text-center space-y-2">
+        <h1 className="text-2xl font-bold tracking-tight">Adaptive Quiz</h1>
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          15 personalized questions targeting your weak areas.
+          Completing the quiz updates your BPS proficiency level.
+        </p>
+      </div>
+
+      {/* Info grid */}
+      <div className="w-full grid grid-cols-3 gap-2 text-center">
+        {[
+          { icon: BookOpen,  value: "15",        label: "questions"     },
+          { icon: Target,    value: "Adaptive",  label: "to your level" },
+          { icon: BarChart2, value: "BPS",       label: "level update"  },
+        ].map(({ icon: Icon, value, label }) => (
+          <div key={label} className="rounded-xl border bg-card py-3 px-2">
+            <Icon className="w-4 h-4 text-primary mx-auto mb-1" />
+            <div className="text-sm font-bold">{value}</div>
+            <div className="text-[10px] text-muted-foreground leading-tight">{label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Format breakdown */}
+      <div className="w-full space-y-2 text-sm text-muted-foreground">
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-secondary flex-shrink-0" />
+          6 Multiple Choice questions
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-accent flex-shrink-0" />
+          6 Fill-in-the-blank questions
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-muted-foreground flex-shrink-0" />
+          3 Translation questions
+        </div>
+      </div>
+
+      {/* CTA */}
+      <button
+        onClick={onStart}
+        className="w-full flex items-center justify-center gap-2 h-11 rounded-xl
+                   bg-primary text-primary-foreground text-sm font-semibold
+                   hover:bg-primary/90 active:scale-[0.98] transition-all"
+      >
+        Start Quiz
+        <ArrowRight className="w-4 h-4" />
+      </button>
+
+      <p className="text-xs text-muted-foreground text-center">
+        The quiz will be generated fresh or loaded from cache.
+        It may take a few seconds.
+      </p>
+    </div>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function AdaptiveQuizPage() {
   const queryClient = useQueryClient();
+
+  // "lobby" = confirmation screen (no API call yet)
+  // "generating" = user confirmed, quiz is being fetched
+  // "quiz" / "result" = active quiz or results
+  const [phase, setPhase] = useState<"lobby" | "generating">("lobby");
 
   // Track user's selected/typed answers keyed by question_id
   const [answers, setAnswers] = useState<Record<string, string>>({});
   // Holds scored results after submission
   const [result, setResult] = useState<StandaloneQuizResult | null>(null);
 
-  // ── Fetch quiz questions ─────────────────────────────────────────────────────
+  // ── Fetch quiz questions — only fires after user confirms ────────────────────
 
   const {
     data: quiz,
@@ -147,6 +223,8 @@ export default function AdaptiveQuizPage() {
     retry: 1,
     // Do not re-fetch while the user is mid-quiz — cache for 30 minutes
     staleTime: 30 * 60 * 1000,
+    // Only fetch after user explicitly starts — prevents accidental API calls
+    enabled: phase === "generating",
   });
 
   // ── Submit answers ───────────────────────────────────────────────────────────
@@ -173,14 +251,24 @@ export default function AdaptiveQuizPage() {
   const handleRetry = () => {
     setAnswers({});
     setResult(null);
-    // Invalidate to fetch a fresh quiz (cache was cleared after last submission)
+    setPhase("lobby");
+    // Invalidate so the next start triggers a fresh Gemini call
     queryClient.invalidateQueries({ queryKey: ["standalone-quiz"] });
-    refetch();
   };
 
   const answeredCount = quiz
     ? quiz.questions.filter((q) => (answers[q.id] ?? "").trim() !== "").length
     : 0;
+
+  // ── Lobby — shown before user confirms ───────────────────────────────────────
+
+  if (phase === "lobby" && !result) {
+    return (
+      <QuizLobby
+        onStart={() => setPhase("generating")}
+      />
+    );
+  }
 
   // ── Loading state ────────────────────────────────────────────────────────────
 
