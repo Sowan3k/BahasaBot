@@ -55,8 +55,8 @@ _Status: ✅ Complete (services not fully verified)_
 - [x] Frontend: SSE streaming chat UI (app/chatbot/page.tsx)
 - [x] Frontend: ChatMessage component, VocabularyHighlight component
 
-### Pending Enhancement (to be done after Phase 13)
-- [x] backend/services/langchain_service.py — update CHATBOT_SYSTEM_PROMPT to include user's native_language fetched from users table — pass it as context so the AI tutor can reference linguistic similarities (e.g. "The user's native language is Bengali")
+### Personalization enhancements (2026-04-08)
+- [x] backend/services/langchain_service.py — CHATBOT_SYSTEM_PROMPT now includes native_language, learning_goal, and proficiency_level (BPS-1 to BPS-4 with description) — all fetched in a single DB query and injected as LEARNER CONTEXT blocks into the system prompt so Gemini can calibrate formality, complexity, and language comparisons per user
 
 ---
 
@@ -347,7 +347,7 @@ _Status: ✅ Complete + Debugged_
 ---
 
 ## Phase 17 — Notification System
-_Status: ✅ Complete (2026-04-07)_
+_Status: ✅ Complete + Extended (2026-04-08)_
 
 **Goal:** In-app bell notifications for streaks, XP milestones, Journey reminders, and course completion.
 
@@ -357,10 +357,12 @@ _Status: ✅ Complete (2026-04-07)_
 - [x] backend/routers/notifications.py — POST /api/notifications/read-all
 - [x] backend/services/gamification_service.py — create_notification() + create_notification_fire_and_forget() helpers
 - [x] Register notifications router + import Notification model in backend/main.py
+- [x] backend/services/journey_service.py — phase_complete notification: complete_activity() now detects when all activities in a phase are done and fires `phase_complete` via create_notification_fire_and_forget()
+- [x] backend/routers/courses.py — course_complete notification: _run_generation_task() fires `course_complete` after generate_course() succeeds
 
 ### Frontend
 - [x] frontend/components/notifications/NotificationBell.tsx — bell icon with unread badge, 60s polling, opens/closes panel
-- [x] frontend/components/notifications/NotificationPanel.tsx — dropdown list of last 20 notifications, per-type icons, mark read on click, mark-all-read button
+- [x] frontend/components/notifications/NotificationPanel.tsx — dropdown list of last 20 notifications, per-type icons (Trophy=phase_complete, BookOpen=course_complete), mark read on click, mark-all-read button
 - [x] frontend/components/nav/AppSidebar.tsx — NotificationBell wired into mobile header bar + desktop sidebar footer (both collapsed and expanded states)
 - [x] frontend/lib/api.ts — notificationsApi (getNotifications, markRead, markAllRead)
 - [x] frontend/lib/types.ts — AppNotification interface, NotificationType union, NotificationListResponse
@@ -377,11 +379,12 @@ _Status: ✅ Complete (2026-04-07)_
 - [x] Wire gamification into: course class completion (+10 XP), module quiz pass (+25 XP), standalone quiz pass (+25 XP), chatbot session (+5 XP, Redis-deduped per session_id)
 - [x] Milestone triggers: 3/7/14/30 day streaks → streak_milestone notification; every 100 XP → xp_milestone notification
 - [x] GET /api/dashboard/ — streak_count and xp_total now included in stats dict
+- [x] backend/routers/dashboard.py — streak_count and xp_total always overridden with current_user values (live DB read) before returning, so dashboard cards and sidebar are permanently in sync regardless of Redis cache state
 
 ### Frontend
 - [x] frontend/components/gamification/StreakBadge.tsx — Flame icon + count, sm/md size prop
 - [x] frontend/components/gamification/XPBar.tsx — XP total + progress bar to next 100 XP milestone
-- [x] frontend/components/dashboard/StatsCards.tsx — 2 new cards (Day Streak, Total XP); grid → lg:grid-cols-4
+- [x] frontend/components/dashboard/StatsCards.tsx — 2 new cards (Day Streak, Total XP); grid → lg:grid-cols-4; `?? 0` fallback so values never render blank
 - [x] frontend/components/nav/AppSidebar.tsx — streak + XP inline in sidebar footer (expanded + collapsed states)
 
 ### Also completed this phase (Sidebar + Chatbot polish)
@@ -471,36 +474,69 @@ _Status: ✅ Complete_
 ### Shader background
 - [x] Background color updated to `#14120a` (darker, matches new palette)
 
+### GlowCard — Global rollout (2026-04-08)
+- [x] `frontend/components/ui/glow-card.tsx` — new reusable GlowCard wrapper (proximity-tracking rainbow conic gradient border via GlowingEffect); `className` targets inner card div, `outerClassName` targets outer wrapper; twMerge via `cn()` so bg overrides work
+- [x] Applied to ALL card-like elements across the project: dashboard (StatsCards already had it), settings pages (hub, profile, password, about), journey page (3 feature cards), PhaseAccordion, admin page (StatCard + nav list), admin/users table, admin/users/[userId] StatPill + analytics cards + recent courses, admin/feedback (aggregate stats + each feedback card)
+
+### Login logo fix (2026-04-08)
+- [x] `frontend/components/ui/auth-card.tsx` — square logo now inline beside "BahasaBot" title (flex-row items-center gap-4) instead of stacked above it; tagline moved below the row
+
 ---
 
 ## Phase 20 — My Journey (Learning Roadmap)
-_Status: 🔲 Not started_
+_Status: ✅ Complete (2026-04-08)_
 
 **Goal:** Personalized AI-generated learning roadmap with deadline, phases, weekly activities, and deep links into existing features.
 
 ### Backend
-- [ ] backend/services/journey_service.py — generate_roadmap(user_id, deadline_date, goal_type): fetches BPS level + weak points, calls Gemini with structured JSON prompt, returns roadmap JSON
-- [ ] backend/services/journey_service.py — include user's native_language from users table in the Gemini prompt when generating roadmap (e.g. "User's native language is Bengali — use relatable comparisons where helpful")
-- [ ] Gemini prompt must return: { phases: [ { phase, title, duration_weeks, weeks: [ { week, activities: [ { id, type, title, topic, reason } ] } ] } ] }
-- [ ] Activity types: 'course' | 'quiz' | 'chatbot'
-- [ ] backend/routers/journey.py — POST /api/journey/ (generate + save to learning_roadmaps table, trigger banner image generation)
-- [ ] backend/routers/journey.py — GET /api/journey/ (return saved roadmap + completion status per activity)
-- [ ] backend/routers/journey.py — DELETE /api/journey/ (delete roadmap + completions)
-- [ ] backend/routers/journey.py — POST /api/journey/activities/{activity_id}/complete
-- [ ] backend/services/image_service.py — generate_journey_banner(goal_type, deadline_months): call gemini-3.1-flash-image-preview, return image URL
-- [ ] Store banner_image_url in learning_roadmaps table on creation
-- [ ] Register journey router in backend/main.py
+- [x] backend/services/journey_service.py — generate_roadmap(user_id, deadline_date, goal_type): fetches BPS level + weak points, calls Gemini with structured JSON prompt, returns roadmap JSON
+- [x] backend/services/journey_service.py — include user's native_language from users table in the Gemini prompt
+- [x] backend/services/journey_service.py — complete_activity() fires phase_complete notification when all activities in a phase are completed (_get_phase_activity_ids + _get_phase_title helpers)
+- [x] Gemini prompt returns: { phases: [ { phase, title, duration_weeks, weeks: [ { week, activities: [ { id, type, title, topic, reason } ] } ] } ] }
+- [x] Activity types: 'course' | 'quiz' | 'chatbot'
+- [x] backend/routers/journey.py — POST /api/journey/ (generate + save to learning_roadmaps table)
+- [x] backend/routers/journey.py — GET /api/journey/ (return saved roadmap + completion status per activity)
+- [x] backend/routers/journey.py — DELETE /api/journey/ (delete roadmap + completions)
+- [x] backend/routers/journey.py — POST /api/journey/activities/{activity_id}/complete (idempotent)
+- [x] Pydantic validation: deadline in future, max 2 years; goal_type enum guard
+- [x] banner_image_url field in learning_roadmaps table (null — Phase 22 adds image generation)
+- [x] Register journey router in backend/main.py + import backend.models.journey
+- [x] backend/services/admin_service.py — get_stats() now includes active_roadmaps count
 
 ### Frontend
-- [ ] frontend/app/(dashboard)/journey/page.tsx — main page: empty state (set goal form) or roadmap view
-- [ ] frontend/components/journey/RoadmapView.tsx — full roadmap display with banner image, phase accordion, activity cards
-- [ ] frontend/components/journey/PhaseAccordion.tsx — collapsible phase with week grouping and completion percentage
-- [ ] frontend/components/journey/ActivityCard.tsx — individual activity card with type icon, title, reason, click handler, completion checkmark
-- [ ] Click handlers: type='course' → /courses?topic=..., type='quiz' → /quiz/adaptive, type='chatbot' → /chatbot?prompt=...
-- [ ] Delete roadmap: confirmation dialog → DELETE /api/journey/ → show empty state + new goal form
-- [ ] Add My Journey link to sidebar
-- [ ] frontend/lib/api.ts — add journeyApi functions
-- [ ] frontend/lib/types.ts — add Roadmap, Phase, Week, Activity interfaces
+- [x] frontend/app/(dashboard)/journey/page.tsx — main page: empty state (goal form) or roadmap view; full-page layout; mobile-responsive
+- [x] frontend/components/journey/RoadmapView.tsx — banner hero, overall progress bar, phase accordions, delete confirmation dialog
+- [x] frontend/components/journey/PhaseAccordion.tsx — collapsible phase, week grouping, completion %, mobile-friendly progress bar
+- [x] frontend/components/journey/ActivityCard.tsx — type icon+badge, title, topic, reason, completion checkmark, click navigation
+- [x] Click handlers: type='course' → /courses?topic=..., type='quiz' → /quiz/adaptive, type='chatbot' → /chatbot?prompt=...
+- [x] Optimistic completion state — immediate UI update, revert on API failure
+- [x] Delete roadmap: confirmation dialog → DELETE /api/journey/ → reset to empty state + goal form
+- [x] My Journey link added to sidebar (Map icon, between Quiz and Games)
+- [x] frontend/lib/api.ts — journeyApi (generateRoadmap, getRoadmap, deleteRoadmap, completeActivity)
+- [x] frontend/lib/types.ts — JourneyActivity, JourneyWeek, JourneyPhase, RoadmapJson, LearningRoadmap, GenerateRoadmapPayload, CompleteActivityResponse
+- [x] frontend/lib/types.ts — AdminStats.active_roadmaps added
+- [x] frontend/app/(dashboard)/admin/page.tsx — Active Roadmaps stat card added
+- [x] frontend/app/(dashboard)/journey/loading.tsx — skeleton was already present
+
+### Bugs fixed this session (non-Phase-20)
+- [x] login/page.tsx — `redirect: false as false` literal type fix (NextAuth SignInOptions overload)
+- [x] StatsCards.tsx — `{card.value ?? 0}` + explicit `text-foreground` so streak/XP show 0 when undefined (stale Redis cache)
+- [x] dashboard/page.tsx — `h-full` on WeakPoints + QuizHistory glowing wrappers to fix height inconsistency in 2-col grid
+
+### Test Results (2026-04-08)
+| Check | Result |
+|---|---|
+| `tsc --noEmit` | ✅ 0 errors |
+| Python syntax check (journey_service.py, journey.py, main.py) | ✅ OK |
+| Backend import test — routes registered | ✅ ['/', '/', '/', '/activities/{activity_id}/complete'] |
+| journey_service: generate_roadmap() (live Gemini call) | ✅ 10-phase roadmap, 117 activities |
+| journey_service: get_active_roadmap() | ✅ Returns roadmap + completed_activity_ids |
+| journey_service: complete_activity() | ✅ Marks done; idempotent (already_completed=True on repeat) |
+| journey_service: delete_roadmap() | ✅ Returns True; second call returns False |
+| Pydantic validation: past deadline | ✅ Correctly rejected |
+| Pydantic validation: invalid goal_type | ✅ Correctly rejected |
+| Edge case: complete_activity with no roadmap | ✅ ValueError raised (404 in router) |
+| Edge case: complete_activity with invalid ID | ✅ ValueError raised (404 in router) |
 
 ---
 

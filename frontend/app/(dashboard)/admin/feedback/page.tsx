@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { adminApi, profileApi } from "@/lib/api";
 import type { AdminFeedbackResponse } from "@/lib/types";
+import { GlowCard } from "@/components/ui/glow-card";
 
 // ── Star rating display ───────────────────────────────────────────────────────
 
@@ -137,7 +138,7 @@ export default function AdminFeedbackPage() {
 
       {/* ── Aggregate stats header ── */}
       {!loading && data && data.total > 0 && (
-        <div className="rounded-xl border border-border bg-card p-5 flex flex-col sm:flex-row gap-6">
+        <GlowCard className="bg-card p-5 flex flex-col sm:flex-row gap-6">
           {/* Average rating */}
           <div className="flex flex-col gap-1">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
@@ -159,7 +160,7 @@ export default function AdminFeedbackPage() {
               total={data.total}
             />
           </div>
-        </div>
+        </GlowCard>
       )}
 
       {/* ── Feedback list ── */}
@@ -172,9 +173,9 @@ export default function AdminFeedbackPage() {
       ) : data && data.items.length > 0 ? (
         <div className="space-y-3">
           {data.items.map((fb) => (
-            <div
+            <GlowCard
               key={fb.id}
-              className="rounded-xl border border-border bg-card p-5 space-y-3"
+              className="bg-card p-5 space-y-3"
             >
               {/* Row 1: user + quiz type + date */}
               <div className="flex flex-wrap items-center gap-2 justify-between">
@@ -211,7 +212,7 @@ export default function AdminFeedbackPage() {
                   &ldquo;{fb.comments}&rdquo;
                 </p>
               )}
-            </div>
+            </GlowCard>
           ))}
         </div>
       ) : (

@@ -43,6 +43,7 @@ from backend.services.course_service import (
     get_courses_list,
     mark_class_complete,
 )
+from backend.services.gamification_service import create_notification_fire_and_forget
 from backend.services.quiz_service import get_module_quiz, submit_module_quiz
 from backend.utils.cache import cache_get
 from backend.utils.content_filter import is_topic_appropriate
@@ -70,12 +71,19 @@ async def _run_generation_task(
     """
     async with AsyncSessionLocal() as db:
         try:
-            await generate_course(
+            course = await generate_course(
                 topic=topic,
                 user_id=user_id,
                 db=db,
                 level=level,
                 job_id=job_id,
+            )
+            # Notify the user that their course is ready
+            await create_notification_fire_and_forget(
+                db=db,
+                user_id=user_id,
+                notification_type="course_complete",
+                message=f"Your course \"{course.title}\" is ready! Head to Courses to start learning.",
             )
         except Exception as exc:
             logger.error(

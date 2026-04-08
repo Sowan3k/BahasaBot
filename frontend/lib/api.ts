@@ -37,6 +37,9 @@ import type {
   SpellingWord,
   SpellingSubmitResponse,
   SpellingPersonalBest,
+  LearningRoadmap,
+  GenerateRoadmapPayload,
+  CompleteActivityResponse,
 } from "@/lib/types";
 
 const apiClient = axios.create({
@@ -323,4 +326,24 @@ export const gamesApi = {
   /** Get the user's all-time personal best score. */
   getPersonalBest: () =>
     apiClient.get<SpellingPersonalBest>("/api/games/spelling/best"),
+};
+
+// ── Journey API (Phase 20) ────────────────────────────────────────────────────
+
+export const journeyApi = {
+  /** Generate a new personalised learning roadmap. Replaces any existing roadmap. */
+  generateRoadmap: (payload: GenerateRoadmapPayload) =>
+    apiClient.post<LearningRoadmap>("/api/journey/", payload),
+
+  /** Get the user's active roadmap with per-activity completion status. Returns 404 if none exists. */
+  getRoadmap: () => apiClient.get<LearningRoadmap>("/api/journey/"),
+
+  /** Delete the user's current roadmap and all completion records. */
+  deleteRoadmap: () => apiClient.delete<void>("/api/journey/"),
+
+  /** Mark a specific activity as completed. Idempotent. */
+  completeActivity: (activityId: string) =>
+    apiClient.post<CompleteActivityResponse>(
+      `/api/journey/activities/${activityId}/complete`
+    ),
 };

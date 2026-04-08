@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { User, Lock, Info, ChevronRight } from "lucide-react";
+import { GlowCard } from "@/components/ui/glow-card";
 
 const SETTINGS_ITEMS = [
   {
@@ -34,7 +35,7 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      <div className="rounded-xl border border-border bg-card divide-y divide-border overflow-hidden">
+      <GlowCard className="bg-card divide-y divide-border overflow-hidden !rounded-xl">
         {SETTINGS_ITEMS.map(({ href, icon: Icon, label, description }) => (
           <Link
             key={href}
@@ -54,7 +55,7 @@ export default function SettingsPage() {
             />
           </Link>
         ))}
-      </div>
+      </GlowCard>
     </div>
   );
 }

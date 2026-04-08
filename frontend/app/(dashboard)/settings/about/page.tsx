@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { GlowCard } from "@/components/ui/glow-card";
 
 const APP_VERSION = "1.0.0";
 const FYP_YEAR = "2025 / 2026";
@@ -25,7 +26,7 @@ export default function AboutPage() {
       </div>
 
       {/* App identity card */}
-      <div className="rounded-xl border border-border bg-card p-6 flex flex-col items-center text-center gap-3">
+      <GlowCard className="bg-card p-6 flex flex-col items-center text-center gap-3">
         <Image
           src="/Logo new (1).svg"
           alt="BahasaBot"
@@ -43,19 +44,19 @@ export default function AboutPage() {
           featuring an adaptive chatbot tutor, dynamic course generation, and
           personalised quiz feedback.
         </p>
-      </div>
+      </GlowCard>
 
       {/* Academic details */}
-      <div className="rounded-xl border border-border bg-card divide-y divide-border overflow-hidden">
+      <GlowCard className="bg-card divide-y divide-border overflow-hidden !rounded-xl">
         <Row label="Institution" value="Universiti Sains Malaysia (USM)" />
         <Row label="Programme" value="Final Year Project (FYP)" />
         <Row label="Academic Year" value={FYP_YEAR} />
         <Row label="Developer" value="Sowan" />
         <Row label="Supervisor" value="Dr. Tan Tien Ping" />
-      </div>
+      </GlowCard>
 
       {/* Tech stack highlights */}
-      <div className="rounded-xl border border-border bg-card p-5 space-y-3">
+      <GlowCard className="bg-card p-5 space-y-3">
         <h3 className="text-sm font-semibold text-foreground">Built with</h3>
         <div className="flex flex-wrap gap-2">
           {[
@@ -71,7 +72,7 @@ export default function AboutPage() {
             </span>
           ))}
         </div>
-      </div>
+      </GlowCard>
 
       {/* Footer note */}
       <p className="text-center text-xs text-muted-foreground">

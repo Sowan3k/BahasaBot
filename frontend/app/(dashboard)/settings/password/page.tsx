@@ -10,6 +10,7 @@ import axios from "axios";
 import { useSession } from "next-auth/react";
 
 import { profileApi } from "@/lib/api";
+import { GlowCard } from "@/components/ui/glow-card";
 
 // ── Zod schema ──────────────────────────────────────────────────────────────
 
@@ -84,14 +85,14 @@ export default function PasswordSettingsPage() {
             <div className="h-3 bg-muted rounded w-40 animate-pulse" />
           </div>
         </div>
-        <div className="rounded-xl border border-border bg-card p-5 space-y-4 animate-pulse">
+        <GlowCard className="bg-card p-5 space-y-4 animate-pulse">
           {[1, 2, 3].map((i) => (
             <div key={i} className="space-y-1.5">
               <div className="h-3 bg-muted rounded w-24" />
               <div className="h-10 bg-muted rounded" />
             </div>
           ))}
-        </div>
+        </GlowCard>
       </div>
     );
   }
@@ -114,7 +115,7 @@ export default function PasswordSettingsPage() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-6 text-center space-y-3">
+        <GlowCard className="bg-card p-6 text-center space-y-3">
           <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto">
             <Lock size={22} className="text-muted-foreground" />
           </div>
@@ -130,7 +131,7 @@ export default function PasswordSettingsPage() {
           >
             Manage Google account security →
           </a>
-        </div>
+        </GlowCard>
       </div>
     );
   }
@@ -153,9 +154,10 @@ export default function PasswordSettingsPage() {
         </div>
       </div>
 
+      <GlowCard className="bg-card p-5">
       <form
         onSubmit={handleSubmit(onSubmit)}
-        className="rounded-xl border border-border bg-card p-5 space-y-5"
+        className="space-y-5"
       >
         {/* Current password */}
         <div className="space-y-1.5">
@@ -268,6 +270,7 @@ export default function PasswordSettingsPage() {
           {isSubmitting ? "Updating…" : "Update password"}
         </button>
       </form>
+      </GlowCard>
     </div>
   );
 }

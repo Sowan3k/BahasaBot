@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-08 (UI overhaul — split-screen auth, dark palette, box logo, Google button, shader tuning)
+## Last Updated: 2026-04-08 (Session 3 — Chatbot personalization + notifications + dashboard streak/XP fix)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -28,6 +28,7 @@ _Update this file at the end of every session_
 | Notification System (Phase 17) | ✅ Complete | GET /api/notifications/ (last 20 + unread_count), POST mark-read, POST read-all; NotificationBell (60s polling, unread badge) + NotificationPanel; floating global icon in layout.tsx |
 | Gamification — Streak + XP (Phase 18) | ✅ Complete | record_learning_activity() in gamification_service.py; Redis-keyed daily streak; XP awards: class=10, quiz pass=25, chatbot session=5; milestone notifications (streak 3/7/14/30, every 100 XP); wired into 4 routers (courses, quiz, chatbot); StreakBadge + XPBar components; dashboard +2 stat cards; sidebar footer shows streak+XP |
 | Sidebar Polish | ✅ Complete | Double divider removed (no border-b on logo area); ThemeToggle repositioned to header row; footer items centered except XP bar; collapsed tooltips use theme-aware bg-popover |
+| My Journey — Learning Roadmap (Phase 20) | ✅ Complete | Gemini-powered roadmap; 4 endpoints; phase/week/activity structure; optimistic completion; deep links; admin roadmap count |
 | Spelling Practice Game (Phase 19) | ✅ Complete + v2 redesign | Leitner-box word selection; Levenshtein fuzzy matching; Start screen → 3-2-1 countdown → 10s per-word timer (green→yellow→red pulse) → Time's Up screen with Next/Start Over; combo multiplier; session summary; keyboard shortcuts (Enter/Space/Escape); personal best; Games link in sidebar |
 | Chatbot vocab pipeline fix | ✅ Fixed | _extract_and_save() now opens its own AsyncSessionLocal session — asyncio.create_task with request-scoped session was silently failing after SSE stream ended; vocab/grammar now reliably saved after every chatbot response |
 | Frontend Performance Optimizations | ✅ Complete | Session cache in api.ts (60s TTL, eliminates /api/auth/session round-trip on every API call); profile fetch deduplication via shared useQuery(['profile']) key in AppSidebar + OnboardingChecker; login router.refresh() race condition removed; redirect loading overlay added |
@@ -39,6 +40,74 @@ _Update this file at the end of every session_
 
 ## Known Pre-existing Issue (not caused by recent changes)
 - Module quiz cache-vs-submission misalignment: if a quiz attempt fails (0%) the cache clears and Gemini regenerates new questions. If the user re-submits using answers from the *first* GET, they score 0% again. Mitigation: frontend should re-fetch GET before showing quiz form if previous submission failed. This is a UI flow issue, not a backend bug.
+
+---
+
+## What Was Done This Session (2026-04-08 Session 3 — Chatbot personalization + Notification completion loop)
+
+### Chatbot System Prompt Personalization
+- **`backend/services/langchain_service.py`** — The DB query now fetches `native_language`, `learning_goal`, AND `proficiency_level` together (single query replacing the previous single-field lookup).
+  - Added `{learning_goal_context}` — if set, tells Gemini: "The user is learning Malay for: [goal]. Tailor formality and examples accordingly."
+  - Added `{proficiency_context}` — always injected; tells Gemini the BPS level with human description (e.g. "BPS-1 — Beginner — focus on basics"). Gemini was previously guessing level from conversation alone.
+  - Both placeholders appended inline to the system prompt template alongside `{native_language_context}`.
+
+### Phase Completion Notifications
+- **`backend/services/journey_service.py`** — Added `_get_phase_activity_ids(roadmap_json, activity_id)` and `_get_phase_title(roadmap_json, activity_id)` pure helper functions.
+  - `complete_activity()` now, after committing the new completion row, queries how many of the phase's activities are completed. If `completed == total`, fires a `phase_complete` notification (fire-and-forget, wrapped in try/except so it never blocks the response).
+  - Import added: `func` from `sqlalchemy`, `create_notification_fire_and_forget` from `gamification_service`.
+
+### Course Completion Notifications
+- **`backend/routers/courses.py`** — In `_run_generation_task()`, the return value of `generate_course()` is now captured as `course`. After success, fires a `course_complete` notification: "Your course '{title}' is ready! Head to Courses to start learning."
+  - Import added: `create_notification_fire_and_forget` from `gamification_service`.
+  - The notification fires in the same `AsyncSessionLocal` context as the course generation.
+
+### Profile Settings UX
+- **`frontend/app/(dashboard)/settings/profile/page.tsx`** — Added helper text below both profile dropdowns:
+  - Native language: "Helps BahasaBot draw comparisons between your language and Malay during tutoring sessions."
+  - Learning goal: "Used to personalize your AI tutor tone and your Journey learning roadmap."
+
+### Notification Type Coverage
+| Type | Frontend icon | Backend fires |
+|---|---|---|
+| streak_milestone | Flame | ✅ |
+| xp_milestone | Star | ✅ |
+| phase_complete | Trophy (purple) | ✅ (this session) |
+| course_complete | BookOpen (green) | ✅ (this session) |
+| journey_reminder | Map (blue) | ❌ (needs scheduler) |
+
+### Dashboard Streak/XP Structural Fix
+- **`backend/routers/dashboard.py`** — `dashboard_summary` endpoint now overwrites `streak_count` and `xp_total` from the cached summary with fresh values from `current_user` (which is already a live DB read via `Depends(get_current_user)`). This permanently prevents any divergence between sidebar (profile API, always fresh) and dashboard cards (summary API, Redis-cached). Other summary fields (courses, modules, weak points, etc.) still benefit from the 5-min cache.
+
+### Test Results (2026-04-08 Session 3)
+| Check | Result |
+|---|---|
+| Python syntax — langchain_service.py | OK |
+| Python syntax — journey_service.py | OK |
+| Python syntax — courses.py | OK |
+| Python syntax — dashboard.py | OK |
+| Dashboard streak/XP — structural root cause identified | current_user always fresh, cache always overridden |
+
+---
+
+## What Was Done This Session (2026-04-08 Session 2 — GlowCard global rollout + login logo)
+
+### GlowCard applied globally
+All card-like `<div className="rounded-xl border border-border bg-card ...">` elements replaced with `<GlowCard className="bg-card ...">` across the entire project:
+- **Settings pages**: `settings/page.tsx`, `settings/profile/page.tsx`, `settings/password/page.tsx`, `settings/about/page.tsx`
+- **Journey**: `journey/page.tsx` (3 feature mini-cards), `components/journey/PhaseAccordion.tsx`
+- **Admin**: `admin/page.tsx` (StatCard + nav list), `admin/users/page.tsx` (skeleton + data table), `admin/users/[userId]/page.tsx` (StatPill + analytics stat cards + recent courses list), `admin/feedback/page.tsx` (aggregate stats card + each feedback card)
+- Two intentionally excluded: analytics day-selector tab bar (pill UI), search input field — both are not semantic cards
+
+### Login page logo fix
+- **`frontend/components/ui/auth-card.tsx`** — changed branding panel layout from `flex-col` (logo above title) to `flex-row items-center gap-4` (logo beside title). The 14×14 square logo now appears inline to the left of "BahasaBot" text. Tagline moved below the row.
+
+### Test Results (2026-04-08)
+| Check | Result |
+|---|---|
+| TypeScript compile | Not run (UI-only changes, no type changes) |
+| GlowCard import added to all updated files | ✅ |
+| Closing tags matched (GlowCard vs. old div) | ✅ Verified |
+| Login logo position | ✅ Logo beside title, tagline below |
 
 ---
 

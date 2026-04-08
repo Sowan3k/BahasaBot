@@ -38,6 +38,7 @@ import {
 } from "recharts";
 import { adminApi, profileApi } from "@/lib/api";
 import type { AdminUserDetail, AdminUserAnalytics } from "@/lib/types";
+import { GlowCard } from "@/components/ui/glow-card";
 
 const BPS_COLORS: Record<string, string> = {
   "BPS-1": "bg-muted text-muted-foreground",
@@ -138,11 +139,11 @@ function StatPill({ icon: Icon, label, value, color }: {
   label: string; value: number; color: string;
 }) {
   return (
-    <div className="flex flex-col items-center gap-1 p-4 rounded-xl border border-border bg-card text-center">
+    <GlowCard className="bg-card p-4 flex flex-col items-center gap-1 text-center">
       <Icon size={18} className={color} />
       <p className="font-heading text-xl font-bold text-foreground">{value}</p>
       <p className="text-xs text-muted-foreground">{label}</p>
-    </div>
+    </GlowCard>
   );
 }
 
@@ -427,7 +428,7 @@ export default function AdminUserDetailPage() {
                   { label: "Output Tokens", value: tok!.total_output_tokens.toLocaleString(), icon: Zap, color: "text-purple-500", bg: "bg-purple-500/10" },
                   { label: "Total Activities", value: act!.total_events.toLocaleString(), icon: BarChart2, color: "text-green-500", bg: "bg-green-500/10" },
                 ].map(({ label, value, icon: Icon, color, bg }) => (
-                  <div key={label} className="rounded-xl border border-border bg-card p-4 flex items-start gap-3">
+                  <GlowCard key={label} className="bg-card p-4 flex items-start gap-3">
                     <div className={`w-9 h-9 rounded-lg ${bg} flex items-center justify-center shrink-0`}>
                       <Icon size={18} className={color} />
                     </div>
@@ -435,7 +436,7 @@ export default function AdminUserDetailPage() {
                       <p className="text-xs text-muted-foreground">{label}</p>
                       <p className="font-heading text-lg font-bold text-foreground">{value}</p>
                     </div>
-                  </div>
+                  </GlowCard>
                 ))}
               </div>
 
@@ -505,7 +506,7 @@ export default function AdminUserDetailPage() {
         {user.recent_courses.length > 0 && (
           <div>
             <h2 className="font-heading text-base font-semibold text-foreground mb-3">Recent Courses</h2>
-            <div className="rounded-xl border border-border bg-card divide-y divide-border overflow-hidden">
+            <GlowCard className="bg-card divide-y divide-border overflow-hidden !rounded-xl">
               {user.recent_courses.map((course) => (
                 <div key={course.id} className="px-5 py-3 flex items-center justify-between gap-4">
                   <div className="min-w-0">
@@ -517,7 +518,7 @@ export default function AdminUserDetailPage() {
                   </span>
                 </div>
               ))}
-            </div>
+            </GlowCard>
           </div>
         )}
 

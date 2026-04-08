@@ -16,6 +16,7 @@ import {
   Settings,
   ShieldCheck,
   LogOut,
+  Map,
   Menu,
   X,
   Flame,
@@ -26,12 +27,13 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { profileApi } from "@/lib/api";
 
 const BASE_NAV_ITEMS = [
-  { label: "Dashboard", href: "/dashboard",       icon: LayoutDashboard },
-  { label: "AI Tutor",  href: "/chatbot",         icon: MessageSquare },
-  { label: "Courses",   href: "/courses",         icon: BookOpen },
-  { label: "Quiz",      href: "/quiz/adaptive",   icon: Brain },
-  { label: "Games",     href: "/games/spelling",  icon: Gamepad2 },
-  { label: "Settings",  href: "/settings",        icon: Settings },
+  { label: "Dashboard",  href: "/dashboard",       icon: LayoutDashboard },
+  { label: "AI Tutor",   href: "/chatbot",         icon: MessageSquare },
+  { label: "Courses",    href: "/courses",         icon: BookOpen },
+  { label: "Quiz",       href: "/quiz/adaptive",   icon: Brain },
+  { label: "My Journey", href: "/journey",         icon: Map },
+  { label: "Games",      href: "/games/spelling",  icon: Gamepad2 },
+  { label: "Settings",   href: "/settings",        icon: Settings },
 ] as const;
 
 export function AppSidebar() {

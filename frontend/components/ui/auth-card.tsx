@@ -37,26 +37,26 @@ export function AuthCard({ children }: { children: React.ReactNode }) {
 
         <div className="relative flex flex-col items-start gap-10 max-w-xs">
 
-          {/* Icon + wordmark as CSS text (no SVG filter hacks) */}
+          {/* Icon + wordmark */}
           <div className="flex flex-col gap-4">
-            <div className="relative w-16 h-16 flex-shrink-0">
-              <Image
-                src="/Logo new only box (1).svg"
-                alt="BahasaBot"
-                fill
-                sizes="64px"
-                priority
-                className="object-contain"
-              />
-            </div>
-            <div>
+            <div className="flex items-center gap-4">
+              <div className="relative w-14 h-14 flex-shrink-0">
+                <Image
+                  src="/Logo new only box (1).svg"
+                  alt="BahasaBot"
+                  fill
+                  sizes="56px"
+                  priority
+                  className="object-contain"
+                />
+              </div>
               <h1 className="text-5xl font-bold text-white tracking-tight leading-none">
                 BahasaBot
               </h1>
-              <p className="text-white/40 text-lg mt-3 leading-snug">
-                Your personal Bahasa Melayu tutor
-              </p>
             </div>
+            <p className="text-white/40 text-lg leading-snug">
+              Your personal Bahasa Melayu tutor
+            </p>
           </div>
 
           {/* Feature list */}

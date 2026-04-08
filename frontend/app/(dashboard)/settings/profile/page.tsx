@@ -10,6 +10,7 @@ import axios from "axios";
 
 import { profileApi } from "@/lib/api";
 import type { UserProfile } from "@/lib/types";
+import { GlowCard } from "@/components/ui/glow-card";
 
 // ── Zod schema ──────────────────────────────────────────────────────────────
 
@@ -114,7 +115,7 @@ export default function ProfileSettingsPage() {
 
       {/* Read-only info card */}
       {profile && (
-        <div className="rounded-xl border border-border bg-card p-5 flex items-center gap-4">
+        <GlowCard className="bg-card p-5 flex items-center gap-4">
           <div className="w-14 h-14 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
             {profile.profile_picture_url ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -137,21 +138,22 @@ export default function ProfileSettingsPage() {
               <span className="text-xs text-muted-foreground capitalize">{profile.provider}</span>
             </div>
           </div>
-        </div>
+        </GlowCard>
       )}
 
       {/* Loading skeleton */}
       {loading && (
-        <div className="rounded-xl border border-border bg-card p-5 space-y-3 animate-pulse">
+        <GlowCard className="bg-card p-5 space-y-3 animate-pulse">
           <div className="h-4 bg-muted rounded w-1/3" />
           <div className="h-4 bg-muted rounded w-1/2" />
-        </div>
+        </GlowCard>
       )}
 
       {/* Edit form */}
+      <GlowCard className="bg-card p-5">
       <form
         onSubmit={handleSubmit(onSubmit)}
-        className="rounded-xl border border-border bg-card p-5 space-y-5"
+        className="space-y-5"
       >
         {/* Display name */}
         <div className="space-y-1.5">
@@ -201,6 +203,9 @@ export default function ProfileSettingsPage() {
               </option>
             ))}
           </select>
+          <p className="text-xs text-muted-foreground mt-1">
+            Helps BahasaBot draw comparisons between your language and Malay during tutoring sessions.
+          </p>
           {errors.native_language && (
             <p className="text-xs text-destructive">{errors.native_language.message}</p>
           )}
@@ -223,6 +228,9 @@ export default function ProfileSettingsPage() {
               </option>
             ))}
           </select>
+          <p className="text-xs text-muted-foreground mt-1">
+            Used to personalize your AI tutor tone and your Journey learning roadmap.
+          </p>
           {errors.learning_goal && (
             <p className="text-xs text-destructive">{errors.learning_goal.message}</p>
           )}
@@ -250,6 +258,7 @@ export default function ProfileSettingsPage() {
           {isSubmitting ? "Saving…" : "Save changes"}
         </button>
       </form>
+      </GlowCard>
     </div>
   );
 }

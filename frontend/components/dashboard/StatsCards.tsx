@@ -101,7 +101,10 @@ export default function StatsCards({ stats }: Props) {
               </div>
               <div className="space-y-0.5">
                 <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">{card.label}</p>
-                <p className="text-3xl font-bold tabular-nums font-heading">{card.value}</p>
+                {/* Use ?? 0 so undefined values (stale cache) still render as 0 */}
+                <p className="text-3xl font-bold tabular-nums font-heading text-foreground">
+                  {card.value ?? 0}
+                </p>
                 <p className="text-xs text-muted-foreground">{card.description}</p>
               </div>
             </div>

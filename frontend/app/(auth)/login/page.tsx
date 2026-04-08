@@ -39,13 +39,13 @@ async function storeSession(data: TokenResponse): Promise<boolean> {
     proficiencyLevel: data.user.proficiency_level,
     provider: data.user.provider,
     createdAt: String(data.user.created_at),
-    redirect: false,
   };
+  // redirect: false as a literal type satisfies NextAuth's SignInOptions<false> overload
   // Retry once — first attempt can fail if CSRF token is still loading
-  let result = await signIn("jwt", credentials);
+  let result = await signIn("jwt", { ...credentials, redirect: false as false });
   if (result?.error) {
     await new Promise((r) => setTimeout(r, 600));
-    result = await signIn("jwt", credentials);
+    result = await signIn("jwt", { ...credentials, redirect: false as false });
   }
   return !result?.error;
 }

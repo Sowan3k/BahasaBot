@@ -56,6 +56,10 @@ async def dashboard_summary(
     """
     try:
         data = await get_dashboard_summary(current_user.id, db)
+        # Always use fresh streak/XP from current_user (already a live DB read via
+        # get_current_user) — the cached summary can lag behind the sidebar values.
+        data["streak_count"] = current_user.streak_count
+        data["xp_total"] = current_user.xp_total
         return DashboardSummaryResponse(**data)
     except Exception as exc:
         logger.exception(

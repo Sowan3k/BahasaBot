@@ -7,6 +7,7 @@ import {
   Users,
   BookOpen,
   ClipboardList,
+  Map,
   Star,
   TrendingUp,
   ShieldCheck,
@@ -16,6 +17,7 @@ import {
 } from "lucide-react";
 import { adminApi, profileApi } from "@/lib/api";
 import type { AdminStats } from "@/lib/types";
+import { GlowCard } from "@/components/ui/glow-card";
 
 // ── Admin sub-sections ────────────────────────────────────────────────────────
 
@@ -56,7 +58,7 @@ function StatCard({
   sub?: string;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-5 flex items-start gap-4">
+    <GlowCard className="bg-card p-5 flex items-start gap-4">
       <div className={`w-11 h-11 rounded-lg ${bg} flex items-center justify-center shrink-0`}>
         <Icon size={22} className={color} />
       </div>
@@ -65,7 +67,7 @@ function StatCard({
         <p className="font-heading text-2xl font-bold text-foreground mt-0.5">{value}</p>
         {sub && <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>}
       </div>
-    </div>
+    </GlowCard>
   );
 }
 
@@ -169,6 +171,14 @@ export default function AdminPage() {
             bg="bg-orange-500/10"
           />
           <StatCard
+            label="Active Roadmaps"
+            value={stats.active_roadmaps ?? 0}
+            icon={Map}
+            color="text-teal-500"
+            bg="bg-teal-500/10"
+            sub="users with a journey plan"
+          />
+          <StatCard
             label="Inactive Users"
             value={stats.total_users - stats.active_users}
             icon={Users}
@@ -181,7 +191,7 @@ export default function AdminPage() {
       {/* ── Navigation cards ── */}
       <div>
         <h2 className="font-heading text-base font-semibold text-foreground mb-3">Sections</h2>
-        <div className="rounded-xl border border-border bg-card divide-y divide-border overflow-hidden">
+        <GlowCard className="bg-card divide-y divide-border overflow-hidden !rounded-xl">
           {ADMIN_SECTIONS.map(({ href, icon: Icon, label, description, color, bg }) => (
             <Link
               key={href}
@@ -201,7 +211,7 @@ export default function AdminPage() {
               />
             </Link>
           ))}
-        </div>
+        </GlowCard>
       </div>
     </div>
   );

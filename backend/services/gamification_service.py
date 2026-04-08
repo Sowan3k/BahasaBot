@@ -25,7 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.models.notification import Notification
 from backend.models.user import User
-from backend.utils.cache import cache_get, cache_set
+from backend.utils.cache import cache_delete, cache_get, cache_set
 from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -168,6 +168,9 @@ async def record_learning_activity(
             user.streak_count = new_streak
             user.xp_total = new_xp
             await db.commit()
+            # Invalidate the dashboard summary cache so streak/XP are immediately
+            # consistent with what the sidebar shows via /api/profile/.
+            await cache_delete(f"dashboard:summary:{user_id}")
 
         # ── Milestone notifications (fire-and-forget) ──────────────────────
         if not streak_already_updated_today and new_streak in _STREAK_MILESTONES and new_streak > old_streak:

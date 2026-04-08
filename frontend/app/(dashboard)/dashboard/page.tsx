@@ -285,8 +285,8 @@ export default function DashboardPage() {
               </div>
 
               {/* Weak points + recent quiz history side by side on wider screens */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="relative rounded-[1.25rem] border-[0.75px] border-border p-2">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                <div className="relative rounded-[1.25rem] border-[0.75px] border-border p-2 h-full">
                   <GlowingEffect spread={40} glow={true} disabled={false} proximity={64} inactiveZone={0.01} borderWidth={3} />
                   <div className="relative overflow-hidden rounded-xl border-[0.75px] border-border bg-background p-5 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)] space-y-3">
                     <h3 className="font-semibold text-base tracking-tight">Weak Points</h3>
@@ -300,7 +300,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                <div className="relative rounded-[1.25rem] border-[0.75px] border-border p-2">
+                <div className="relative rounded-[1.25rem] border-[0.75px] border-border p-2 h-full">
                   <GlowingEffect spread={40} glow={true} disabled={false} proximity={64} inactiveZone={0.01} borderWidth={3} />
                   <div className="relative overflow-hidden rounded-xl border-[0.75px] border-border bg-background p-5 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)] space-y-3">
                     <h3 className="font-semibold text-base tracking-tight">Recent Quiz Attempts</h3>

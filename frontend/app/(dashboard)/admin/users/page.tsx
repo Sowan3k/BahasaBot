@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { adminApi, profileApi } from "@/lib/api";
 import type { AdminUser, PaginatedResponse } from "@/lib/types";
+import { GlowCard } from "@/components/ui/glow-card";
 
 const BPS_COLORS: Record<string, string> = {
   "BPS-1": "bg-muted text-muted-foreground",
@@ -120,7 +121,7 @@ export default function AdminUsersPage() {
 
       {/* ── Table ── */}
       {loading ? (
-        <div className="rounded-xl border border-border bg-card divide-y divide-border overflow-hidden">
+        <GlowCard className="bg-card divide-y divide-border overflow-hidden !rounded-xl">
           {[...Array(8)].map((_, i) => (
             <div key={i} className="h-14 px-5 flex items-center gap-4">
               <div className="h-4 w-40 rounded bg-muted animate-pulse" />
@@ -128,9 +129,9 @@ export default function AdminUsersPage() {
               <div className="h-4 w-16 rounded bg-muted animate-pulse ml-auto" />
             </div>
           ))}
-        </div>
+        </GlowCard>
       ) : data && data.items.length > 0 ? (
-        <div className="rounded-xl border border-border bg-card overflow-hidden">
+        <GlowCard className="bg-card overflow-hidden !rounded-xl">
           {/* Table header */}
           <div className="grid grid-cols-[2fr_2fr_1fr_1fr_1fr_auto] gap-4 px-5 py-3 bg-muted/50 border-b border-border text-xs font-semibold text-muted-foreground uppercase tracking-wide">
             <span>User</span>
@@ -202,7 +203,7 @@ export default function AdminUsersPage() {
               </div>
             </div>
           ))}
-        </div>
+        </GlowCard>
       ) : (
         !loading && (
           <div className="text-center py-16 text-muted-foreground text-sm">

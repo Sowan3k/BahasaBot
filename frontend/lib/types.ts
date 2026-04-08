@@ -395,6 +395,7 @@ export interface AdminStats {
   quiz_pass_rate: number;       // 0–100
   feedback_count: number;
   avg_feedback_rating: number | null;
+  active_roadmaps: number;
 }
 
 /** Row in GET /api/admin/users */
@@ -524,4 +525,56 @@ export interface SpellingSubmitResponse {
 export interface SpellingPersonalBest {
   best_correct: number;
   best_attempted: number;
+}
+
+// ── Journey — My Learning Roadmap (Phase 20) ──────────────────────────────────
+
+export type ActivityType = "course" | "quiz" | "chatbot";
+export type GoalType = "survival" | "conversational" | "academic";
+
+export interface JourneyActivity {
+  id: string;          // e.g. "p1_w1_a1"
+  type: ActivityType;
+  title: string;
+  topic: string;
+  reason: string;
+}
+
+export interface JourneyWeek {
+  week: number;
+  activities: JourneyActivity[];
+}
+
+export interface JourneyPhase {
+  phase: number;
+  title: string;
+  duration_weeks: number;
+  weeks: JourneyWeek[];
+}
+
+export interface RoadmapJson {
+  phases: JourneyPhase[];
+}
+
+export interface LearningRoadmap {
+  id: string;
+  deadline_date: string;        // ISO date string
+  goal_type: GoalType;
+  roadmap_json: RoadmapJson;
+  banner_image_url: string | null;
+  created_at: string;
+  completed_activity_ids: string[];
+  total_activities: number;
+  completed_activities: number;
+}
+
+export interface GenerateRoadmapPayload {
+  deadline_date: string;        // ISO date string e.g. "2026-12-31"
+  goal_type: GoalType;
+}
+
+export interface CompleteActivityResponse {
+  activity_id: string;
+  completed: boolean;
+  already_completed: boolean;
 }

@@ -75,6 +75,11 @@ async def get_stats(db: AsyncSession) -> dict:
         select(func.avg(EvaluationFeedback.rating)).select_from(EvaluationFeedback)
     )
 
+    # Active learning roadmaps
+    active_roadmaps = await db.scalar(
+        select(func.count()).select_from(LearningRoadmap)
+    )
+
     return {
         "total_users": total_users or 0,
         "active_users": active_users or 0,
@@ -83,6 +88,7 @@ async def get_stats(db: AsyncSession) -> dict:
         "quiz_pass_rate": pass_rate,
         "feedback_count": feedback_count or 0,
         "avg_feedback_rating": round(float(avg_rating), 2) if avg_rating else None,
+        "active_roadmaps": active_roadmaps or 0,
     }
 
 

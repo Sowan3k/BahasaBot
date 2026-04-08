@@ -65,7 +65,7 @@ Formatting rules (IMPORTANT — follow these exactly):
 
 Relevant Malay language knowledge (from the learning corpus):
 {context}
-{native_language_context}"""
+{native_language_context}{learning_goal_context}{proficiency_context}"""
 
 EXTRACTION_PROMPT = """\
 Analyse the following Bahasa Melayu tutoring response and extract:
@@ -201,11 +201,20 @@ async def stream_chat_response(
         else "No specific reference material found — use your general Malay knowledge."
     )
 
-    # 3. Fetch user's native language for personalised tutor context
-    nl_result = await db.execute(
-        select(User.native_language).where(User.id == user_id)
+    # 3. Fetch user profile for personalised tutor context
+    profile_result = await db.execute(
+        select(
+            User.native_language,
+            User.learning_goal,
+            User.proficiency_level,
+        ).where(User.id == user_id)
     )
-    native_language: str | None = nl_result.scalar_one_or_none()
+    profile_row = profile_result.one_or_none()
+    native_language: str | None = profile_row.native_language if profile_row else None
+    learning_goal: str | None = profile_row.learning_goal if profile_row else None
+    proficiency_level: str = profile_row.proficiency_level if profile_row else "BPS-1"
+
+    # Native language context
     if native_language:
         native_language_context = (
             f"\nLEARNER CONTEXT:\n"
@@ -216,6 +225,28 @@ async def stream_chat_response(
         )
     else:
         native_language_context = ""
+
+    # Learning goal context
+    if learning_goal:
+        learning_goal_context = (
+            f"\nThe user is learning Malay for: {learning_goal}. "
+            f"Tailor your vocabulary, examples, and level of formality to match this goal."
+        )
+    else:
+        learning_goal_context = ""
+
+    # Proficiency context — explicitly tell Gemini the user's BPS level
+    _BPS_DESCRIPTIONS = {
+        "BPS-1": "Beginner — very limited Malay; focus on basics, simple vocabulary, and common phrases",
+        "BPS-2": "Elementary — knows common phrases; can follow simple explanations with clear examples",
+        "BPS-3": "Intermediate — conversational; can handle most everyday topics with some complexity",
+        "BPS-4": "Advanced — near-fluent; can engage with complex grammar, idioms, and formal Malay",
+    }
+    proficiency_context = (
+        f"\nThe user's current BPS level: {proficiency_level} — "
+        f"{_BPS_DESCRIPTIONS.get(proficiency_level, _BPS_DESCRIPTIONS['BPS-1'])}. "
+        f"Calibrate explanation depth and vocabulary complexity to this level."
+    )
 
     # 4. Load conversation history
     history = await _load_history(session_id, db)
@@ -240,6 +271,8 @@ async def stream_chat_response(
     system_prompt = CHATBOT_SYSTEM_PROMPT.format(
         context=context_text,
         native_language_context=native_language_context,
+        learning_goal_context=learning_goal_context,
+        proficiency_context=proficiency_context,
     )
 
     # 6. Stream the response and collect the full text
