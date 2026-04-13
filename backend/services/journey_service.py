@@ -33,6 +33,7 @@ from uuid import UUID
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.models.course import Course
 from backend.models.journey import UserRoadmap
 from backend.models.progress import WeakPoint
 from backend.models.user import User
@@ -413,6 +414,35 @@ async def get_roadmap(user_id: UUID, db: AsyncSession) -> dict | None:
 
     today = datetime.now(timezone.utc).date()
     elements: list[dict] = roadmap.elements or []
+
+    # Enrich elements with exists/course_id by matching against the user's courses
+    courses_q = await db.execute(
+        select(Course.id, Course.topic, Course.title).where(Course.user_id == user_id)
+    )
+    user_courses = courses_q.all()
+    enriched_elements: list[dict] = []
+    for elem in elements:
+        elem_dict = dict(elem)
+        elem_topic = str(elem_dict.get("topic", "")).lower().strip()
+        best_id = None
+        best_score = 0
+        for cid, c_topic, c_title in user_courses:
+            score = max(
+                fuzz.token_sort_ratio(elem_topic, str(c_topic or "").lower().strip()),
+                fuzz.token_sort_ratio(elem_topic, str(c_title or "").lower().strip()),
+            )
+            if score > best_score:
+                best_score = score
+                best_id = cid
+        if best_score >= 70 and best_id:
+            elem_dict["exists"] = True
+            elem_dict["course_id"] = str(best_id)
+        else:
+            elem_dict["exists"] = False
+            elem_dict["course_id"] = None
+        enriched_elements.append(elem_dict)
+    elements = enriched_elements
+
     completed_count = sum(1 for e in elements if e.get("completed"))
     total_count = len(elements)
     all_done = completed_count == total_count

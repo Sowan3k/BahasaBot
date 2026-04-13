@@ -848,6 +848,16 @@ In the admin control panel add a "User Journeys" tab:
 - [x] "Other" intent free text passed correctly into Gemini prompt
 - [x] Past Journeys section added to journey page showing completed roadmaps
 
+### Phase 20 — Session 16 Fixes (2026-04-13)
+
+**Fix 1: Obstacle always opened course generation even when course already existed**
+- [x] `backend/services/journey_service.py` — `get_roadmap()` now enriches each element with `exists` (bool) and `course_id` (str|None) by querying the user's `courses` table and fuzzy-matching `elem.topic` against `course.topic` + `course.title` (token_sort_ratio ≥ 70). Added `from backend.models.course import Course` import.
+- [x] `backend/services/course_service.py` — `save_course()` calls `cache_delete(f"journey:{user_id}")` after commit so the journey cache is invalidated immediately on course creation. Added `cache_delete` import.
+- [x] `frontend/app/(dashboard)/courses/page.tsx` — Safety net: `?generate=<topic>` now waits for the course list to load, then checks for a matching topic (case-insensitive substring). If match found → navigates to existing course instead of opening the modal.
+
+**Fix 2: Completing a course was not marking the roadmap obstacle as completed**
+- [x] `backend/services/quiz_service.py` — `_check_course_completion_for_journey()` now passes `course.topic or course.title` instead of just `course.title`. The `topic` field is the raw input string which directly matches roadmap element topics. Creative AI-generated `title` values were scoring below the 70% threshold.
+
 ---
 
 ## Phase 21 — Chat History Page

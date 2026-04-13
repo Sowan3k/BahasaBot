@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-13 (Session 13 — Course cover hero banner + image generation root cause fix)
+## Last Updated: 2026-04-13 (Session 16 — Journey obstacle → existing course fix + layout border clashing fix)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -28,12 +28,13 @@ _Update this file at the end of every session_
 | Notification System (Phase 17) | ✅ Complete | GET /api/notifications/ (last 20 + unread_count), POST mark-read, POST read-all; NotificationBell (60s polling, unread badge) + NotificationPanel; floating global icon in layout.tsx |
 | Gamification — Streak + XP (Phase 18) | ✅ Complete | record_learning_activity() in gamification_service.py; Redis-keyed daily streak; XP awards: class=10, quiz pass=25, chatbot session=5; milestone notifications (streak 3/7/14/30, every 100 XP); wired into 4 routers (courses, quiz, chatbot); StreakBadge + XPBar components; dashboard +2 stat cards; sidebar footer shows streak+XP |
 | Sidebar Polish | ✅ Complete | Double divider removed (no border-b on logo area); ThemeToggle repositioned to header row; footer items centered except XP bar; collapsed tooltips use theme-aware bg-popover |
-| My Journey — Learning Roadmap (Phase 20) | ✅ Complete (v2 + patches) | New user_roadmaps table; flat course-obstacle model; 3-question modal; road/path UI; overdue+extend; BPS upgrade banner; identity-verified delete; check_roadmap_progress hook; admin journeys page. Phase 20 fully complete including all 7 post-implementation patches: fuzzy match (fuzzywuzzy token_sort_ratio ≥ 70%), sequential completion enforcement, Gemini failure UX with Try Again, estimated_weeks displayed on nodes, streak hook, Other intent free text, past journeys history section. |
-| Chat History Page (Phase 21) | ✅ Complete | /chatbot/history; ChatHistoryList (paginated, title from first user msg, message count); session detail read-only view; History button in chatbot header; backend ChatSessionResponse extended with title + message_count |
+| My Journey — Learning Roadmap (Phase 20) | ✅ Complete (v2 + patches + Session 16 fixes) | New user_roadmaps table; flat course-obstacle model; 3-question modal; road/path UI; overdue+extend; BPS upgrade banner; identity-verified delete; check_roadmap_progress hook; admin journeys page. Phase 20 fully complete including all 7 post-implementation patches + Session 16: obstacle → existing course navigation fixed (get_roadmap enriches elements with exists/course_id via fuzzy match); obstacle completion fix (check_roadmap_progress now uses course.topic for better fuzzy match); journey cache invalidated on new course save. |
+| Chat History Page (Phase 21) | ✅ Complete + Session Delete | /chatbot/history; ChatHistoryList (paginated, title from first user msg, message count); session detail read-only view; History button in chatbot header; backend ChatSessionResponse extended with title + message_count; DELETE /api/chatbot/sessions/{id} (ownership-verified, cascade messages, preserves vocab/grammar); Trash2 icon + inline confirm strip per row; error banner with 4s auto-dismiss |
 | Image Generation — Nano Banana 2 (Phase 22) | ✅ Complete + Bug fixed + Hero banner | image_service.py uses Gemini REST API via httpx; get_courses_list() retroactive cover healing; cover_image_url now included in get_course_with_progress(); course detail page shows full-width hero banner with cover as background + dark gradient overlay + white title text |
 | Spelling Practice Game (Phase 19) | ✅ Complete + v2 redesign | Leitner-box word selection; Levenshtein fuzzy matching; Start screen → 3-2-1 countdown → 10s per-word timer (green→yellow→red pulse) → Time's Up screen with Next/Start Over; combo multiplier; session summary; keyboard shortcuts (Enter/Space/Escape); personal best; Games link in sidebar |
 | Chatbot vocab pipeline fix | ✅ Fixed | _extract_and_save() now opens its own AsyncSessionLocal session — asyncio.create_task with request-scoped session was silently failing after SSE stream ended; vocab/grammar now reliably saved after every chatbot response |
 | Frontend Performance Optimizations | ✅ Complete | Session cache in api.ts (60s TTL, eliminates /api/auth/session round-trip on every API call); profile fetch deduplication via shared useQuery(['profile']) key in AppSidebar + OnboardingChecker; login router.refresh() race condition removed; redirect loading overlay added |
+| Performance + Animations (Session 14) | ✅ Complete | Admin stats Redis cache (2min TTL, key: admin:stats); admin page parallel Promise.allSettled replacing sequential waterfall; PageTransition component (fade+slide, 0.3s) wired into layout keyed by pathname; journey obstacle stagger (0.08s between nodes); course card stagger + whileHover scale 1.02 |
 | UI Overhaul (2026-04-08) | ✅ Complete | Split-screen auth (branding left, glass form right); unified dark olive palette (#25221a bg, #1c1a13 sidebar, #2e2b22 card); box logo across all icon contexts; autofill CSS fix; quiz generating loader; WeakPoints + QuizHistory tile redesign; spelling game exit button; chatbot Waves color fix; sidebar bg-sidebar token; custom themed Google button (hides iframe, uses ref click); shader intensity reduced; left panel gradient overlay; storeSession() CSRF retry |
 | Evaluation Feedback (Section 5.20) | ✅ Complete | POST /api/evaluation/feedback; backend/schemas/evaluation.py + backend/routers/evaluation.py; FeedbackModal component (3-question survey: star rating, Yes/No/Somewhat, optional textarea); wired into adaptive quiz (3s delay) and module quiz results page; feedbackApi in api.ts; FeedbackPayload + FeedbackSubmitResponse types added |
 | Module Quiz Results Page | ✅ Complete | Full results page replacing TODO stub; sessionStorage data-passing pattern (quiz page stores result before redirect); SVG circular score ring; Pass/Fail state with Module Unlocked banner; Continue to Next Module button (fetches course structure via React Query to resolve next module's first class); Retry Quiz + Review Module on fail; per-question breakdown with SpeakerButton on wrong answers; FeedbackModal wired in |
@@ -50,6 +51,91 @@ _Update this file at the end of every session_
 
 ## ✅ Fixed Issues (Session 13)
 - **Course covers not appearing (2026-04-13):** Session 12 correctly fixed `image_service.py` (httpx REST API) and `course_service.py` (retroactive healing + `asyncio.create_task`), but the backend was **never restarted** after those changes were made. Uvicorn started at 08:19, files modified at 14:22–14:28 — old broken code was still running. Fix: killed old uvicorn PIDs (18316, 25012), started fresh process on port 8000. Also manually ran `_generate_and_save_cover()` for all 3 existing courses that had `cover_image_url = NULL`. All verified: Gemini REST API returns JPEG (~1.1 MB base64, ~17s), DB save works, `GET /api/courses/` returns cover correctly. **Important**: after any code change to the backend, the uvicorn process MUST be restarted manually (no `--reload` flag in prod mode).
+
+---
+
+## What Was Done This Session (2026-04-13 Session 16 — Journey obstacle → existing course + layout border clashing fix)
+
+### Bug 1: Journey obstacle always opens course generation even if course already exists
+
+**Root cause:** `get_roadmap()` in `journey_service.py` was returning elements straight from the JSONB column without populating `exists` or `course_id`. The `handleObstacleClick` handler on the journey page was already checking for those fields (CASE 1/2) but they were always `undefined`, so it always fell through to CASE 4 (generate new course).
+
+**Fixes:**
+- **`backend/services/journey_service.py`** — `get_roadmap()` now queries the user's `courses` table after fetching the roadmap. For each element it fuzzy-matches the element `topic` against `course.topic` and `course.title` (fuzzywuzzy `token_sort_ratio ≥ 70`). Matching elements are enriched with `exists: true` and `course_id`. Non-matching get `exists: false, course_id: null`. Added `from backend.models.course import Course` import.
+- **`backend/services/course_service.py`** — `save_course()` now calls `cache_delete(f"journey:{user_id}")` after committing the new course, so the 1-hour journey Redis cache is invalidated immediately. Added `cache_delete` to imports.
+- **`frontend/app/(dashboard)/courses/page.tsx`** — Safety net: when `?generate=<topic>` URL param arrives, waits for the course list to load, then checks for a matching topic (case-insensitive substring match). If found, navigates to `courses/${existing.id}` instead of opening the generation modal. Added `useRouter` import and `pendingGenerateTopic` state.
+
+### Bug 2: Completing a course was not marking the obstacle as completed
+
+**Root cause:** `_check_course_completion_for_journey()` in `quiz_service.py` was passing `course.title` (the AI-generated title, e.g. "Hello Melayu: A Beginner's Guide to Greetings") to `check_roadmap_progress()`. The fuzzy matcher then compared this creative title against the element topic (e.g. "Greetings and Self-Introduction") — often scoring below the 70% threshold. The `course.topic` field holds the raw input string (identical or near-identical to the element topic) and would match much better.
+
+**Fix:** Changed the `check_roadmap_progress()` call to pass `course.topic or course.title` — uses raw topic string as primary match, falls back to title only if topic is empty.
+
+### Bug 3: Chat page and quiz page elements clashing with viewport border
+
+**Root cause:** `PageTransition` used `initial={{ opacity: 0, y: 16 }}`. A CSS `transform: translateY(16px)` shifts the element's *visual* position without affecting layout. For pages that fill the full viewport height (e.g. chatbot: `flex-1 min-h-0` chain), the entire content was visually 16px too low — pushing the chatbot footer and quiz bottom elements past the viewport edge, making them appear clipped against the border.
+
+Additionally, without `min-h-0` on the `motion.div`, the flex height chain (`main → motion.div → chatbot-div`) was not properly bounded, allowing the chatbot's internal scroll to break.
+
+**Fix:** **`frontend/components/layout/PageTransition.tsx`** — removed `y` translation entirely (opacity-only fade: `initial={{ opacity: 0 }} → animate={{ opacity: 1 }}`); reduced duration to 0.2s; added `style={{ minHeight: 0 }}` to ensure `min-h-0` is applied to the motion.div and the flex height chain stays intact.
+
+---
+
+## What Was Done This Session (2026-04-13 Session 15 — Post-login animation bug fix + dashboard query optimization)
+
+### White screen bug root cause
+The curtain (`showCurtain` state) started as `false`, so the dashboard's PageTransition was already fading in (opacity 0→1). The `useEffect` then fired and SET `showCurtain = true`, which slapped a fully-opaque `bg-background` div on top of the already-visible content — causing the white flash the user saw. This is the opposite of what a curtain should do.
+
+### Fixes
+**`frontend/app/(dashboard)/layout.tsx`** — removed the entire curtain: `showCurtain` state, `useEffect`, `AnimatePresence`, `motion` import, and the overlay `motion.div`. The PageTransition with `key={pathname}` already plays a 0.3s fade-in + slide-up on every navigation including the post-login arrival at `/dashboard`. No extra overlay needed.
+
+**`frontend/app/(auth)/login/page.tsx`** — removed `sessionStorage.setItem("fromLogin", "1")` from both sign-in paths (email + Google). Kept `localStorage.setItem("theme", "light")` + `document.documentElement.classList.remove("dark")` so light mode is always forced on sign-in.
+
+**`backend/services/progress_service.py`** — `get_dashboard_summary()` reduced from **8 sequential DB round-trips to 2** on cache miss:
+- Round trip 1: Fetch 3 user columns (proficiency_level, streak_count, xp_total) — was loading the entire User ORM object
+- Round trip 2: All 7 aggregate COUNTs (courses, modules, classes, mq, sq, vocab, grammar) in ONE query using scalar subqueries — PostgreSQL evaluates them in parallel internally
+- The remaining 4 operations (recent vocab, recent grammar, weak points, quiz history) stay sequential — these return row data, not scalars, and are harder to merge without UNION complexity
+
+### Dashboard loading: confirmed OK
+- Dashboard summary: Redis-cached (5-min TTL, `dashboard:summary:{user_id}`) — confirmed in progress_service.py
+- Dashboard page: shows proper skeleton loaders immediately (`summaryLoading = true` by default)
+- Slowness on first load = Railway/Render free-tier cold start (10-20s) — not a code issue
+- After first request, all subsequent loads return in <100ms from Redis
+
+---
+
+## What Was Done This Session (2026-04-13 Session 14 — Performance fixes + Framer Motion)
+
+### Root causes diagnosed
+- **Admin page (12–20s):** `profileApi.getProfile()` blocked `adminApi.getStats()` in a sequential `.then()` chain — two full round-trips before anything rendered. Fixed with `Promise.allSettled`.
+- **Admin stats endpoint:** 8 sequential DB queries with zero caching. Fixed with 2-min Redis cache (`admin:stats`).
+- **General slowness:** Railway/Render free-tier cold start on first request. Sequential calls doubled the cold-start penalty.
+- **Journey + Courses:** Already parallel (Promise.allSettled / React Query). Journey service already had Redis cache. Not problematic.
+
+### Backend changes
+**`backend/routers/admin.py`** — 2 changes:
+- Added `cache_get` / `cache_set` / `cache_delete` import from `backend.utils.cache`
+- `GET /stats` now checks `admin:stats` Redis key first; on miss fetches from DB and caches result for 120s
+
+### Frontend changes
+**`frontend/components/layout/PageTransition.tsx`** — NEW file:
+- `motion.div` with `initial={{ opacity: 0, y: 16 }}`, `animate={{ opacity: 1, y: 0 }}`, `transition={{ duration: 0.3, ease: "easeOut" }}`
+
+**`frontend/app/(dashboard)/layout.tsx`** — 3 changes:
+- Added `usePathname` import
+- Added `PageTransition` import
+- Wrapped `{children}` inside `<PageTransition key={pathname}>` — page fade-in triggers on every navigation
+
+**`frontend/app/(dashboard)/admin/page.tsx`** — 1 change:
+- Replaced sequential `.then()` chain with `Promise.allSettled([profileApi.getProfile(), adminApi.getStats()])` — both requests fire simultaneously
+
+**`frontend/app/(dashboard)/journey/page.tsx`** — 2 changes:
+- Added `motion` import from `framer-motion`
+- Road obstacle container `div` → `motion.div` with `staggerChildren: 0.08`; each node `div` → `motion.div` with `hidden/show` variants (0.3s, easeOut, y: 0→20)
+
+**`frontend/app/(dashboard)/courses/page.tsx`** — 2 changes:
+- Added `motion` import from `framer-motion`
+- Course grid `div` → `motion.div` with `staggerChildren: 0.08`; each card wrapped in `motion.div` with same variants + `whileHover={{ scale: 1.02, transition: { duration: 0.15 } }}`
 
 ---
 

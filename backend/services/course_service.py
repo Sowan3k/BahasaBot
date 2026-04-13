@@ -27,7 +27,7 @@ from sqlalchemy.orm import selectinload
 from backend.models.course import Class, Course, Module
 from backend.models.progress import UserProgress, VocabularyLearned
 from backend.services.gemini_service import FALLBACK_MESSAGE, generate_json, generate_text
-from backend.utils.cache import cache_set
+from backend.utils.cache import cache_delete, cache_set
 from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -459,6 +459,8 @@ async def save_course(
 
     await db.commit()
     await db.refresh(course)
+    # Invalidate journey roadmap cache so the new course is reflected in element exists/course_id
+    await cache_delete(f"journey:{user_id}")
     return course
 
 

@@ -449,9 +449,11 @@ async def _check_course_completion_for_journey(
                     course_id=str(course_id),
                     course_title=course.title,
                 )
+                # Use course.topic (raw input string) for roadmap matching — it corresponds
+                # directly to the element topic. Fall back to course.title if topic is empty.
                 await journey_service.check_roadmap_progress(
                     user_id=user_id,
-                    completed_course_title=course.title,
+                    completed_course_title=course.topic or course.title,
                     db=db,
                 )
     except Exception as exc:

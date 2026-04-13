@@ -5,9 +5,10 @@
 // "Generate New Course" button opens the CourseGenerationModal.
 
 import { useState, useEffect, useRef } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { coursesApi } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -167,21 +168,22 @@ function CourseCard({ course }: { course: CourseSummary }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function CoursesPage() {
+  const router = useRouter();
   const [showModal, setShowModal] = useState(false);
   const [prefillTopic, setPrefillTopic] = useState<string | undefined>(undefined);
+  const [pendingGenerateTopic, setPendingGenerateTopic] = useState<string | undefined>(undefined);
   const [page, setPage] = useState(1);
   const LIMIT = 9;
   const { activeJobId } = useCourseGeneration();
   const { theme } = useTheme();
   const searchParams = useSearchParams();
 
-  // Handle ?generate=<topic> from Journey page — auto-open modal with pre-filled topic
+  // Handle ?generate=<topic> from Journey page — capture the topic first, then wait for courses
   useEffect(() => {
     const generateParam = searchParams.get("generate");
     if (generateParam) {
       const topic = decodeURIComponent(generateParam);
-      setPrefillTopic(topic);
-      setShowModal(true);
+      setPendingGenerateTopic(topic);
       // Remove the param from the URL so a page refresh doesn't re-trigger it
       const url = new URL(window.location.href);
       url.searchParams.delete("generate");
@@ -198,6 +200,27 @@ export default function CoursesPage() {
   const courses = data?.items ?? [];
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / LIMIT);
+
+  // Once courses load, check whether the pending topic already has an existing course.
+  // If so, navigate straight to it instead of opening the generation modal.
+  useEffect(() => {
+    if (!pendingGenerateTopic || isLoading) return;
+    const topicNorm = pendingGenerateTopic.toLowerCase().trim();
+    const existing = courses.find((c) => {
+      const ct = (c.topic ?? "").toLowerCase().trim();
+      const tt = (c.title ?? "").toLowerCase().trim();
+      // Simple substring / exact match — fuzzy is handled on the backend; this is a safety net
+      return ct === topicNorm || tt === topicNorm || ct.includes(topicNorm) || topicNorm.includes(ct);
+    });
+    if (existing) {
+      router.push(`/courses/${existing.id}`);
+    } else {
+      setPrefillTopic(pendingGenerateTopic);
+      setShowModal(true);
+    }
+    setPendingGenerateTopic(undefined);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingGenerateTopic, isLoading]);
 
   // If any course is missing a cover image, re-fetch once after 12s to pick up
   // the background-generated image (image generation takes ~5-10s after course creation)
@@ -297,11 +320,25 @@ export default function CoursesPage() {
         {/* Course grid */}
         {!isLoading && !isError && courses.length > 0 && (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <motion.div
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+              initial="hidden"
+              animate="show"
+              variants={{ hidden: {}, show: { transition: { staggerChildren: 0.08 } } }}
+            >
               {courses.map((course) => (
-                <CourseCard key={course.id} course={course} />
+                <motion.div
+                  key={course.id}
+                  variants={{
+                    hidden: { opacity: 0, y: 20 },
+                    show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" } },
+                  }}
+                  whileHover={{ scale: 1.02, transition: { duration: 0.15 } }}
+                >
+                  <CourseCard course={course} />
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
 
             {/* Pagination */}
             {totalPages > 1 && (
