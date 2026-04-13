@@ -57,7 +57,7 @@ function QuizGeneratingLoader() {
   }, []);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[480px] max-w-sm mx-auto px-6 gap-10">
+    <div className="flex flex-col items-center w-full max-w-sm gap-10">
 
       {/* Spinning ring + icon ------------------------------------------------ */}
       <div className="relative w-20 h-20 flex-shrink-0">
@@ -130,7 +130,7 @@ function QuizGeneratingLoader() {
 
 function QuizLobby({ onStart }: { onStart: () => void }) {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[480px] max-w-sm mx-auto px-6 gap-8 animate-in fade-in duration-300">
+    <div className="flex flex-col items-center w-full max-w-sm gap-8 animate-in fade-in duration-300">
 
       {/* Icon */}
       <div className="w-16 h-16 rounded-2xl bg-primary/15 flex items-center justify-center ring-1 ring-primary/20">
@@ -279,16 +279,20 @@ export default function AdaptiveQuizPage() {
 
   if (phase === "lobby" && !result) {
     return (
-      <QuizLobby
-        onStart={() => setPhase("generating")}
-      />
+      <div className="flex flex-1 items-center justify-center px-4 py-8">
+        <QuizLobby onStart={() => setPhase("generating")} />
+      </div>
     );
   }
 
   // ── Loading state ────────────────────────────────────────────────────────────
 
   if (isLoading) {
-    return <QuizGeneratingLoader />;
+    return (
+      <div className="flex flex-1 items-center justify-center px-4 py-8">
+        <QuizGeneratingLoader />
+      </div>
+    );
   }
 
   // ── Error state ──────────────────────────────────────────────────────────────
