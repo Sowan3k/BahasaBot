@@ -41,6 +41,8 @@ function NotificationIcon({ type }: { type: string }) {
       return <BookOpen size={15} className={`${cls} text-green-500`} />;
     case "phase_complete":
       return <Trophy size={15} className={`${cls} text-purple-500`} />;
+    case "bps_milestone":
+      return <Trophy size={15} className={`${cls} text-amber-500`} />;
     default:
       return <Bell size={15} className={`${cls} text-muted-foreground`} />;
   }
@@ -172,13 +174,21 @@ export function NotificationPanel({
                   <NotificationIcon type={n.type} />
                 </div>
 
-                {/* Message + time */}
+                {/* Message + time + optional milestone image */}
                 <div className="flex-1 min-w-0">
                   <p className={`text-[13px] leading-snug ${
                     n.read ? "text-muted-foreground font-normal" : "text-foreground font-medium"
                   }`}>
                     {n.message}
                   </p>
+                  {n.image_url && (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={n.image_url}
+                      alt="Achievement card"
+                      className="mt-2 w-full max-w-[180px] rounded-lg object-cover shadow-sm"
+                    />
+                  )}
                   <p className="text-[11px] text-muted-foreground mt-0.5 opacity-80">
                     {relativeTime(n.created_at)}
                   </p>

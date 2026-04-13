@@ -38,6 +38,8 @@ class NotificationResponse(BaseModel):
     message: str
     read: bool
     created_at: str
+    # Optional image for visual notifications (e.g. BPS milestone card base64 data URL)
+    image_url: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -86,6 +88,7 @@ async def get_notifications(
                 message=n.message,
                 read=n.read,
                 created_at=n.created_at.isoformat(),
+                image_url=getattr(n, "image_url", None),
             )
             for n in notifications
         ]

@@ -11,6 +11,7 @@ Endpoints:
   DELETE /api/admin/users/{user_id}             — permanently delete user (admin password required)
   POST  /api/admin/users/{user_id}/reset        — clear learning data, reset BPS (admin password required)
   GET   /api/admin/feedback                     — paginated evaluation feedback
+  GET   /api/admin/journeys                     — read-only list of all user roadmaps
 """
 
 import uuid
@@ -273,3 +274,23 @@ async def get_admin_feedback(
     except Exception as exc:
         logger.error("Failed to fetch admin feedback", error=str(exc))
         raise HTTPException(status_code=500, detail="Failed to fetch feedback")
+
+
+# ── GET /api/admin/journeys ────────────────────────────────────────────────────
+
+
+@router.get("/journeys")
+async def get_admin_journeys(
+    _admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> list:
+    """
+    Read-only list of all user roadmaps (active, overdue, and completed).
+    Deleted roadmaps are excluded.
+    """
+    try:
+        from backend.services import journey_service
+        return await journey_service.get_all_roadmaps_admin(db)
+    except Exception as exc:
+        logger.error("Failed to fetch admin journeys", error=str(exc))
+        raise HTTPException(status_code=500, detail="Failed to fetch journeys")

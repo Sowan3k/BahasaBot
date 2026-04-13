@@ -4,7 +4,7 @@
 // 15 questions: 6 MCQ + 6 fill-in-blank + 3 translation, personalised to user's weak points.
 // Scores server-side; recalculates BPS proficiency level after submission.
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { Brain, ChartBar, Sparkles, CheckCircle2, BookOpen, Target, BarChart2, ArrowRight } from "lucide-react";
@@ -12,6 +12,7 @@ import { standaloneQuizApi } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SpeakerButton } from "@/components/ui/SpeakerButton";
+import { FeedbackModal } from "@/components/quiz/FeedbackModal";
 import type {
   StandaloneQuizQuestion,
   StandaloneQuizResult,
@@ -210,6 +211,10 @@ export default function AdaptiveQuizPage() {
   // Holds scored results after submission
   const [result, setResult] = useState<StandaloneQuizResult | null>(null);
 
+  // Feedback modal — shown 3 s after results appear, once per attempt
+  const [showFeedback, setShowFeedback] = useState(false);
+  const feedbackShown = useRef(false);
+
   // ── Fetch quiz questions — only fires after user confirms ────────────────────
 
   const {
@@ -252,9 +257,19 @@ export default function AdaptiveQuizPage() {
     setAnswers({});
     setResult(null);
     setPhase("lobby");
+    feedbackShown.current = false;
     // Invalidate so the next start triggers a fresh Gemini call
     queryClient.invalidateQueries({ queryKey: ["standalone-quiz"] });
   };
+
+  // Show feedback modal 3 s after results appear — once per attempt
+  useEffect(() => {
+    if (result && !feedbackShown.current) {
+      feedbackShown.current = true;
+      const timer = setTimeout(() => setShowFeedback(true), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [result]);
 
   const answeredCount = quiz
     ? quiz.questions.filter((q) => (answers[q.id] ?? "").trim() !== "").length
@@ -299,6 +314,11 @@ export default function AdaptiveQuizPage() {
   if (result) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
+        <FeedbackModal
+          isOpen={showFeedback}
+          onClose={() => setShowFeedback(false)}
+          quizType="standalone"
+        />
         {/* Score card */}
         <div className="rounded-xl border p-6 text-center space-y-3 bg-card">
           <div className="text-5xl font-bold tabular-nums font-heading">{result.score_percent}%</div>

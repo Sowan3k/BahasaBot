@@ -15,10 +15,12 @@
  */
 
 import Image from "next/image";
+import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { History } from "lucide-react";
 import ChatMessage from "@/components/chatbot/ChatMessage";
 import { useTheme } from "@/lib/use-theme";
 
@@ -258,13 +260,23 @@ export default function ChatbotPage() {
             <p className="text-xs text-muted-foreground leading-tight">Bahasa Melayu</p>
           </div>
         </div>
-        <button
-          onClick={startNewSession}
-          className="text-xs px-3 py-1.5 rounded-lg border text-muted-foreground
-                     hover:bg-muted hover:text-foreground transition-colors"
-        >
-          New chat
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/chatbot/history"
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border
+                       text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          >
+            <History className="w-3.5 h-3.5" />
+            History
+          </Link>
+          <button
+            onClick={startNewSession}
+            className="text-xs px-3 py-1.5 rounded-lg border text-muted-foreground
+                       hover:bg-muted hover:text-foreground transition-colors"
+          >
+            New chat
+          </button>
+        </div>
       </header>
 
       {/* ── Waves background — always visible ── */}

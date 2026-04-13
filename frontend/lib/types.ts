@@ -133,6 +133,7 @@ export interface CourseSummary {
   title: string;
   description: string;
   topic: string;
+  cover_image_url: string | null;
   created_at: string;
   total_classes: number;
   completed_classes: number;
@@ -156,13 +157,40 @@ export interface JobStatusResponse {
   error?: string;     // Present when status === "failed"
 }
 
-// ── Chatbot (Phase 3) — stub types ───────────────────────────────────────────
+// ── Chatbot (Phase 3 + Phase 21) ─────────────────────────────────────────────
 
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
   created_at: string;
+}
+
+/** A chat session summary as returned by GET /api/chatbot/sessions */
+export interface ChatSessionSummary {
+  id: string;
+  created_at: string;
+  last_message: string | null;
+  /** First user message truncated to 60 chars — used as display title */
+  title: string | null;
+  message_count: number;
+}
+
+/** Paginated list of chat sessions */
+export interface SessionListResponse {
+  sessions: ChatSessionSummary[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+/** Full message history for a single session */
+export interface ChatHistoryResponse {
+  session_id: string;
+  messages: ChatMessage[];
+  total: number;
+  page: number;
+  limit: number;
 }
 
 // ── Quiz (Phase 5) ────────────────────────────────────────────────────────────
@@ -495,6 +523,8 @@ export interface AppNotification {
   message: string;
   read: boolean;
   created_at: string;
+  /** Base64 data URL for visual notifications (e.g. BPS milestone card) */
+  image_url: string | null;
 }
 
 export interface NotificationListResponse {
@@ -527,54 +557,95 @@ export interface SpellingPersonalBest {
   best_attempted: number;
 }
 
-// ── Journey — My Learning Roadmap (Phase 20) ──────────────────────────────────
+// ── Journey — My Learning Roadmap (Phase 20 v2) ───────────────────────────────
 
-export type ActivityType = "course" | "quiz" | "chatbot";
-export type GoalType = "survival" | "conversational" | "academic";
+/** Intent options shown in the 3-question onboarding modal */
+export type JourneyIntent = "casual" | "academic" | "work" | "travel" | "other";
 
-export interface JourneyActivity {
-  id: string;          // e.g. "p1_w1_a1"
-  type: ActivityType;
-  title: string;
+/** A single course obstacle in the roadmap */
+export interface RoadmapElement {
+  order: number;
   topic: string;
-  reason: string;
-}
-
-export interface JourneyWeek {
-  week: number;
-  activities: JourneyActivity[];
-}
-
-export interface JourneyPhase {
-  phase: number;
-  title: string;
-  duration_weeks: number;
-  weeks: JourneyWeek[];
-}
-
-export interface RoadmapJson {
-  phases: JourneyPhase[];
-}
-
-export interface LearningRoadmap {
-  id: string;
-  deadline_date: string;        // ISO date string
-  goal_type: GoalType;
-  roadmap_json: RoadmapJson;
-  banner_image_url: string | null;
-  created_at: string;
-  completed_activity_ids: string[];
-  total_activities: number;
-  completed_activities: number;
-}
-
-export interface GenerateRoadmapPayload {
-  deadline_date: string;        // ISO date string e.g. "2026-12-31"
-  goal_type: GoalType;
-}
-
-export interface CompleteActivityResponse {
-  activity_id: string;
+  description: string;
+  estimated_weeks: number;
   completed: boolean;
-  already_completed: boolean;
+  completed_at: string | null;
+}
+
+/** Full roadmap as returned by GET /api/journey/roadmap */
+export interface UserRoadmap {
+  id: string;
+  intent: JourneyIntent;
+  goal: string;
+  timeline_months: number;
+  elements: RoadmapElement[];
+  status: "active" | "overdue" | "completed" | "deleted";
+  deadline: string;            // ISO date string
+  extended: boolean;
+  created_at: string;
+  completed_at: string | null;
+  bps_level_at_creation: string;
+  banner_image_url: string | null;
+  completed_count: number;
+  total_count: number;
+  bps_upgraded: boolean;       // true if BPS level went up since roadmap was created
+  days_remaining: number;
+}
+
+/** POST /api/journey/roadmap/generate request body */
+export interface GenerateRoadmapPayload {
+  intent: JourneyIntent;
+  goal: string;
+  timeline_months: number;     // 1–6
+  intent_other?: string | null;  // required when intent === 'other'
+}
+
+/** GET /api/journey/roadmap/history — one past roadmap summary */
+export interface PastJourneyItem {
+  id: string;
+  intent: string;
+  goal: string;
+  timeline_months: number;
+  deadline: string;
+  completed_at: string | null;
+  status: "completed" | "deleted";
+  total_elements: number;
+  completed_elements: number;
+  created_at: string;
+}
+
+// ── Evaluation Feedback (Phase 20 / Section 5.20) ────────────────────────────
+
+/** POST /api/evaluation/feedback request body */
+export interface FeedbackPayload {
+  quiz_type: "module" | "standalone";
+  rating: number;               // 1–5
+  weak_points_relevant: "yes" | "no" | "somewhat";
+  comments?: string;            // optional, max 1000 chars
+}
+
+/** POST /api/evaluation/feedback response */
+export interface FeedbackSubmitResponse {
+  success: boolean;
+  message: string;
+}
+
+/** Admin: one row in the journeys table */
+export interface AdminRoadmapRow {
+  id: string;
+  user_id: string;
+  user_name: string;
+  user_email: string;
+  intent: string;
+  goal: string;
+  timeline_months: number;
+  status: string;
+  deadline: string;
+  extended: boolean;
+  created_at: string;
+  completed_at: string | null;
+  bps_level_at_creation: string;
+  total_count: number;
+  completed_count: number;
+  elements: RoadmapElement[];
 }

@@ -5,6 +5,7 @@
 // Shows 10 questions (6 MCQ + 4 fill-in-blank), scores server-side, unlocks next module on pass.
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { quizApi } from "@/lib/api";
@@ -23,12 +24,11 @@ export default function ModuleQuizPage({
   params: { courseId: string; moduleId: string };
 }) {
   const { courseId, moduleId } = params;
+  const router = useRouter();
   const queryClient = useQueryClient();
 
   // Track user's selected / typed answers keyed by question_id
   const [answers, setAnswers] = useState<Record<string, string>>({});
-  // Holds scored results after submission
-  const [result, setResult] = useState<ModuleQuizResult | null>(null);
 
   // ── Fetch quiz questions ───────────────────────────────────────────────────
 
@@ -51,10 +51,16 @@ export default function ModuleQuizPage({
       quizApi
         .submitModuleQuiz(courseId, moduleId, submittedAnswers)
         .then((r) => r.data),
-    onSuccess: (data) => {
-      setResult(data);
+    onSuccess: (data: ModuleQuizResult) => {
       // Invalidate course cache so module lock states refresh correctly
       queryClient.invalidateQueries({ queryKey: ["course", courseId] });
+      // Store result in sessionStorage so the results page can read it without
+      // an extra API call. The key is namespaced by moduleId to avoid collisions.
+      sessionStorage.setItem(
+        `moduleQuizResult_${moduleId}`,
+        JSON.stringify({ result: data, courseId, moduleTitle: quiz?.module_title ?? "" })
+      );
+      router.push(`/quiz/module/${moduleId}/results?courseId=${courseId}`);
     },
   });
 
@@ -67,16 +73,20 @@ export default function ModuleQuizPage({
     submitMutation.mutate(submittedAnswers);
   };
 
-  const handleRetry = () => {
-    setAnswers({});
-    setResult(null);
-    // Refetch will get a new quiz (cache was cleared after submission)
-    refetch();
-  };
-
   const answeredCount = quiz
     ? quiz.questions.filter((q) => (answers[q.id] ?? "").trim() !== "").length
     : 0;
+
+  // ── Submitting redirect state ─────────────────────────────────────────────
+  // After submitMutation.onSuccess fires, router.push navigates away.
+  // Show a brief redirect overlay so the user doesn't see a flash of the form.
+  if (submitMutation.isSuccess) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <p className="text-muted-foreground text-sm animate-pulse">Loading results…</p>
+      </div>
+    );
+  }
 
   // ── Loading state ─────────────────────────────────────────────────────────
 
@@ -125,111 +135,6 @@ export default function ModuleQuizPage({
         <Button asChild>
           <Link href={`/courses/${courseId}`}>Back to Course</Link>
         </Button>
-      </div>
-    );
-  }
-
-  // ── Results screen ────────────────────────────────────────────────────────
-
-  if (result) {
-    return (
-      <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
-        {/* Score card */}
-        <div
-          className={`rounded-xl border p-6 text-center space-y-2 ${
-            result.passed
-              ? "bg-green-500/10 border-green-500/30"
-              : "bg-destructive/10 border-destructive/30"
-          }`}
-        >
-          <div className="text-5xl font-bold">
-            {result.score_percent}%
-          </div>
-          <p className="text-lg font-semibold">
-            {result.passed ? "Passed! 🎉" : "Not quite — try again"}
-          </p>
-          <p className="text-sm text-muted-foreground">
-            {result.correct_count} / {result.total_questions} correct
-            {" "}· Pass threshold: 70%
-          </p>
-          {result.module_unlocked && (
-            <p className="text-sm font-medium text-green-600 mt-1">
-              Next module unlocked!
-            </p>
-          )}
-        </div>
-
-        {/* Actions */}
-        <div className="flex gap-3 justify-center flex-wrap">
-          {result.passed ? (
-            <Button asChild>
-              <Link href={`/courses/${courseId}`}>Back to Course</Link>
-            </Button>
-          ) : (
-            <Button onClick={handleRetry}>Try Again</Button>
-          )}
-          <Button variant="outline" asChild>
-            <Link href={`/courses/${courseId}/modules/${moduleId}`}>
-              Back to Module
-            </Link>
-          </Button>
-        </div>
-
-        {/* Per-question breakdown */}
-        <div className="space-y-3">
-          <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">
-            Question Breakdown
-          </h2>
-          {result.question_results.map((qr, idx) => (
-            <div
-              key={qr.question_id}
-              className={`rounded-lg border p-4 space-y-2 ${
-                qr.is_correct
-                  ? "border-green-500/30 bg-green-500/5"
-                  : "border-destructive/30 bg-destructive/5"
-              }`}
-            >
-              <div className="flex items-start gap-2">
-                <span
-                  className={`mt-0.5 w-5 h-5 flex-shrink-0 rounded-full text-xs font-bold flex items-center justify-center ${
-                    qr.is_correct
-                      ? "bg-green-500 text-white"
-                      : "bg-destructive text-white"
-                  }`}
-                >
-                  {qr.is_correct ? "✓" : "✗"}
-                </span>
-                <p className="text-sm font-medium">
-                  Q{idx + 1}. {qr.question}
-                </p>
-              </div>
-
-              <div className="pl-7 space-y-1 text-sm">
-                <p>
-                  <span className="text-muted-foreground">Your answer: </span>
-                  <span
-                    className={
-                      qr.is_correct ? "text-green-600 font-medium" : "text-destructive font-medium"
-                    }
-                  >
-                    {qr.your_answer || <em className="text-muted-foreground">no answer</em>}
-                  </span>
-                </p>
-                {!qr.is_correct && (
-                  <p>
-                    <span className="text-muted-foreground">Correct answer: </span>
-                    <span className="text-green-600 font-medium">{qr.correct_answer}</span>
-                  </p>
-                )}
-                {qr.explanation && (
-                  <p className="text-muted-foreground italic text-xs mt-1">
-                    {qr.explanation}
-                  </p>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
     );
   }

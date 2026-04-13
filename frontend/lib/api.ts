@@ -13,6 +13,7 @@ import type {
   AdminUserDetail,
   ChangePasswordPayload,
   ChangePasswordResponse,
+  ChatHistoryResponse,
   ClassCompleteResponse,
   ClassDetail,
   Course,
@@ -20,6 +21,8 @@ import type {
   CourseGenerateResponse,
   JobStatusResponse,
   DashboardSummary,
+  FeedbackPayload,
+  FeedbackSubmitResponse,
   GrammarListResponse,
   ModuleQuizResponse,
   ModuleQuizResult,
@@ -28,6 +31,7 @@ import type {
   ProgressResponse,
   QuizAnswer,
   QuizHistoryResponse,
+  SessionListResponse,
   StandaloneQuizResponse,
   StandaloneQuizResult,
   UserProfile,
@@ -37,9 +41,10 @@ import type {
   SpellingWord,
   SpellingSubmitResponse,
   SpellingPersonalBest,
-  LearningRoadmap,
+  UserRoadmap,
   GenerateRoadmapPayload,
-  CompleteActivityResponse,
+  AdminRoadmapRow,
+  PastJourneyItem,
 } from "@/lib/types";
 
 const apiClient = axios.create({
@@ -328,22 +333,66 @@ export const gamesApi = {
     apiClient.get<SpellingPersonalBest>("/api/games/spelling/best"),
 };
 
-// ── Journey API (Phase 20) ────────────────────────────────────────────────────
+// ── Journey API (Phase 20 v2) ─────────────────────────────────────────────────
 
 export const journeyApi = {
-  /** Generate a new personalised learning roadmap. Replaces any existing roadmap. */
+  /** Generate a new roadmap from the 3-question onboarding answers. */
   generateRoadmap: (payload: GenerateRoadmapPayload) =>
-    apiClient.post<LearningRoadmap>("/api/journey/", payload),
+    apiClient.post<UserRoadmap>("/api/journey/roadmap/generate", payload),
 
-  /** Get the user's active roadmap with per-activity completion status. Returns 404 if none exists. */
-  getRoadmap: () => apiClient.get<LearningRoadmap>("/api/journey/"),
+  /** Get active/overdue/completed roadmap + flags. Returns 404 if none exists. */
+  getRoadmap: () => apiClient.get<UserRoadmap>("/api/journey/roadmap"),
 
-  /** Delete the user's current roadmap and all completion records. */
-  deleteRoadmap: () => apiClient.delete<void>("/api/journey/"),
+  /** Soft-delete after identity verification. */
+  verifyAndDelete: (body: { password?: string; oauth_confirmed?: boolean }) =>
+    apiClient.post<void>("/api/journey/roadmap/verify-and-delete", body),
 
-  /** Mark a specific activity as completed. Idempotent. */
-  completeActivity: (activityId: string) =>
-    apiClient.post<CompleteActivityResponse>(
-      `/api/journey/activities/${activityId}/complete`
+  /** Extend deadline by 1-3 months (once per roadmap). */
+  extendDeadline: (extension_months: number) =>
+    apiClient.patch<UserRoadmap>("/api/journey/roadmap/extend", { extension_months }),
+
+  /** Regenerate uncompleted elements after BPS upgrade. */
+  regenerate: () => apiClient.post<UserRoadmap>("/api/journey/roadmap/regenerate"),
+
+  /** Dismiss the BPS upgrade banner without regenerating. */
+  dismissUpgrade: () => apiClient.delete<void>("/api/journey/roadmap/dismiss-upgrade"),
+
+  /** Admin: all users' roadmaps. */
+  getAdminJourneys: () => apiClient.get<AdminRoadmapRow[]>("/api/admin/journeys"),
+
+  /** Past (completed/deleted) roadmaps for the current user — summary only. */
+  getHistory: () => apiClient.get<PastJourneyItem[]>("/api/journey/roadmap/history"),
+};
+
+// ── Chatbot History API (Phase 21) ────────────────────────────────────────────
+
+export const chatbotApi = {
+  /** List the current user's chat sessions, newest first (paginated). */
+  getSessions: (page = 1, limit = 20) =>
+    apiClient.get<SessionListResponse>("/api/chatbot/sessions", {
+      params: { page, limit },
+    }),
+
+  /** Get full message history for a specific session (paginated). */
+  getHistory: (sessionId: string, page = 1, limit = 100) =>
+    apiClient.get<ChatHistoryResponse>("/api/chatbot/history", {
+      params: { session_id: sessionId, page, limit },
+    }),
+
+  /**
+   * Delete a chat session and all its messages.
+   * Vocabulary/grammar words extracted from the session are intentionally kept.
+   */
+  deleteSession: (sessionId: string) =>
+    apiClient.delete<{ deleted: boolean; session_id: string }>(
+      `/api/chatbot/sessions/${sessionId}`
     ),
+};
+
+// ── Evaluation Feedback API (Phase 20 / Section 5.20) ────────────────────────
+
+export const feedbackApi = {
+  /** Submit an optional survey response after completing a quiz. */
+  submitFeedback: (payload: FeedbackPayload) =>
+    apiClient.post<FeedbackSubmitResponse>("/api/evaluation/feedback", payload),
 };

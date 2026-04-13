@@ -557,7 +557,44 @@ async def generate_course(
     except Exception:
         pass
 
+    # Generate cover image in background — never blocks the response
+    asyncio.create_task(
+        _generate_and_save_cover(
+            course_id=str(course.id),
+            course_title=course.title,
+            topic=topic,
+        )
+    )
+
     return course
+
+
+async def _generate_and_save_cover(
+    course_id: str,
+    course_title: str,
+    topic: str,
+) -> None:
+    """
+    Background task: generate a cover image for the course and save it to DB.
+    Opens its own DB session — safe to run after the request session has closed.
+    """
+    from backend.db.database import AsyncSessionLocal
+    from backend.services.image_service import generate_course_cover
+
+    try:
+        image_url = await generate_course_cover(course_title, topic)
+        if not image_url:
+            return
+
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(select(Course).where(Course.id == course_id))
+            course = result.scalar_one_or_none()
+            if course and not course.cover_image_url:
+                course.cover_image_url = image_url
+                await db.commit()
+                logger.info("Cover image saved to course", course_id=course_id)
+    except Exception as exc:
+        logger.error("Cover generation background task failed", course_id=course_id, error=str(exc))
 
 
 # ── Course retrieval ───────────────────────────────────────────────────────────
@@ -699,6 +736,7 @@ async def get_courses_list(
             "title": course.title,
             "description": course.description,
             "topic": course.topic,
+            "cover_image_url": course.cover_image_url,
             "created_at": course.created_at.isoformat(),
             "total_classes": total_cls,
             "completed_classes": completed_cls,

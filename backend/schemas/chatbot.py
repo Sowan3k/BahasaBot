@@ -58,6 +58,10 @@ class ChatSessionResponse(BaseModel):
     created_at: datetime
     # Latest message preview (optional, populated by the router)
     last_message: str | None = None
+    # First user message truncated to 60 chars — used as the session title
+    title: str | None = None
+    # Total number of messages in the session
+    message_count: int = 0
 
     @field_validator("id", mode="before")
     @classmethod

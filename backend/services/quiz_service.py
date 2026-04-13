@@ -20,6 +20,7 @@ Internal helpers:
   - _calculate_cefr_level(user_id, db)                — rule-based BPS level from quiz history
 """
 
+import asyncio
 from uuid import UUID
 
 from sqlalchemy import select
@@ -376,6 +377,17 @@ async def submit_module_quiz(
         total=total,
     )
 
+    # ── Journey progress hook ──────────────────────────────────────────────
+    # If a module was newly unlocked, check if ALL modules in the course
+    # are now complete — if so, fire check_roadmap_progress().
+    if module_unlocked:
+        asyncio.create_task(
+            _check_course_completion_for_journey(
+                user_id=user_id,
+                course_id=course_id,
+            )
+        )
+
     return {
         "score": round(score, 4),
         "score_percent": round(score * 100),
@@ -385,6 +397,70 @@ async def submit_module_quiz(
         "question_results": question_results,
         "module_unlocked": module_unlocked,
     }
+
+
+async def _check_course_completion_for_journey(
+    user_id: UUID,
+    course_id: UUID,
+) -> None:
+    """
+    Background task: check if all modules in the course are now completed.
+    If yes, call journey_service.check_roadmap_progress() with the course title.
+    Opens its own DB session — safe after the request session closes.
+    """
+    from backend.db.database import AsyncSessionLocal
+    from backend.models.course import Course, Module
+    from backend.services import journey_service
+
+    try:
+        async with AsyncSessionLocal() as db:
+            # Fetch course title
+            course_result = await db.execute(
+                select(Course).where(Course.id == course_id)
+            )
+            course = course_result.scalar_one_or_none()
+            if not course:
+                return
+
+            # Count total modules in this course
+            mod_result = await db.execute(
+                select(Module.id).where(Module.course_id == course_id)
+            )
+            all_module_ids = [str(r) for r in mod_result.scalars().all()]
+
+            if not all_module_ids:
+                return
+
+            # Count how many modules have a passing quiz (UserProgress with class_id=None)
+            done_result = await db.execute(
+                select(UserProgress.module_id).where(
+                    UserProgress.user_id == user_id,
+                    UserProgress.course_id == course_id,
+                    UserProgress.class_id.is_(None),
+                )
+            )
+            done_module_ids = {str(r) for r in done_result.scalars().all()}
+
+            if set(all_module_ids) == done_module_ids:
+                # All modules completed — notify journey service
+                logger.info(
+                    "Course fully completed — checking roadmap progress",
+                    user_id=str(user_id),
+                    course_id=str(course_id),
+                    course_title=course.title,
+                )
+                await journey_service.check_roadmap_progress(
+                    user_id=user_id,
+                    completed_course_title=course.title,
+                    db=db,
+                )
+    except Exception as exc:
+        logger.error(
+            "Course completion journey check failed",
+            user_id=str(user_id),
+            course_id=str(course_id),
+            error=str(exc),
+        )
 
 
 # ── Weak points helper ─────────────────────────────────────────────────────────
@@ -815,6 +891,26 @@ async def submit_standalone_quiz(
     # Clear cache — next quiz will be freshly generated
     await cache_delete(cache_key)
 
+    # If BPS level advanced, generate a milestone card notification + set journey flag
+    if level_changed and new_level > previous_level and user:
+        user_name = user.name or "Learner"
+        asyncio.create_task(
+            _generate_and_save_milestone_card(
+                user_id=user_id,
+                bps_level=new_level,
+                user_name=user_name,
+            )
+        )
+        # Notify journey service so it can offer to regenerate uncompleted elements
+        from backend.services import journey_service as _journey_service
+        asyncio.create_task(
+            _journey_service.check_bps_change(
+                user_id=user_id,
+                old_bps=previous_level,
+                new_bps=new_level,
+            )
+        )
+
     logger.info(
         "Standalone quiz scored",
         user_id=str(user_id),
@@ -836,3 +932,54 @@ async def submit_standalone_quiz(
         "previous_proficiency_level": previous_level,
         "level_changed": level_changed,
     }
+
+
+async def _generate_and_save_milestone_card(
+    user_id: UUID,
+    bps_level: str,
+    user_name: str,
+) -> None:
+    """
+    Background task: generate a BPS milestone card image and save it as a
+    'bps_milestone' notification with image_url populated.
+    Opens its own DB session — safe to run after the request session has closed.
+    """
+    from backend.db.database import AsyncSessionLocal
+    from backend.models.notification import Notification
+    from backend.services.image_service import generate_milestone_card
+
+    try:
+        image_url = await generate_milestone_card(bps_level, user_name)
+
+        level_labels = {
+            "BPS-1": "Beginner",
+            "BPS-2": "Elementary",
+            "BPS-3": "Intermediate",
+            "BPS-4": "Advanced",
+        }
+        level_name = level_labels.get(bps_level, bps_level)
+        message = f"You've reached {bps_level} ({level_name})! Your Malay proficiency has advanced."
+
+        async with AsyncSessionLocal() as db:
+            notification = Notification(
+                user_id=user_id,
+                type="bps_milestone",
+                message=message,
+                image_url=image_url,  # None if generation failed — that's fine
+                read=False,
+            )
+            db.add(notification)
+            await db.commit()
+            logger.info(
+                "BPS milestone notification created",
+                user_id=str(user_id),
+                bps_level=bps_level,
+                has_image=bool(image_url),
+            )
+    except Exception as exc:
+        logger.error(
+            "Milestone card background task failed",
+            user_id=str(user_id),
+            bps_level=bps_level,
+            error=str(exc),
+        )

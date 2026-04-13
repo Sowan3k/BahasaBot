@@ -2,14 +2,15 @@
 Chatbot Router — /api/chatbot/*
 
 Endpoints:
-  POST /api/chatbot/message          — send a message, receive streaming SSE response
-  GET  /api/chatbot/sessions         — list the user's chat sessions (paginated)
-  GET  /api/chatbot/history          — paginated message history for a session
+  POST   /api/chatbot/message              — send a message, receive streaming SSE response
+  GET    /api/chatbot/sessions             — list the user's chat sessions (paginated)
+  GET    /api/chatbot/history              — paginated message history for a session
+  DELETE /api/chatbot/sessions/{session_id} — delete a session + its messages
 """
 
 import json
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sse_starlette.sse import EventSourceResponse
@@ -27,6 +28,7 @@ from backend.schemas.chatbot import (
     SessionListResponse,
 )
 from backend.services import langchain_service
+from backend.utils import cache as cache_utils
 from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -160,9 +162,10 @@ async def list_sessions(
     )
     sessions = sessions_result.scalars().all()
 
-    # Attach the last message preview to each session
+    # For each session: fetch last message, first user message (title), and message count
     session_responses: list[ChatSessionResponse] = []
     for session in sessions:
+        # Last message preview
         last_msg_result = await db.execute(
             select(ChatMessage)
             .where(ChatMessage.session_id == session.id)
@@ -170,11 +173,35 @@ async def list_sessions(
             .limit(1)
         )
         last_msg = last_msg_result.scalar_one_or_none()
+
+        # First user message — used as the session title
+        first_user_msg_result = await db.execute(
+            select(ChatMessage)
+            .where(
+                ChatMessage.session_id == session.id,
+                ChatMessage.role == "user",
+            )
+            .order_by(ChatMessage.created_at.asc())
+            .limit(1)
+        )
+        first_user_msg = first_user_msg_result.scalar_one_or_none()
+        title = first_user_msg.content[:60] if first_user_msg else None
+
+        # Total message count for the session
+        count_result = await db.execute(
+            select(func.count())
+            .select_from(ChatMessage)
+            .where(ChatMessage.session_id == session.id)
+        )
+        message_count = count_result.scalar_one()
+
         session_responses.append(
             ChatSessionResponse(
                 id=str(session.id),
                 created_at=session.created_at,
                 last_message=last_msg.content[:100] if last_msg else None,
+                title=title,
+                message_count=message_count,
             )
         )
 
@@ -238,3 +265,49 @@ async def get_history(
         page=page,
         limit=limit,
     )
+
+
+# ── DELETE /api/chatbot/sessions/{session_id} ──────────────────────────────────
+
+
+@router.delete("/sessions/{session_id}", status_code=status.HTTP_200_OK)
+async def delete_session(
+    session_id: str = Path(..., description="UUID of the chat session to delete"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """
+    Delete a chat session and all its messages.
+
+    Vocabulary and grammar words extracted from this session are intentionally
+    kept — they represent real learning and are used by the dashboard, spelling
+    game, and adaptive quiz. Only the conversation log is removed.
+
+    Redis history cache for this session is invalidated on success.
+    """
+    # Verify the session belongs to the requesting user before deleting
+    result = await db.execute(
+        select(ChatSession).where(
+            ChatSession.id == session_id,
+            ChatSession.user_id == current_user.id,
+        )
+    )
+    session = result.scalar_one_or_none()
+    if session is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Session not found",
+        )
+
+    await db.delete(session)  # cascade="all, delete-orphan" removes messages too
+    await db.commit()
+
+    # Bust the Redis history cache so stale data isn't served if the ID is reused
+    await cache_utils.cache_delete(f"chat:history:{session_id}")
+
+    logger.info(
+        "Chat session deleted",
+        session_id=session_id,
+        user_id=str(current_user.id),
+    )
+    return {"deleted": True, "session_id": session_id}

@@ -25,6 +25,7 @@ class Notification(Base):
       'journey_reminder'  — weekly activity not completed by Friday
       'course_complete'   — background course generation finished
       'phase_complete'    — Journey roadmap phase fully completed
+      'bps_milestone'     — user advanced to a new BPS proficiency level (carries image_url)
     """
 
     __tablename__ = "notifications"
@@ -45,6 +46,8 @@ class Notification(Base):
     read: Mapped[bool] = mapped_column(
         Boolean(), nullable=False, default=False, server_default="false"
     )
+    # Optional image for visual notifications (e.g. BPS milestone card base64 data URL)
+    image_url: Mapped[str | None] = mapped_column(Text(), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

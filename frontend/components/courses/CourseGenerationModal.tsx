@@ -15,11 +15,13 @@ import axios from "axios";
 
 interface CourseGenerationModalProps {
   onClose: () => void;
+  /** Pre-filled topic from the ?generate= URL param (Journey → Courses navigation). */
+  initialTopic?: string;
 }
 
-export function CourseGenerationModal({ onClose }: CourseGenerationModalProps) {
+export function CourseGenerationModal({ onClose, initialTopic }: CourseGenerationModalProps) {
   const { setActiveJobId } = useCourseGeneration();
-  const [topic, setTopic] = useState("");
+  const [topic, setTopic] = useState(initialTopic ?? "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

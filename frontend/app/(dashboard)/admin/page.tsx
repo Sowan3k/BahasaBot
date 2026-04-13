@@ -38,6 +38,14 @@ const ADMIN_SECTIONS = [
     color: "text-amber-500",
     bg: "bg-amber-500/10",
   },
+  {
+    href: "/admin/journeys",
+    icon: Map,
+    label: "User Journeys",
+    description: "Read-only view of all user learning roadmaps, progress, and deadlines",
+    color: "text-emerald-500",
+    bg: "bg-emerald-500/10",
+  },
 ] as const;
 
 // ── Stat card ────────────────────────────────────────────────────────────────

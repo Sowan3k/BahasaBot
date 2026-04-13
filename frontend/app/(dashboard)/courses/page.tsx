@@ -4,7 +4,8 @@
 // Shows all of the user's generated courses with progress indicators.
 // "Generate New Course" button opens the CourseGenerationModal.
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { coursesApi } from "@/lib/api";
@@ -86,27 +87,41 @@ function CourseCard({ course }: { course: CourseSummary }) {
   });
 
   return (
-    <div className="rounded-lg border bg-card/90 backdrop-blur-sm hover:border-primary/50 hover:shadow-sm transition-all flex flex-col">
+    <div className="rounded-lg border bg-card/90 backdrop-blur-sm hover:border-primary/50 hover:shadow-sm transition-all flex flex-col overflow-hidden">
       {/* Clickable content area */}
       <Link
         href={`/courses/${course.id}`}
-        className="block p-5 space-y-3 flex-1"
+        className="block flex-1"
       >
-        <div>
-          <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-1">
-            {course.topic}
-          </p>
-          <h3 className="font-semibold text-base leading-snug line-clamp-2">{course.title}</h3>
-          <p className="text-sm text-muted-foreground mt-1 leading-relaxed line-clamp-2">{course.description}</p>
-        </div>
+        {/* Cover image — shown when available, hidden gracefully when null */}
+        {course.cover_image_url ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            src={course.cover_image_url}
+            alt={`Cover for ${course.title}`}
+            className="w-full h-32 object-cover"
+          />
+        ) : (
+          <div className="w-full h-32 bg-gradient-to-br from-primary/20 via-primary/10 to-transparent" />
+        )}
 
-        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-          <span>{course.module_count} module{course.module_count !== 1 ? "s" : ""}</span>
-          <span>·</span>
-          <span>{new Date(course.created_at).toLocaleDateString()}</span>
-        </div>
+        <div className="p-5 space-y-3">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-1">
+              {course.topic}
+            </p>
+            <h3 className="font-semibold text-base leading-snug line-clamp-2">{course.title}</h3>
+            <p className="text-sm text-muted-foreground mt-1 leading-relaxed line-clamp-2">{course.description}</p>
+          </div>
 
-        <ProgressBar value={course.completed_classes} max={course.total_classes} />
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <span>{course.module_count} module{course.module_count !== 1 ? "s" : ""}</span>
+            <span>·</span>
+            <span>{new Date(course.created_at).toLocaleDateString()}</span>
+          </div>
+
+          <ProgressBar value={course.completed_classes} max={course.total_classes} />
+        </div>
       </Link>
 
       {/* Delete row — outside the Link so it doesn't trigger navigation */}
@@ -152,10 +167,27 @@ function CourseCard({ course }: { course: CourseSummary }) {
 
 export default function CoursesPage() {
   const [showModal, setShowModal] = useState(false);
+  const [prefillTopic, setPrefillTopic] = useState<string | undefined>(undefined);
   const [page, setPage] = useState(1);
   const LIMIT = 9;
   const { activeJobId } = useCourseGeneration();
   const { theme } = useTheme();
+  const searchParams = useSearchParams();
+
+  // Handle ?generate=<topic> from Journey page — auto-open modal with pre-filled topic
+  useEffect(() => {
+    const generateParam = searchParams.get("generate");
+    if (generateParam) {
+      const topic = decodeURIComponent(generateParam);
+      setPrefillTopic(topic);
+      setShowModal(true);
+      // Remove the param from the URL so a page refresh doesn't re-trigger it
+      const url = new URL(window.location.href);
+      url.searchParams.delete("generate");
+      window.history.replaceState({}, "", url.toString());
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["courses", page],
@@ -165,6 +197,25 @@ export default function CoursesPage() {
   const courses = data?.items ?? [];
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / LIMIT);
+
+  // If any course is missing a cover image, re-fetch once after 12s to pick up
+  // the background-generated image (image generation takes ~5-10s after course creation)
+  const refetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    const hasMissingCovers = courses.length > 0 && courses.some((c) => !c.cover_image_url);
+    if (hasMissingCovers && !refetchTimerRef.current) {
+      refetchTimerRef.current = setTimeout(() => {
+        refetch();
+        refetchTimerRef.current = null;
+      }, 12_000);
+    }
+    return () => {
+      if (refetchTimerRef.current) {
+        clearTimeout(refetchTimerRef.current);
+        refetchTimerRef.current = null;
+      }
+    };
+  }, [courses, refetch]);
 
   return (
     /* Outer wrapper is relative + min-h-full so the absolute background fills it */
@@ -271,8 +322,13 @@ export default function CoursesPage() {
         )}
       </div>
 
-      {/* Modal */}
-      {showModal && <CourseGenerationModal onClose={() => setShowModal(false)} />}
+      {/* Modal — passes initialTopic when opened from Journey ?generate= param */}
+      {showModal && (
+        <CourseGenerationModal
+          onClose={() => { setShowModal(false); setPrefillTopic(undefined); }}
+          initialTopic={prefillTopic}
+        />
+      )}
     </div>
   );
 }
