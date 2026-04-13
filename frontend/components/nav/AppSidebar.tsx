@@ -24,6 +24,7 @@ import {
   Gamepad2,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { profileApi } from "@/lib/api";
 
 const BASE_NAV_ITEMS = [
@@ -56,7 +57,8 @@ export function AppSidebar() {
     queryKey: ["profile"],
     queryFn: () => profileApi.getProfile().then((r) => r.data),
     enabled: status === "authenticated",
-    staleTime: 60_000,
+    staleTime: 30_000,          // 30 s — shows fresh XP/streak after returning from an activity
+    refetchOnWindowFocus: true, // re-fetch when user tabs back in after earning XP
   });
 
   const isAdmin = profileData?.role === "admin";
@@ -94,8 +96,11 @@ export function AppSidebar() {
         <div className="flex items-center">
           <Image src="/Logo new (1).svg" width={113} height={36} alt="BahasaBot" className="object-contain" />
         </div>
-        {/* Theme toggle lives in the mobile header — right side */}
-        <ThemeToggle variant="icon" />
+        {/* Notification bell + theme toggle — right side of mobile header */}
+        <div className="flex items-center gap-1">
+          <NotificationBell panelSide="left" />
+          <ThemeToggle variant="icon" />
+        </div>
       </header>
 
       {/* ── MOBILE: overlay ── */}
@@ -198,10 +203,10 @@ export function AppSidebar() {
           ) : (
             <>
               <Link href="/dashboard" className="flex items-center min-w-0">
-                <Image src="/Logo new (1).svg" width={126} height={40} alt="BahasaBot" className="object-contain" />
+                <Image src="/Logo new (1).svg" width={140} height={44} alt="BahasaBot" className="object-contain" />
               </Link>
-              {/* Theme toggle — top-right of header (industry standard placement) */}
-              <ThemeToggle variant="pill" className="shrink-0 ml-2" />
+              {/* Theme toggle only — notification bell lives in the footer */}
+              <ThemeToggle variant="icon" className="shrink-0 ml-2" />
             </>
           )}
         </div>
@@ -257,6 +262,10 @@ export function AppSidebar() {
                   </span>
                 </div>
               )}
+              {/* Notification bell (collapsed: panel opens right+up — footer position) */}
+              <div className="flex items-center justify-center">
+                <NotificationBell panelSide="right" panelDirection="up" />
+              </div>
               {/* Streak */}
               <div className="relative group/streak w-10 h-8 flex items-center justify-center">
                 <div className="flex items-center gap-0.5">
@@ -297,15 +306,17 @@ export function AppSidebar() {
               </button>
             </div>
           ) : (
-            /* ── Expanded footer — items centered except XP bar ── */
+            /* ── Expanded footer ── */
             <div className="flex flex-col items-center gap-3 py-4 px-4">
-              {/* User row */}
+              {/* User row + notification bell on the right */}
               {userName && (
-                <div className="flex items-center gap-2.5 w-full justify-center">
+                <div className="flex items-center gap-2 w-full">
                   <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-[11px] font-bold shrink-0">
                     {userInitial}
                   </div>
-                  <span className="text-sm font-medium text-foreground truncate">{userName}</span>
+                  <span className="text-sm font-medium text-foreground truncate flex-1 min-w-0">{userName}</span>
+                  {/* Bell opens upward (footer is at the bottom of the viewport) */}
+                  <NotificationBell panelSide="right" panelDirection="up" />
                 </div>
               )}
 
@@ -323,7 +334,7 @@ export function AppSidebar() {
                 </div>
               </div>
 
-              {/* XP bar — full width (exception to centering) */}
+              {/* XP bar — full width */}
               <div className="w-full space-y-1">
                 <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                   <div

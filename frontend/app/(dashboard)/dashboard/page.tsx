@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useSession } from "next-auth/react";
 import dynamic from "next/dynamic";
 
 import { dashboardApi } from "@/lib/api";
@@ -132,6 +133,7 @@ const TABS: { id: Tab; label: string }[] = [
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
+  const { status } = useSession();
   const [activeTab, setActiveTab] = useState<Tab>("overview");
 
   // Summary (overview tab)
@@ -154,15 +156,45 @@ export default function DashboardPage() {
   const [quizPage, setQuizPage] = useState(1);
   const [quizLoading, setQuizLoading] = useState(false);
 
-  // Load summary on mount
+  // Track last fetch time to avoid re-fetching too frequently on focus
+  const lastFetchRef = useRef<number>(0);
+
+  const fetchSummary = useCallback(
+    (force = false) => {
+      if (status !== "authenticated") return;
+      const now = Date.now();
+      // Throttle: skip refetch if data is less than 30 s old (unless forced)
+      if (!force && lastFetchRef.current > 0 && now - lastFetchRef.current < 30_000) return;
+      lastFetchRef.current = now;
+      setSummaryLoading(true);
+      dashboardApi
+        .getSummary()
+        .then((res) => setSummary(res.data))
+        .catch(() => setSummaryError("Failed to load dashboard. Please refresh the page."))
+        .finally(() => setSummaryLoading(false));
+    },
+    [status],
+  );
+
+  // Initial load — wait for session to be confirmed to avoid a 401 race on first login
   useEffect(() => {
-    setSummaryLoading(true);
-    dashboardApi
-      .getSummary()
-      .then((res) => setSummary(res.data))
-      .catch(() => setSummaryError("Failed to load dashboard. Please refresh the page."))
-      .finally(() => setSummaryLoading(false));
-  }, []);
+    if (status !== "authenticated") return;
+    fetchSummary(true);
+  }, [status, fetchSummary]);
+
+  // Refetch XP/streak/stats when the user switches back to this tab after an activity
+  useEffect(() => {
+    const handleFocus = () => fetchSummary();
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") fetchSummary();
+    };
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [fetchSummary]);
 
   // Load vocabulary when tab activates or page changes
   useEffect(() => {

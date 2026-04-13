@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { User, Lock, Info, ChevronRight } from "lucide-react";
+import { User, Lock, Info, MessageSquarePlus, ChevronRight } from "lucide-react";
 import { GlowCard } from "@/components/ui/glow-card";
 
 const SETTINGS_ITEMS = [
@@ -16,6 +16,12 @@ const SETTINGS_ITEMS = [
     icon: Lock,
     label: "Password",
     description: "Change your account password",
+  },
+  {
+    href: "/settings/feedback",
+    icon: MessageSquarePlus,
+    label: "Send Feedback",
+    description: "Rate your experience and report suggestions or issues",
   },
   {
     href: "/settings/about",

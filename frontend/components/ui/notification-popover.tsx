@@ -16,7 +16,7 @@
  */
 
 import React, { useState } from "react";
-import { Bell, BookOpen, Check, CheckCheck, Flame, Map, Star, Trophy } from "lucide-react";
+import { Bell, BookOpen, Check, CheckCheck, Flame, Map, Star, Trash2, Trophy, TrendingUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -40,11 +40,12 @@ export type NotificationItem = {
 function TypeIcon({ type }: { type?: string }) {
   const cls = "shrink-0";
   switch (type) {
-    case "streak_milestone": return <Flame   size={13} className={`${cls} text-orange-500`} />;
-    case "xp_milestone":     return <Star    size={13} className={`${cls} text-yellow-500`} />;
-    case "journey_reminder": return <Map     size={13} className={`${cls} text-blue-500`} />;
-    case "course_complete":  return <BookOpen size={13} className={`${cls} text-green-500`} />;
-    case "phase_complete":   return <Trophy  size={13} className={`${cls} text-purple-500`} />;
+    case "streak_milestone": return <Flame     size={13} className={`${cls} text-orange-500`} />;
+    case "xp_milestone":     return <Star      size={13} className={`${cls} text-yellow-500`} />;
+    case "bps_milestone":    return <TrendingUp size={13} className={`${cls} text-emerald-500`} />;
+    case "journey_reminder": return <Map       size={13} className={`${cls} text-blue-500`} />;
+    case "course_complete":  return <BookOpen  size={13} className={`${cls} text-green-500`} />;
+    case "phase_complete":   return <Trophy    size={13} className={`${cls} text-purple-500`} />;
     default:                 return <Bell    size={13} className={`${cls} text-muted-foreground`} />;
   }
 }
@@ -131,19 +132,37 @@ const NotificationList = ({ notifications, onMarkAsRead }: NotificationListProps
 export interface NotificationPopoverProps {
   notifications?: NotificationItem[];
   onNotificationsChange?: (notifications: NotificationItem[]) => void;
+  /** Called when the user clicks "Clear all" — parent should delete from API */
+  onClearAll?: () => Promise<void>;
   /** Extra classes on the trigger button */
   buttonClassName?: string;
   /** Extra classes on the popover panel */
   popoverClassName?: string;
+  /**
+   * Which horizontal side the panel anchors to.
+   * "right" → left-0  (panel extends right, for left-side triggers)
+   * "left"  → right-0 (panel extends left, for right-side triggers)
+   */
+  panelSide?: "left" | "right";
+  /**
+   * Which vertical direction the panel opens.
+   * "down" → below the trigger (default, for header/top placements)
+   * "up"   → above the trigger (for footer/bottom placements)
+   */
+  panelDirection?: "down" | "up";
 }
 
 export const NotificationPopover = ({
   notifications: initialNotifications = [],
   onNotificationsChange,
+  onClearAll,
   buttonClassName,
   popoverClassName,
+  panelSide = "left",
+  panelDirection = "down",
 }: NotificationPopoverProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [clearing, setClearing] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>(initialNotifications);
 
   // Sync when parent passes a new array (e.g. after polling)
@@ -157,6 +176,18 @@ export const NotificationPopover = ({
     const updated = notifications.map((n) => ({ ...n, read: true }));
     setNotifications(updated);
     onNotificationsChange?.(updated);
+  };
+
+  const handleClearAll = async () => {
+    if (!onClearAll) return;
+    setClearing(true);
+    try {
+      await onClearAll();
+      setNotifications([]);
+      onNotificationsChange?.([]);
+    } finally {
+      setClearing(false);
+    }
   };
 
   const markAsRead = (id: string) => {
@@ -226,7 +257,9 @@ export const NotificationPopover = ({
               exit={{ opacity: 0, y: 8, scale: 0.95 }}
               transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
               className={cn(
-                "absolute right-0 mt-3 w-80 z-[80]",
+                "absolute w-80 z-[80]",
+                panelDirection === "up" ? "bottom-full mb-3" : "top-full mt-3",
+                panelSide === "right" ? "left-0" : "right-0",
                 "bg-card/95 backdrop-blur-md",
                 "border border-border",
                 "rounded-2xl",
@@ -246,17 +279,32 @@ export const NotificationPopover = ({
                     </span>
                   )}
                 </div>
-                {unreadCount > 0 && (
-                  <Button
-                    onClick={markAllAsRead}
-                    variant="ghost"
-                    size="sm"
-                    className="h-auto py-1 px-2 text-[11px] text-muted-foreground hover:text-primary gap-1"
-                  >
-                    <CheckCheck size={11} />
-                    Mark all read
-                  </Button>
-                )}
+                <div className="flex items-center gap-1">
+                  {unreadCount > 0 && (
+                    <Button
+                      onClick={markAllAsRead}
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto py-1 px-2 text-[11px] text-muted-foreground hover:text-primary gap-1"
+                    >
+                      <CheckCheck size={11} />
+                      Mark all read
+                    </Button>
+                  )}
+                  {notifications.length > 0 && onClearAll && (
+                    <Button
+                      onClick={handleClearAll}
+                      disabled={clearing}
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto py-1 px-2 text-[11px] text-muted-foreground hover:text-destructive gap-1"
+                      title="Clear all notifications"
+                    >
+                      <Trash2 size={11} />
+                      {clearing ? "…" : "Clear all"}
+                    </Button>
+                  )}
+                </div>
               </div>
 
               {/* List or empty state */}

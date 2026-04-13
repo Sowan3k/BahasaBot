@@ -1,39 +1,29 @@
 "use client";
 
 /**
- * NotificationBell — global floating wrapper (fixed top-right, all screens)
+ * NotificationBell — inline notification trigger.
  *
- * This component owns data fetching and polling.
- * All visual rendering is delegated to <NotificationPopover> from /components/ui/.
+ * Owns data fetching + polling.
+ * Renders <NotificationPopover> — caller controls positioning via the wrapper.
  *
- * Positioning:
- *   Mobile (< md): top-3 right-14  — beside the ThemeToggle in the mobile header
- *   Desktop (md+): top-5 right-5   — floating above the main content area
- *   z-[55] — above the mobile header (z-50), below the mobile drawer (z-[70])
- *
- * Hidden on:
- *   /chatbot/*  — conflicts with the "New chat" button in the chatbot header
- *   /settings/* — not needed in settings pages (user preference)
+ * Props:
+ *   panelSide — "left" (sidebar placement) | "right" (top-right placement, default)
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { notificationsApi } from "@/lib/api";
 import type { AppNotification } from "@/lib/types";
 import { NotificationPopover, type NotificationItem } from "@/components/ui/notification-popover";
 
-/** Pages where the floating bell is hidden to avoid visual conflicts. */
-const HIDDEN_ON = ["/chatbot", "/settings"];
-
 const POLL_INTERVAL_MS = 60_000;
 
 /** Map BahasaBot AppNotification → NotificationItem shape used by the popover UI. */
 function toPopoverItem(n: AppNotification): NotificationItem {
-  // Derive a human-friendly title from the notification type
   const titleMap: Record<string, string> = {
     streak_milestone: "Streak Milestone",
     xp_milestone:     "XP Milestone",
+    bps_milestone:    "Level Up!",
     journey_reminder: "Journey Reminder",
     course_complete:  "Course Ready",
     phase_complete:   "Phase Complete",
@@ -48,9 +38,15 @@ function toPopoverItem(n: AppNotification): NotificationItem {
   };
 }
 
-export function NotificationBell() {
+interface NotificationBellProps {
+  /** Which horizontal side the panel anchors to. */
+  panelSide?: "left" | "right";
+  /** "down" (default) = panel opens below; "up" = panel opens above (use for footer bells). */
+  panelDirection?: "down" | "up";
+}
+
+export function NotificationBell({ panelSide = "left", panelDirection = "down" }: NotificationBellProps) {
   const { status } = useSession();
-  const pathname = usePathname();
   const [items, setItems] = useState<AppNotification[]>([]);
   const pollerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -92,10 +88,8 @@ export function NotificationBell() {
       const justMarked = wasUnread.filter((id) => nowRead.includes(id));
 
       if (justMarked.length === wasUnread.length && justMarked.length > 1) {
-        // All were marked — use mark-all-read endpoint
         try { await notificationsApi.markAllRead(); } catch { /* silent */ }
       } else {
-        // Individual marks
         await Promise.allSettled(
           justMarked.map((id) => notificationsApi.markRead(id))
         );
@@ -104,19 +98,24 @@ export function NotificationBell() {
     [items]
   );
 
+  // ── Clear all ─────────────────────────────────────────────────────────────
+
+  const handleClearAll = useCallback(async () => {
+    await notificationsApi.clearAll();
+    setItems([]);
+  }, []);
+
   // ── Render ────────────────────────────────────────────────────────────────
 
-  // Hide on pages where the floating bell conflicts or isn't wanted
-  const isHidden = HIDDEN_ON.some((p) => pathname?.startsWith(p));
-  if (status !== "authenticated" || isHidden) return null;
+  if (status !== "authenticated") return null;
 
   return (
-    /* Fixed container — the popover panel is absolute relative to this */
-    <div className="fixed top-3 right-14 md:top-5 md:right-5 z-[55]">
-      <NotificationPopover
-        notifications={items.map(toPopoverItem)}
-        onNotificationsChange={handleChange}
-      />
-    </div>
+    <NotificationPopover
+      notifications={items.map(toPopoverItem)}
+      onNotificationsChange={handleChange}
+      onClearAll={handleClearAll}
+      panelSide={panelSide}
+      panelDirection={panelDirection}
+    />
   );
 }

@@ -4,16 +4,17 @@ Notifications Router — /api/notifications/*
 Endpoints for the in-app notification system (Phase 17).
 
 Endpoints:
-  GET  /api/notifications/            — List last 20 notifications for current user
-  POST /api/notifications/{id}/read   — Mark a single notification as read
-  POST /api/notifications/read-all    — Mark all notifications as read
+  GET    /api/notifications/            — List last 20 notifications for current user
+  POST   /api/notifications/{id}/read   — Mark a single notification as read
+  POST   /api/notifications/read-all    — Mark all notifications as read
+  DELETE /api/notifications/            — Clear (delete) all notifications for current user
 """
 
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
-from sqlalchemy import select, update
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.db.database import get_db
@@ -107,6 +108,36 @@ async def get_notifications(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Could not fetch notifications",
+        )
+
+
+@router.delete("/", response_model=dict)
+async def clear_all_notifications(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """
+    Delete all notifications for the current user (clear notification history).
+    Must be registered BEFORE the /{id}/read route to avoid path-param conflicts.
+    """
+    try:
+        await db.execute(
+            delete(Notification).where(Notification.user_id == current_user.id)
+        )
+        await db.commit()
+
+        logger.info("All notifications cleared", user_id=str(current_user.id))
+        return {"success": True, "message": "All notifications cleared"}
+
+    except Exception as exc:
+        logger.error(
+            "Failed to clear notifications",
+            user_id=str(current_user.id),
+            error=str(exc),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not clear notifications",
         )
 
 

@@ -447,7 +447,7 @@ export interface AdminFeedbackItem {
   user_id: string;
   user_name: string;
   user_email: string;
-  quiz_type: "module" | "standalone";
+  quiz_type: "module" | "standalone" | "general";
   rating: number;               // 1–5
   weak_points_relevant: "yes" | "no" | "somewhat";
   comments: string | null;
@@ -571,6 +571,10 @@ export interface RoadmapElement {
   estimated_weeks: number;
   completed: boolean;
   completed_at: string | null;
+  /** True when the user already has a course matching this topic */
+  exists?: boolean;
+  /** The existing course ID, populated when exists === true */
+  course_id?: string | null;
 }
 
 /** Full roadmap as returned by GET /api/journey/roadmap */
@@ -619,7 +623,7 @@ export interface PastJourneyItem {
 
 /** POST /api/evaluation/feedback request body */
 export interface FeedbackPayload {
-  quiz_type: "module" | "standalone";
+  quiz_type: "module" | "standalone" | "general";
   rating: number;               // 1–5
   weak_points_relevant: "yes" | "no" | "somewhat";
   comments?: string;            // optional, max 1000 chars

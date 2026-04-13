@@ -10,14 +10,20 @@ from pydantic import BaseModel, Field
 
 
 class FeedbackSubmitRequest(BaseModel):
-    """Survey response submitted by a user after completing a quiz."""
+    """Survey response submitted by a user — after a quiz or from the Settings feedback form.
 
-    quiz_type: Literal["module", "standalone"] = Field(
-        ..., description="Which quiz type triggered this feedback prompt"
+    quiz_type:
+      'module'     — from a module quiz results page
+      'standalone' — from the adaptive quiz results page
+      'general'    — submitted directly from Settings > Feedback (not quiz-triggered)
+    """
+
+    quiz_type: Literal["module", "standalone", "general"] = Field(
+        ..., description="Source of this feedback"
     )
     rating: int = Field(..., ge=1, le=5, description="Overall experience rating 1–5")
     weak_points_relevant: Literal["yes", "no", "somewhat"] = Field(
-        ..., description="Did the quiz reflect the user's weak areas?"
+        ..., description="Did the content reflect the user's weak areas?"
     )
     comments: str | None = Field(
         default=None, max_length=1000, description="Optional free-text feedback"

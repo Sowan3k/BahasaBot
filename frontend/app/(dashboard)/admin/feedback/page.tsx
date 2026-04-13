@@ -121,9 +121,9 @@ export default function AdminFeedbackPage() {
           <ArrowLeft size={18} />
         </Link>
         <div>
-          <h1 className="font-heading text-2xl font-bold text-foreground">Evaluation Feedback</h1>
+          <h1 className="font-heading text-2xl font-bold text-foreground">User Feedback</h1>
           <p className="text-sm text-muted-foreground">
-            {data ? `${data.total} responses collected` : "Loading…"}
+            {data ? `${data.total} responses — quiz surveys and general feedback` : "Loading…"}
           </p>
         </div>
       </div>
@@ -184,8 +184,12 @@ export default function AdminFeedbackPage() {
                   <span className="text-xs text-muted-foreground ml-2">{fb.user_email}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground capitalize">
-                    {fb.quiz_type}
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize ${
+                    fb.quiz_type === "general"
+                      ? "bg-primary/10 text-primary"
+                      : "bg-muted text-muted-foreground"
+                  }`}>
+                    {fb.quiz_type === "general" ? "General" : fb.quiz_type}
                   </span>
                   <span className="text-xs text-muted-foreground">
                     {new Date(fb.created_at).toLocaleDateString("en-MY", {
@@ -218,7 +222,7 @@ export default function AdminFeedbackPage() {
       ) : (
         !loading && (
           <div className="text-center py-16 text-muted-foreground text-sm">
-            No feedback responses yet. They will appear here after users complete a quiz.
+            No feedback yet. Responses appear here after users submit quiz surveys or general feedback from Settings.
           </div>
         )
       )}

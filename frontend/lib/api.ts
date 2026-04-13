@@ -306,6 +306,10 @@ export const notificationsApi = {
   /** Mark all notifications as read. */
   markAllRead: () =>
     apiClient.post<{ success: boolean }>("/api/notifications/read-all"),
+
+  /** Delete all notifications for the current user (clear history). */
+  clearAll: () =>
+    apiClient.delete<{ success: boolean; message: string }>("/api/notifications/"),
 };
 
 // ── Games API (Phase 19) ──────────────────────────────────────────────────────

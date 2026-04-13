@@ -5,7 +5,7 @@
 // main is flex-col so flex-1 children (like the chatbot page) can fill the available height.
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 
 // Routes to prefetch as soon as the layout mounts (runs once per session).
@@ -24,7 +24,7 @@ import { AppSidebar } from "@/components/nav/AppSidebar";
 import { CourseGenerationProvider } from "@/lib/course-generation-context";
 import { CourseGenerationProgress } from "@/components/courses/CourseGenerationProgress";
 import { OnboardingModal } from "@/components/onboarding/OnboardingModal";
-import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { PageTransition } from "@/components/layout/PageTransition";
 import { profileApi } from "@/lib/api";
 
 /**
@@ -83,6 +83,7 @@ function OnboardingChecker({ onShowModal }: { onShowModal: () => void }) {
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   // Prefetch all main sidebar routes on layout mount so their JS chunks
@@ -102,13 +103,15 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       <div className="flex h-screen overflow-hidden bg-background">
         <SessionWatcher />
         <OnboardingChecker onShowModal={handleShowOnboarding} />
+        {/* AppSidebar now includes the NotificationBell in the header */}
         <AppSidebar />
         {/* flex-col allows flex-1 children (chatbot) to fill height; overflow-y-auto scrolls regular pages */}
         <main className="flex-1 min-w-0 overflow-y-auto flex flex-col pt-14 md:pt-0">
-          {children}
+          {/* PageTransition: keyed by pathname so every navigation triggers fade-in + slide-up */}
+          <PageTransition key={pathname} className="flex-1 flex flex-col">
+            {children}
+          </PageTransition>
         </main>
-        {/* Floating notification bell — fixed top-right on all screen sizes */}
-        <NotificationBell />
         {/* Floating progress card — overlays all pages while a course generates */}
         <CourseGenerationProgress />
         {/* Onboarding modal — shown once on first login, dismissed only after completion */}

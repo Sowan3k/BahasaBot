@@ -34,8 +34,8 @@ const ADMIN_SECTIONS = [
   {
     href: "/admin/feedback",
     icon: ClipboardList,
-    label: "Evaluation Feedback",
-    description: "View 30-user evaluation survey responses and aggregate ratings",
+    label: "User Feedback",
+    description: "View quiz survey responses and general feedback submitted by users",
     color: "text-amber-500",
     bg: "bg-amber-500/10",
   },
@@ -89,16 +89,24 @@ export default function AdminPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Guard: fetch profile first to confirm admin role
-    profileApi.getProfile()
-      .then((res) => {
-        if (res.data.role !== "admin") {
+    // Fire both requests in parallel — eliminates the sequential waterfall.
+    // If the stats request returns 403, the user is not an admin and we redirect.
+    Promise.allSettled([profileApi.getProfile(), adminApi.getStats()])
+      .then(([profileResult, statsResult]) => {
+        if (profileResult.status === "rejected") {
+          setError("Failed to load admin data");
+          return;
+        }
+        if (profileResult.value.data.role !== "admin") {
           router.replace("/dashboard");
           return;
         }
-        return adminApi.getStats().then((r) => setStats(r.data));
+        if (statsResult.status === "fulfilled") {
+          setStats(statsResult.value.data);
+        } else {
+          setError("Failed to load admin stats");
+        }
       })
-      .catch(() => setError("Failed to load admin data"))
       .finally(() => setLoading(false));
   }, [router]);
 

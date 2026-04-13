@@ -1,13 +1,13 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-13 (Session 16 — Journey obstacle → existing course fix + layout border clashing fix)
+## Last Updated: 2026-04-14 (Session 18 — XP/streak fixes + user feedback + notification bell UX)
 
 ## Feature Status
 | Feature | Status | Notes |
 |---|---|---|
 | Auth | ✅ Complete + Verified | Email + Google OAuth, JWT, token refresh, 30-min sessions |
-| AI Chatbot Tutor | ✅ Complete + Verified | SSE streaming, LangChain, RAG — Malaysian Malay + IPA in prompt; markdown rendering; session persistence; native_language injected into system prompt |
+| AI Chatbot Tutor | ✅ Complete + Verified + Optimised | SSE streaming, LangChain, RAG — Malaysian Malay + IPA in prompt; markdown rendering; session persistence; native_language injected into system prompt; RAG context Redis-cached (5 min) saving ~1.3s on repeat queries; ping SSE event for early frontend feedback; typing dots UX while waiting for first token |
 | Course Generator | ✅ Complete + English-medium fix | Lesson content in English; Malay words taught inline; Malaysian BM only |
 | Quiz | ✅ Complete + English-medium fix | Question text explicitly English; Malay vocabulary uses Malaysian BM; IPA in explanations |
 | Dashboard | ✅ Complete + Vocab Delete | All 6 endpoints verified — vocab/grammar/progress/weak-points/quiz-history; streak + XP now included |
@@ -38,6 +38,9 @@ _Update this file at the end of every session_
 | UI Overhaul (2026-04-08) | ✅ Complete | Split-screen auth (branding left, glass form right); unified dark olive palette (#25221a bg, #1c1a13 sidebar, #2e2b22 card); box logo across all icon contexts; autofill CSS fix; quiz generating loader; WeakPoints + QuizHistory tile redesign; spelling game exit button; chatbot Waves color fix; sidebar bg-sidebar token; custom themed Google button (hides iframe, uses ref click); shader intensity reduced; left panel gradient overlay; storeSession() CSRF retry |
 | Evaluation Feedback (Section 5.20) | ✅ Complete | POST /api/evaluation/feedback; backend/schemas/evaluation.py + backend/routers/evaluation.py; FeedbackModal component (3-question survey: star rating, Yes/No/Somewhat, optional textarea); wired into adaptive quiz (3s delay) and module quiz results page; feedbackApi in api.ts; FeedbackPayload + FeedbackSubmitResponse types added |
 | Module Quiz Results Page | ✅ Complete | Full results page replacing TODO stub; sessionStorage data-passing pattern (quiz page stores result before redirect); SVG circular score ring; Pass/Fail state with Module Unlocked banner; Continue to Next Module button (fetches course structure via React Query to resolve next module's first class); Retry Quiz + Review Module on fail; per-question breakdown with SpeakerButton on wrong answers; FeedbackModal wired in |
+| XP / Streak Display (Session 18) | ✅ Fixed | Dashboard refetches on window focus/visibilitychange (30s throttle); sidebar profile staleTime 60→30s + refetchOnWindowFocus; bps_milestone added to notification title map + TrendingUp icon |
+| User Feedback — Settings (Session 18) | ✅ Complete | /settings/feedback page (star rating + relevance + textarea → POST /api/evaluation/feedback quiz_type="general"); backend schema extended to accept "general"; admin feedback page shows "General" badge; admin main page label updated to "User Feedback" |
+| Notification Bell UX (Session 18) | ✅ Relocated + Clear-all | Bell moved from floating fixed overlay into AppSidebar: mobile header (opens left/downward), desktop expanded footer next to username (opens right/upward), desktop collapsed footer (opens right/upward); DELETE /api/notifications/ backend endpoint; "Clear all" button in panel header; panelSide + panelDirection props added to NotificationPopover |
 
 ## Missing / Broken
 - `frontend/app/(dashboard)/quiz/adaptive/results/page.tsx` — redirects back to `/quiz/adaptive` (inline results used instead). Deep-link works but no standalone results page.
@@ -51,6 +54,88 @@ _Update this file at the end of every session_
 
 ## ✅ Fixed Issues (Session 13)
 - **Course covers not appearing (2026-04-13):** Session 12 correctly fixed `image_service.py` (httpx REST API) and `course_service.py` (retroactive healing + `asyncio.create_task`), but the backend was **never restarted** after those changes were made. Uvicorn started at 08:19, files modified at 14:22–14:28 — old broken code was still running. Fix: killed old uvicorn PIDs (18316, 25012), started fresh process on port 8000. Also manually ran `_generate_and_save_cover()` for all 3 existing courses that had `cover_image_url = NULL`. All verified: Gemini REST API returns JPEG (~1.1 MB base64, ~17s), DB save works, `GET /api/courses/` returns cover correctly. **Important**: after any code change to the backend, the uvicorn process MUST be restarted manually (no `--reload` flag in prod mode).
+
+---
+
+## What Was Done This Session (2026-04-14 Session 18 — XP/streak fixes + user feedback + notification bell UX)
+
+### Fix 1: XP and Streak display not updating
+
+**Root causes:**
+- Dashboard `useEffect` ran once on mount — if user earned XP in another tab/chatbot, dashboard showed stale data until hard refresh
+- Sidebar profile `staleTime: 60_000` meant XP/streak could lag 60 s behind real DB values
+- `bps_milestone` notification type had no entry in `NotificationBell.tsx` titleMap (showed as "Notification") and no icon in `notification-popover.tsx`
+
+**Fixes:**
+- `dashboard/page.tsx` — extracted `fetchSummary` into `useCallback`, added `window focus` + `visibilitychange` listeners with 30 s throttle so XP/streak refresh when user tabs back from chatbot/quiz
+- `AppSidebar.tsx` — `staleTime: 60_000 → 30_000`, added `refetchOnWindowFocus: true`
+- `NotificationBell.tsx` — added `bps_milestone: "Level Up!"` to titleMap
+- `notification-popover.tsx` — added `TrendingUp` icon for `bps_milestone`
+
+### Fix 2: User feedback form in Settings
+
+Users had no way to submit general feedback outside of quiz surveys; only admins could see evaluation responses.
+
+**Built:**
+- `backend/schemas/evaluation.py` — `quiz_type` Literal extended to include `"general"`
+- `frontend/lib/types.ts` — `FeedbackPayload` + `AdminFeedbackItem` updated to include `"general"`
+- `frontend/app/(dashboard)/settings/feedback/page.tsx` — new page: star rating (1–5) + relevance selector + optional textarea → `POST /api/evaluation/feedback` with `quiz_type="general"`
+- `frontend/app/(dashboard)/settings/page.tsx` — "Send Feedback" entry added with `MessageSquarePlus` icon
+- `frontend/app/(dashboard)/admin/feedback/page.tsx` — "General" badge shown for general feedback; header/empty-state text updated
+- `frontend/app/(dashboard)/admin/page.tsx` — section label "Evaluation Feedback" → "User Feedback"
+
+### Fix 3: Notification bell — placement + clear-all
+
+**Problem:** Bell floated as a fixed overlay at `top-3 right-14 / top-5 right-5` — not part of any standard UI element.
+
+**Backend:** `DELETE /api/notifications/` endpoint added to `routers/notifications.py` — deletes all notifications for current user.
+
+**Frontend:**
+- `frontend/lib/api.ts` — `notificationsApi.clearAll()` added
+- `notification-popover.tsx` — `panelSide` prop ("left"=right-0 / "right"=left-0), `panelDirection` prop ("down"=below / "up"=above), `onClearAll` prop + "Clear all" button with `Trash2` icon
+- `NotificationBell.tsx` — removed fixed-position wrapper; now an inline component; accepts `panelSide` + `panelDirection`; calls `notificationsApi.clearAll()` on clear
+- `layout.tsx` — `<NotificationBell />` import + render removed
+- `AppSidebar.tsx` — bell integrated in three spots:
+  - Mobile header: between logo and ThemeToggle (`panelSide="left"` / `panelDirection="down"`)
+  - Desktop expanded footer: right of username row (`panelSide="right"` / `panelDirection="up"`)
+  - Desktop collapsed footer: above streak row (`panelSide="right"` / `panelDirection="up"`)
+
+---
+
+## What Was Done This Session (2026-04-14 Session 17 — Chatbot performance + UX + post-login bug fixes)
+
+### Bug 1: Dashboard blank/error on first visit after login
+
+**Root cause:** `dashboard/page.tsx` fired `getSummary()` immediately on mount with no check on session readiness. Right after `router.push("/dashboard")` from login, the NextAuth session token might not be fully propagated yet, causing a 401 on the first API call.
+
+**Fix:** Added `useSession` to dashboard page. The `useEffect` that fetches summary now has `[status]` dependency and early-returns when `status !== "authenticated"`, ensuring the API call only fires once the session is confirmed.
+
+### Bug 2: Chatbot background animation showing dark mode after login
+
+**Root cause:** The login page was calling `localStorage.setItem("theme", "light")` and `document.documentElement.classList.remove("dark")` directly — which updates the DOM and localStorage but NOT the React `ThemeContext` state (which lives in `Providers`, mounted once for the entire SPA session). After SPA navigation to the chatbot, `useTheme()` returned the stale `"dark"` state, so `Waves` rendered with dark colors despite the user being in light mode.
+
+**Fix:** Added `setTheme(t: Theme)` to `ThemeContextValue` and `useThemeState`. Login page now calls `setTheme("light")` instead of raw DOM manipulation — this updates React state + localStorage + DOM class atomically.
+
+### Bug 3: Chatbot slow first-token delay (~4.5s) + UX improvements
+
+**Root causes:**
+- RAG embedding + pgvector search runs on every message: ~500ms warm / ~1500ms cold
+- Module-level `ChatGoogleGenerativeAI` and `GoogleGenerativeAIEmbeddings` instances recreated on every request
+- Frontend showed empty bubble with just a cursor while waiting 4+ seconds for first token
+- No early signal to frontend that the server received the request
+
+**Fixes:**
+- **`backend/services/gemini_service.py`** — Converted `_chat_llm()`, `_chatbot_llm()`, and `_embeddings_model()` to module-level singletons (created once per process, reused across requests). Keeps HTTP connection pool warm.
+- **`backend/services/langchain_service.py`** — Added `_get_rag_context()` with Redis caching (5-min TTL, key = `rag:ctx:{sha256(message[:150][:16])}`). On cache hit, skips entire embedding+pgvector path. Saves ~1.3 seconds on repeated/similar queries (confirmed: 4477ms cold → 3177ms warm). Reduced `HISTORY_WINDOW` 10→6 to decrease Gemini input tokens.
+- **`backend/routers/chatbot.py`** — Added `{"type":"ping"}` as the first yield in `event_generator`. Arrives at client ~800-1000ms after request, before RAG+LLM completes.
+- **`frontend/components/chatbot/ChatMessage.tsx`** — Shows 3-dot bouncing animation when `isStreaming=true` AND `content=""` (waiting for first token), then switches to blinking cursor once text starts flowing.
+- **`frontend/app/(dashboard)/chatbot/page.tsx`** — Added `"ping"` to the SSE event type union; `ping` events are skipped (they exist only to trigger the typing animation via the empty assistant message).
+
+**Verified test results (local):**
+- Ping event arrives: ~800ms after request
+- Cold RAG + Gemini TTFT: ~4.5s (unchanged — Gemini's inherent latency)
+- Warm RAG cache + Gemini TTFT: ~3.2s (1.3s improvement)
+- Chatbot reply: ✅ confirmed working for standard Malay learning queries
 
 ---
 

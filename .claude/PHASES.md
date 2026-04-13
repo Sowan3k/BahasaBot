@@ -938,3 +938,29 @@ _Status: 🔄 In progress_
 - [ ] Run full end-to-end smoke test of all 20 features
 - [ ] Update STATUS.md to reflect all completed phases
 
+### Session 18 Fixes (2026-04-14)
+
+**Fix 1: XP & Streak stale in sidebar and dashboard**
+- [x] `frontend/components/nav/AppSidebar.tsx` — reduced `staleTime: 60_000 → 30_000` and added `refetchOnWindowFocus: true` so sidebar re-fetches profile (XP/streak) when user returns from any activity tab
+- [x] `frontend/app/(dashboard)/dashboard/page.tsx` — extracted `fetchSummary` as `useCallback` with 30s throttle; added `focus` and `visibilitychange` listeners so XP/streak stat cards refresh automatically when user tabs back in
+
+**Fix 2: bps_milestone notification showing as "Notification"**
+- [x] `frontend/components/notifications/NotificationBell.tsx` — added `bps_milestone: "Level Up!"` to titleMap
+- [x] `frontend/components/ui/notification-popover.tsx` — added `bps_milestone → TrendingUp` icon (emerald-500)
+
+**Feature: User Feedback from Settings**
+- [x] `backend/schemas/evaluation.py` — extended `quiz_type` Literal to include `"general"` for settings-originated feedback
+- [x] `frontend/lib/types.ts` — added `"general"` to `FeedbackPayload.quiz_type` and `AdminFeedbackItem.quiz_type`
+- [x] `frontend/app/(dashboard)/settings/feedback/page.tsx` — new page: star rating (1–5), content relevance (yes/somewhat/no), optional text, POSTs to `/api/evaluation/feedback` with `quiz_type: "general"`
+- [x] `frontend/app/(dashboard)/settings/page.tsx` — added "Send Feedback" entry linking to /settings/feedback
+- [x] `frontend/app/(dashboard)/admin/feedback/page.tsx` — updated title to "User Feedback", added "General" badge for `quiz_type === "general"`
+- [x] `frontend/app/(dashboard)/admin/page.tsx` — updated section label to "User Feedback"
+
+**Feature: Notification Bell Relocation + Clear All**
+- [x] Removed floating fixed-position bell from `frontend/app/(dashboard)/layout.tsx`
+- [x] `frontend/components/notifications/NotificationBell.tsx` — refactored to inline component with `panelSide` and `panelDirection` props; added `handleClearAll` calling `notificationsApi.clearAll()`
+- [x] `frontend/components/ui/notification-popover.tsx` — added `panelSide` ("left"→right-0 / "right"→left-0) and `panelDirection` ("down"→top-full / "up"→bottom-full) props; added "Clear all" button with Trash2 icon; added `onClearAll` prop
+- [x] `backend/routers/notifications.py` — added `DELETE /api/notifications/` endpoint to bulk-delete all user notifications
+- [x] `frontend/lib/api.ts` — added `notificationsApi.clearAll()` calling DELETE /api/notifications/
+- [x] Bell placed in: mobile header (right of logo, `panelSide="left"`), desktop expanded footer (right of username, `panelSide="right" panelDirection="up"`), desktop collapsed footer (`panelSide="right" panelDirection="up"`)
+
