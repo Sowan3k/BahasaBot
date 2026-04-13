@@ -46,7 +46,7 @@ _Update this file at the end of every session_
 
 ## ✅ Fixed Issues (Session 10)
 - **Login broken (2026-04-13):** `fuzzywuzzy` and `python-Levenshtein` were in `requirements.txt` but not installed in the venv. `journey_service.py` imports `fuzzywuzzy`, so backend crashed on startup — port 8000 never opened, all API calls returned "connection refused". Fix: `pip install fuzzywuzzy==0.18.0 python-Levenshtein==0.25.1` (packages confirmed installed via `pip check`).
-- **Gemini image model name (2026-04-13):** `backend/.env` and `image_service.py` fallback had old model `gemini-2.0-flash-preview-image-generation`. Correct model is `gemini-3.1-flash-image-preview` (released Feb 26, 2026 — matches CLAUDE.md and .env.example). Updated: `backend/.env`, `image_service.py` default + docstring.
+- **Gemini image model name (2026-04-13):** `backend/.env` and `image_service.py` fallback had old model `gemini-2.0-flash-preview-image-generation`. That model is **deprecated and shuts down June 1, 2026**. Correct model is `gemini-3.1-flash-image-preview` (released Feb 26, 2026 — matches CLAUDE.md and .env.example). Updated: `backend/.env`, `image_service.py` default + docstring.
 
 ---
 
