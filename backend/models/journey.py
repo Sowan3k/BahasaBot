@@ -2,28 +2,48 @@
 Journey ORM Models
 
 Tables:
-  learning_roadmaps           — AI-generated personalised learning roadmap (one active per user)
-  roadmap_activity_completions — tracks which roadmap activities the user has completed
+  user_roadmaps — Phase 20 v2 roadmap (flat ordered course obstacles — sole active model)
+
+Removed (v1 — tables dropped via drop_v1_journey_tables migration):
+  learning_roadmaps            — phase/week/activity structure, superseded by v2
+  roadmap_activity_completions — v1 completion tracker, superseded by user_roadmaps.elements[].completed
 """
 
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, ForeignKey, String, func
+from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.db.database import Base
 
 
-class LearningRoadmap(Base):
-    """AI-generated personalised learning roadmap for a user.
+class UserRoadmap(Base):
+    """Phase 20 v2 — flat ordered list of course obstacles.
 
-    One active roadmap per user. User can delete and regenerate at any time.
-    roadmap_json stores the full structured plan (phases → weeks → activities).
+    One active roadmap per user (enforced by partial unique index
+    user_roadmaps_one_active_per_user WHERE status = 'active').
+    Old completed/deleted roadmaps are soft-kept for admin history.
+
+    elements JSONB schema:
+        [
+          {
+            "order": 1,
+            "topic": "Greetings and Self-Introduction",
+            "description": "Learn how to introduce yourself in Malay",
+            "estimated_weeks": 2,
+            "completed": false,
+            "completed_at": null
+          },
+          ...
+        ]
     """
 
-    __tablename__ = "learning_roadmaps"
+    __tablename__ = "user_roadmaps"
+    __table_args__ = (
+        CheckConstraint("timeline_months BETWEEN 1 AND 6", name="user_roadmaps_timeline_check"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4,
@@ -33,45 +53,26 @@ class LearningRoadmap(Base):
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False, index=True
     )
-    # When the user wants to reach their goal
-    deadline_date: Mapped[date] = mapped_column(Date(), nullable=False)
-    # 'survival' | 'conversational' | 'academic'
-    goal_type: Mapped[str] = mapped_column(String(50), nullable=False)
-    # Full roadmap JSON: { phases: [ { phase, title, duration_weeks, weeks: [...] } ] }
-    roadmap_json: Mapped[dict] = mapped_column(JSONB(), nullable=False)
-    # Nano Banana 2 banner image URL — generated once on creation, never regenerated
-    banner_image_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    # Onboarding answers
+    intent: Mapped[str] = mapped_column(String(100), nullable=False)
+    goal: Mapped[str] = mapped_column(Text, nullable=False)
+    timeline_months: Mapped[int] = mapped_column(Integer, nullable=False)
+    # Ordered array of course obstacle objects (see class docstring)
+    elements: Mapped[dict] = mapped_column(JSONB(), nullable=False)
+    # 'active' | 'overdue' | 'completed' | 'deleted'
+    status: Mapped[str] = mapped_column(String(20), nullable=False, server_default="active")
+    # created_at + timeline_months
+    deadline: Mapped[date] = mapped_column(Date(), nullable=False)
+    # True after the user has used their one allowed deadline extension
+    extended: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Snapshot of the user's BPS level when this roadmap was generated
+    bps_level_at_creation: Mapped[str] = mapped_column(String(10), nullable=False)
+    # Nano Banana 2 banner (generated async, null until ready)
+    banner_image_url: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     def __repr__(self) -> str:
-        return f"<LearningRoadmap user={self.user_id} goal={self.goal_type} deadline={self.deadline_date}>"
-
-
-class RoadmapActivityCompletion(Base):
-    """Tracks which activities within a roadmap a user has completed.
-
-    activity_id is a unique string key identifying an activity within the roadmap
-    JSON (e.g. "phase1_week2_act3"). Cross-referenced with user_progress and
-    standalone_quiz_attempts to show visual progress.
-    """
-
-    __tablename__ = "roadmap_activity_completions"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4,
-        server_default=func.gen_random_uuid()
-    )
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False, index=True
-    )
-    # Unique activity identifier within the roadmap JSON
-    activity_id: Mapped[str] = mapped_column(String(100), nullable=False)
-    completed_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
-
-    def __repr__(self) -> str:
-        return f"<RoadmapActivityCompletion user={self.user_id} activity={self.activity_id!r}>"
+        return f"<UserRoadmap user={self.user_id} status={self.status} timeline={self.timeline_months}mo>"

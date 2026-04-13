@@ -24,7 +24,7 @@ from backend.models.analytics import ActivityLog, TokenUsageLog
 from backend.models.chatbot import ChatSession
 from backend.models.course import Course
 from backend.models.evaluation import EvaluationFeedback
-from backend.models.journey import LearningRoadmap
+from backend.models.journey import UserRoadmap
 from backend.models.notification import Notification
 from backend.models.progress import GrammarLearned, UserProgress, VocabularyLearned, WeakPoint
 from backend.models.quiz import ModuleQuizAttempt, StandaloneQuizAttempt
@@ -75,9 +75,9 @@ async def get_stats(db: AsyncSession) -> dict:
         select(func.avg(EvaluationFeedback.rating)).select_from(EvaluationFeedback)
     )
 
-    # Active learning roadmaps
+    # Active learning roadmaps (Phase 20 v2 user_roadmaps)
     active_roadmaps = await db.scalar(
-        select(func.count()).select_from(LearningRoadmap)
+        select(func.count()).select_from(UserRoadmap).where(UserRoadmap.status == "active")
     )
 
     return {
@@ -368,7 +368,7 @@ async def reset_user_data(db: AsyncSession, user_id: uuid.UUID, admin_user: User
       - vocabulary_learned, grammar_learned, weak_points
       - module_quiz_attempts, standalone_quiz_attempts
       - chat_sessions (cascades to chat_messages)
-      - learning_roadmaps (cascades to roadmap_activity_completions)
+      - user_roadmaps (v2 — all statuses)
       - notifications
 
     Resets user columns: proficiency_level, streak_count, xp_total.
@@ -407,8 +407,8 @@ async def reset_user_data(db: AsyncSession, user_id: uuid.UUID, admin_user: User
         for session in sessions.scalars().all():
             await db.delete(session)
 
-        # Delete roadmaps (cascades to roadmap_activity_completions)
-        roadmaps = await db.execute(select(LearningRoadmap).where(LearningRoadmap.user_id == user_id))
+        # Delete v2 roadmaps (all statuses: active, overdue, completed, deleted)
+        roadmaps = await db.execute(select(UserRoadmap).where(UserRoadmap.user_id == user_id))
         for roadmap in roadmaps.scalars().all():
             await db.delete(roadmap)
 

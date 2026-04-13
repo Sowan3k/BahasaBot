@@ -7,7 +7,7 @@ from backend.models.course import Class, Course, Module  # noqa: F401
 from backend.models.document import Document  # noqa: F401
 from backend.models.evaluation import EvaluationFeedback  # noqa: F401
 from backend.models.game import SpellingGameScore  # noqa: F401
-from backend.models.journey import LearningRoadmap, RoadmapActivityCompletion  # noqa: F401
+from backend.models.journey import UserRoadmap  # noqa: F401
 from backend.models.notification import Notification  # noqa: F401
 from backend.models.password_reset import PasswordResetToken  # noqa: F401
 from backend.models.progress import GrammarLearned, UserProgress, VocabularyLearned, WeakPoint  # noqa: F401

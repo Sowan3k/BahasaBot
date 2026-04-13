@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-08 (Session 3 — Chatbot personalization + notifications + dashboard streak/XP fix)
+## Last Updated: 2026-04-13 (Session 10 — v1 Journey cleanup + Login fix + Gemini model fix)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -28,18 +28,201 @@ _Update this file at the end of every session_
 | Notification System (Phase 17) | ✅ Complete | GET /api/notifications/ (last 20 + unread_count), POST mark-read, POST read-all; NotificationBell (60s polling, unread badge) + NotificationPanel; floating global icon in layout.tsx |
 | Gamification — Streak + XP (Phase 18) | ✅ Complete | record_learning_activity() in gamification_service.py; Redis-keyed daily streak; XP awards: class=10, quiz pass=25, chatbot session=5; milestone notifications (streak 3/7/14/30, every 100 XP); wired into 4 routers (courses, quiz, chatbot); StreakBadge + XPBar components; dashboard +2 stat cards; sidebar footer shows streak+XP |
 | Sidebar Polish | ✅ Complete | Double divider removed (no border-b on logo area); ThemeToggle repositioned to header row; footer items centered except XP bar; collapsed tooltips use theme-aware bg-popover |
-| My Journey — Learning Roadmap (Phase 20) | ✅ Complete | Gemini-powered roadmap; 4 endpoints; phase/week/activity structure; optimistic completion; deep links; admin roadmap count |
+| My Journey — Learning Roadmap (Phase 20) | ✅ Complete (v2 + patches) | New user_roadmaps table; flat course-obstacle model; 3-question modal; road/path UI; overdue+extend; BPS upgrade banner; identity-verified delete; check_roadmap_progress hook; admin journeys page. Phase 20 fully complete including all 7 post-implementation patches: fuzzy match (fuzzywuzzy token_sort_ratio ≥ 70%), sequential completion enforcement, Gemini failure UX with Try Again, estimated_weeks displayed on nodes, streak hook, Other intent free text, past journeys history section. |
+| Chat History Page (Phase 21) | ✅ Complete | /chatbot/history; ChatHistoryList (paginated, title from first user msg, message count); session detail read-only view; History button in chatbot header; backend ChatSessionResponse extended with title + message_count |
+| Image Generation — Nano Banana 2 (Phase 22) | ✅ Complete | image_service.py (generate_image, generate_journey_banner, generate_course_cover, generate_milestone_card); background asyncio tasks; Alembic migration (TEXT columns + notifications.image_url); CourseCard cover image; NotificationPanel BPS milestone card |
 | Spelling Practice Game (Phase 19) | ✅ Complete + v2 redesign | Leitner-box word selection; Levenshtein fuzzy matching; Start screen → 3-2-1 countdown → 10s per-word timer (green→yellow→red pulse) → Time's Up screen with Next/Start Over; combo multiplier; session summary; keyboard shortcuts (Enter/Space/Escape); personal best; Games link in sidebar |
 | Chatbot vocab pipeline fix | ✅ Fixed | _extract_and_save() now opens its own AsyncSessionLocal session — asyncio.create_task with request-scoped session was silently failing after SSE stream ended; vocab/grammar now reliably saved after every chatbot response |
 | Frontend Performance Optimizations | ✅ Complete | Session cache in api.ts (60s TTL, eliminates /api/auth/session round-trip on every API call); profile fetch deduplication via shared useQuery(['profile']) key in AppSidebar + OnboardingChecker; login router.refresh() race condition removed; redirect loading overlay added |
 | UI Overhaul (2026-04-08) | ✅ Complete | Split-screen auth (branding left, glass form right); unified dark olive palette (#25221a bg, #1c1a13 sidebar, #2e2b22 card); box logo across all icon contexts; autofill CSS fix; quiz generating loader; WeakPoints + QuizHistory tile redesign; spelling game exit button; chatbot Waves color fix; sidebar bg-sidebar token; custom themed Google button (hides iframe, uses ref click); shader intensity reduced; left panel gradient overlay; storeSession() CSRF retry |
+| Evaluation Feedback (Section 5.20) | ✅ Complete | POST /api/evaluation/feedback; backend/schemas/evaluation.py + backend/routers/evaluation.py; FeedbackModal component (3-question survey: star rating, Yes/No/Somewhat, optional textarea); wired into adaptive quiz (3s delay) and module quiz results page; feedbackApi in api.ts; FeedbackPayload + FeedbackSubmitResponse types added |
+| Module Quiz Results Page | ✅ Complete | Full results page replacing TODO stub; sessionStorage data-passing pattern (quiz page stores result before redirect); SVG circular score ring; Pass/Fail state with Module Unlocked banner; Continue to Next Module button (fetches course structure via React Query to resolve next module's first class); Retry Quiz + Review Module on fail; per-question breakdown with SpeakerButton on wrong answers; FeedbackModal wired in |
 
 ## Missing / Broken
-- `frontend/app/(dashboard)/quiz/module/[moduleId]/results/page.tsx` — **stub only** (returns `<div>Module Quiz Results — TODO</div>`). Score + per-question breakdown + Continue/Retry button not yet implemented.
 - `frontend/app/(dashboard)/quiz/adaptive/results/page.tsx` — redirects back to `/quiz/adaptive` (inline results used instead). Deep-link works but no standalone results page.
 
 ## Known Pre-existing Issue (not caused by recent changes)
 - Module quiz cache-vs-submission misalignment: if a quiz attempt fails (0%) the cache clears and Gemini regenerates new questions. If the user re-submits using answers from the *first* GET, they score 0% again. Mitigation: frontend should re-fetch GET before showing quiz form if previous submission failed. This is a UI flow issue, not a backend bug.
+
+## ✅ Fixed Issues (Session 10)
+- **Login broken (2026-04-13):** `fuzzywuzzy` and `python-Levenshtein` were in `requirements.txt` but not installed in the venv. `journey_service.py` imports `fuzzywuzzy`, so backend crashed on startup — port 8000 never opened, all API calls returned "connection refused". Fix: `pip install fuzzywuzzy==0.18.0 python-Levenshtein==0.25.1` (packages confirmed installed via `pip check`).
+- **Gemini image model name (2026-04-13):** `backend/.env` and `image_service.py` fallback had old model `gemini-2.0-flash-preview-image-generation`. Correct model is `gemini-3.1-flash-image-preview` (released Feb 26, 2026 — matches CLAUDE.md and .env.example). Updated: `backend/.env`, `image_service.py` default + docstring.
+
+---
+
+## What Was Done This Session (2026-04-13 Session 10 — v1 Journey cleanup + Login fix + Gemini model fix)
+
+### v1 Journey Model Cleanup
+- **`backend/models/journey.py`** — Removed `LearningRoadmap` and `RoadmapActivityCompletion` class definitions (v1 tables superseded by `user_roadmaps` in Phase 20 v2). Updated module docstring.
+- **`backend/models/__init__.py`** — Replaced `LearningRoadmap, RoadmapActivityCompletion` export with `UserRoadmap` only.
+- **`backend/services/admin_service.py`** — Fixed admin "reset user data" function: was deleting from `LearningRoadmap` (v1, dead data), now correctly deletes from `UserRoadmap` (v2). Removed `LearningRoadmap` import.
+- **`backend/db/migrations/versions/20260413_1200_drop_v1_journey_tables.py`** — New Alembic migration (revision `c9d0e1f2a3b4`, chains from `b8c9d0e1f2a3`) that DROPs `roadmap_activity_completions` and `learning_roadmaps`. Down migration recreates both tables with TEXT `banner_image_url` (Phase 22 state). **Not yet run — run manually after review.**
+
+### Login Fix
+- **Root cause:** `fuzzywuzzy` and `python-Levenshtein` missing from venv → backend startup crash → port 8000 never opened
+- **Fix:** Installed via pip; `pip check` confirms no broken requirements
+
+### Gemini Image Model Fix
+- **`backend/services/image_service.py`** — Updated fallback model name from old `gemini-2.0-flash-preview-image-generation` to correct `gemini-3.1-flash-image-preview`; updated docstring + stale `learning_roadmaps` comment
+- **`backend/.env`** — Updated `GEMINI_IMAGE_MODEL` to `gemini-3.1-flash-image-preview`
+
+---
+
+## What Was Done This Session (2026-04-13 Session 9 — Docs sync + Evaluation Feedback + Module Quiz Results)
+
+### CLAUDE.md Corrections (Section 6, 7, 13)
+
+#### Section 6 — Database Schema
+- **`users` table**: removed non-existent `bps_level` column; added clarifying comment that `proficiency_level` stores BPS values; removed incorrect migration note
+- **`courses` table**: added `cover_image_url TEXT` (Phase 22)
+- **`chat_sessions` table**: added `title TEXT` (Phase 21)
+- **Journey / Roadmap**: replaced obsolete `learning_roadmaps` + `roadmap_activity_completions` with current `user_roadmaps` table (full column list + partial unique index note)
+- **`notifications` table**: added `image_url TEXT` (Phase 22)
+- **New tables added**: `token_usage_logs`, `activity_logs` (Phase 15 analytics)
+
+#### Section 7 — API Endpoints
+- **Journey**: replaced 3 v1 endpoints (`GET/POST/DELETE /api/journey/`) with 7 current v2 endpoints under `/api/journey/roadmap/...`; added `GET /api/journey/roadmap/history`
+- **Admin**: added `GET /api/admin/journeys`
+- **Profile**: added `POST /api/profile/change-password`
+- **Notifications**: added `POST /api/notifications/read-all`
+- **Games**: added `POST /api/games/spelling/session` + `GET /api/games/spelling/best`
+- **Courses**: added `GET /api/courses/jobs/{job_id}`
+- **Evaluation**: updated comment; endpoint was already present
+
+#### Section 13 — Feature → File Map
+- **Dashboard**: `CEFRProgressBar.tsx` → `BPSProgressBar.tsx`
+- **Admin Panel**: added `admin/users/[userId]/page.tsx`, `admin/journeys/page.tsx`, `backend/models/analytics.py`, `backend/utils/analytics.py`
+- **My Journey**: removed 3 deleted component files (`RoadmapView.tsx`, `ActivityCard.tsx`, `PhaseAccordion.tsx`); updated page.tsx description; added `backend/models/journey.py`
+
+### PHASES.md Corrections
+- **Phase 20** status: updated from `🔲 In Progress` → `✅ Complete (v2 + patches — 2026-04-13)`
+- **Phase 20** checklist: all 14 items (8 backend + 6 frontend) marked `[x]`
+
+---
+
+### Evaluation Feedback (Section 5.20)
+
+#### New Files
+- **`backend/schemas/evaluation.py`** — `FeedbackSubmitRequest` (quiz_type, rating 1–5, weak_points_relevant, optional comments ≤1000 chars) + `FeedbackSubmitResponse`
+- **`backend/routers/evaluation.py`** — `POST /api/evaluation/feedback`; auth required via `get_current_user`; inserts into `evaluation_feedback` table (table already existed from Phase 11); returns 201 `{ success: true, message: "Thank you for your feedback!" }`
+- **`frontend/components/quiz/FeedbackModal.tsx`** — 3-question survey modal: Q1 5-star rating (hover + click), Q2 Yes/No/Somewhat buttons, Q3 optional textarea (max 1000 chars); success thank-you state auto-closes after 2s; inline error with retry; Skip link; uses bg-card / border-border card pattern
+
+#### Modified Files
+- **`backend/main.py`** — imported `evaluation` router + `backend.models.evaluation`; registered at `/api/evaluation`
+- **`frontend/lib/types.ts`** — added `FeedbackPayload`, `FeedbackSubmitResponse`
+- **`frontend/lib/api.ts`** — added `FeedbackPayload` + `FeedbackSubmitResponse` imports; added `feedbackApi.submitFeedback()`
+- **`frontend/app/(dashboard)/quiz/adaptive/page.tsx`** — added `useRef` import; `showFeedback` state + `feedbackShown` ref; `useEffect` triggers modal 3s after results appear (once per attempt); `<FeedbackModal quizType="standalone" />` rendered in results block; ref resets in `handleRetry`
+
+#### Test Results
+| Check | Result |
+|---|---|
+| `tsc --noEmit` | ✅ 0 errors |
+| Python syntax (evaluation.py, schemas/evaluation.py, main.py) | ✅ OK |
+
+---
+
+### Module Quiz Results Page (stub → full implementation)
+
+#### Problem
+`frontend/app/(dashboard)/quiz/module/[moduleId]/results/page.tsx` was a TODO stub. The quiz page previously rendered results inline but had no actual results page for the `/quiz/module/[moduleId]/results` route.
+
+#### Data-passing pattern
+Quiz page (`courses/[courseId]/modules/[moduleId]/quiz/page.tsx`) stores result + courseId + moduleTitle in `sessionStorage['moduleQuizResult_${moduleId}']` immediately before `router.push` to the results route. Results page reads from sessionStorage on mount.
+
+#### Modified Files
+- **`frontend/app/(dashboard)/courses/[courseId]/modules/[moduleId]/quiz/page.tsx`**
+  - Added `useRouter` import
+  - `onSuccess`: stores to sessionStorage, then `router.push('/quiz/module/${moduleId}/results?courseId=${courseId}')`
+  - Removed entire inline results block (`if (result)`) and `handleRetry` function
+  - Added brief "Loading results…" redirect overlay for `submitMutation.isSuccess`
+
+#### New File
+- **`frontend/app/(dashboard)/quiz/module/[moduleId]/results/page.tsx`** — full results page:
+  - Reads sessionStorage on mount; graceful fallback if data missing (direct URL access)
+  - **SVG circular score ring**: animated stroke-dashoffset, PASS/FAIL label inside ring
+  - **Pass state**: "Module Unlocked! 🎉" + `Trophy` icon + "Continue to Next Module" button → fetches course via `coursesApi.get()` (React Query) to resolve next module's first class href
+  - **Fail state**: "Keep practising!" + "Retry Quiz" + "Review Module" buttons
+  - **Per-question breakdown**: SpeakerButton (xs) on every wrong `correct_answer`
+  - **FeedbackModal**: triggered 3s after mount with `quizType="module"`
+  - Breadcrumb, Back to Course link, fully styled to match adaptive quiz results
+  - Wrapped in `<Suspense>` for `useSearchParams` (Next.js App Router requirement)
+
+#### Test Results
+| Check | Result |
+|---|---|
+| `tsc --noEmit` | ✅ 0 errors |
+
+---
+
+## What Was Done This Session (2026-04-09 Session 7 — Phase 20 Full Rewrite)
+
+### Phase 20 — My Journey (Learning Roadmap) — Complete Rewrite
+
+#### Why it was rewritten
+The Phase 20 v1 implementation used a phases/weeks/activities structure with three activity types ('course', 'quiz', 'chatbot'). The new spec redefines the roadmap as a flat ordered list of **course obstacles only**, with a new 3-question onboarding modal, identity-verified delete, deadline extension, BPS upgrade regeneration, and a road/path visual metaphor.
+
+#### DB Changes
+- [x] New `user_roadmaps` table — flat ordered course obstacles in JSONB, status (active/overdue/completed/deleted), partial unique index for one active roadmap per user, deadline, extended flag, bps_level_at_creation, banner_image_url
+- [x] Alembic migration: `20260409_0900_phase20_user_roadmaps.py` (revision `b8c9d0e1f2a3`, down_revision `a7b8c9d0e1f2`)
+- [x] Old `learning_roadmaps` + `roadmap_activity_completions` tables kept for backward compat (not used for new journey logic)
+
+#### Backend
+- [x] `backend/models/journey.py` — added `UserRoadmap` ORM model alongside old models
+- [x] `backend/services/journey_service.py` — complete rewrite: generate_roadmap, get_roadmap (overdue check + notification triggers + BPS upgrade flag), check_roadmap_progress (fuzzy match + XP awards), check_bps_change (Redis flag), extend_deadline, verify_and_delete (bcrypt for email / oauth_confirmed for Google), regenerate_uncompleted, dismiss_bps_upgrade, get_all_roadmaps_admin
+- [x] `backend/routers/journey.py` — complete rewrite: POST /roadmap/generate, GET /roadmap, POST /roadmap/verify-and-delete, PATCH /roadmap/extend, POST /roadmap/regenerate, DELETE /roadmap/dismiss-upgrade
+- [x] `backend/services/quiz_service.py` — added `_check_course_completion_for_journey()` background task; hooks `check_roadmap_progress()` after all modules in a course are passed; hooks `check_bps_change()` after BPS recalculation in `submit_standalone_quiz()`
+- [x] `backend/services/admin_service.py` — `active_roadmaps` now counts `user_roadmaps WHERE status='active'`
+- [x] `backend/routers/admin.py` — added `GET /api/admin/journeys` (read-only, all roadmaps for admin)
+
+#### Frontend
+- [x] `frontend/lib/types.ts` — replaced old Journey types with `UserRoadmap`, `RoadmapElement`, `GenerateRoadmapPayload` (v2), `AdminRoadmapRow`
+- [x] `frontend/lib/api.ts` — replaced old `journeyApi` with new endpoints (generate, getRoadmap, verifyAndDelete, extendDeadline, regenerate, dismissUpgrade, getAdminJourneys)
+- [x] `frontend/app/(dashboard)/journey/page.tsx` — complete rewrite with road/path UI, 3-question setup modal, obstacle nodes (completed/current/locked states), overdue banner + extend modal, BPS upgrade banner, identity-verified delete modal, celebration page
+- [x] `frontend/app/(dashboard)/courses/page.tsx` — added `?generate=<topic>` param handling: reads on mount, auto-opens modal with pre-filled topic, clears param from URL via `window.history.replaceState`
+- [x] `frontend/components/courses/CourseGenerationModal.tsx` — added `initialTopic` prop; state initialized from it
+- [x] `frontend/app/(dashboard)/admin/journeys/page.tsx` — new read-only admin page: table of all roadmaps with expandable obstacle detail rows; summary chips (total/active/overdue/completed)
+- [x] `frontend/app/(dashboard)/admin/page.tsx` — added "User Journeys" section card linking to `/admin/journeys`
+- [x] Deleted old Phase 20 v1 components: `RoadmapView.tsx`, `PhaseAccordion.tsx`, `ActivityCard.tsx`
+
+#### Syntax Checks
+| Check | Result |
+|---|---|
+| Python syntax — 7 backend files | ✅ All OK |
+| `tsc --noEmit` | ✅ 0 errors |
+
+#### Applied / Resolved (2026-04-13 diagnosis session)
+- ✅ Alembic migrations applied: `f1a2b3c4d5e6 → a7b8c9d0e1f2 → b8c9d0e1f2a3` (Phase 22 image columns + Phase 20 user_roadmaps table)
+- `user_roadmaps` table, `ix_user_roadmaps_user_id` index, `user_roadmaps_one_active_per_user` partial unique index, and `notifications.image_url` column all confirmed present in DB
+- Journey page renders inline obstacle components (no separate component files needed — road UI is self-contained)
+- Journey v1 endpoints gone; no old frontend routes reference them
+
+---
+
+## What Was Done This Session (2026-04-08 Session 6 — Testing & Validation Pass)
+
+### Full Validation Pass — Phase 21 + Phase 22
+
+#### Tests Run
+| Check | Result |
+|---|---|
+| TypeScript compile (`tsc --noEmit`) | ✅ 0 errors |
+| Python syntax — 10 Phase 21+22 files | ✅ All OK |
+| Python syntax — 4 fixed files re-check | ✅ All OK |
+
+#### Bugs Found and Fixed
+| File | Issue | Fix |
+|---|---|---|
+| `backend/routers/chatbot.py` | `import uuid as _uuid` — unused (0 references) | Removed |
+| `backend/services/journey_service.py` | `import uuid as _uuid` — unused (0 references) | Removed |
+| `backend/services/image_service.py` | `asyncio.get_event_loop()` — deprecated in Python 3.10+ when called from async context | Changed to `asyncio.get_running_loop()` |
+| `backend/services/quiz_service.py` | `import asyncio as _asyncio` inside an `if` block — non-standard pattern | Moved `import asyncio` to top-level; changed `_asyncio.create_task(...)` to `asyncio.create_task(...)` |
+
+### Pending Migration
+Phase 22 Alembic migration (`20260408_1200_phase22_image_columns.py`, revision `a7b8c9d0e1f2`) must be applied before first run:
+```
+alembic upgrade head
+```
+Adds: `courses.cover_image_url TEXT`, `learning_roadmaps.banner_image_url TEXT`, `notifications.image_url TEXT NULL`
 
 ---
 
