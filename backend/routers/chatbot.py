@@ -74,6 +74,10 @@ async def send_message(
 
     async def event_generator():
         """Yield SSE events as the model streams its response."""
+        # Emit a ping immediately so the client knows the connection is live
+        # and can display a "thinking" indicator while RAG + LLM warm up.
+        yield {"data": json.dumps({"type": "ping"})}
+
         try:
             async for chunk in langchain_service.stream_chat_response(
                 session_id=session_id,

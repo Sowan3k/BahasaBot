@@ -62,6 +62,8 @@ export default function ChatHistoryList({
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   // IDs currently being deleted (shows spinner)
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
+  // Error message shown briefly when a delete fails
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
   const limit = 15;
@@ -82,8 +84,12 @@ export default function ChatHistoryList({
       // Invalidate all pages of the session list so the list re-fetches
       queryClient.invalidateQueries({ queryKey: ["chatbot-sessions"] });
       onSessionDeleted?.(sessionId);
-    } catch {
-      // Silently restore — user can retry
+    } catch (err) {
+      const detail =
+        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      const msg = detail ?? "Failed to delete conversation. Please try again.";
+      setDeleteError(msg);
+      setTimeout(() => setDeleteError(null), 4000);
     } finally {
       setDeletingIds((prev) => {
         const next = new Set(prev);
@@ -123,6 +129,15 @@ export default function ChatHistoryList({
 
   return (
     <div className="flex flex-col gap-1">
+      {/* Delete error banner — auto-dismisses after 4 s */}
+      {deleteError && (
+        <div className="mb-2 px-3 py-2 rounded-lg bg-destructive/10 border border-destructive/20
+                        text-xs text-destructive flex items-center gap-2">
+          <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+          {deleteError}
+        </div>
+      )}
+
       {data.sessions.map((session: ChatSessionSummary) => {
         const isConfirming = confirmingId === session.id;
         const isDeleting = deletingIds.has(session.id);

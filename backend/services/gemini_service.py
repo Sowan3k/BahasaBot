@@ -32,34 +32,51 @@ FALLBACK_MESSAGE = (
     "I'm having a little trouble connecting right now. Please try again in a moment."
 )
 
+# ── Module-level singletons ────────────────────────────────────────────────────
+# Reusing a single instance across requests avoids repeated HTTP client init
+# and keeps the underlying connection pool warm between calls.
+
+_CHAT_LLM_INSTANCE: ChatGoogleGenerativeAI | None = None
+_CHATBOT_LLM_INSTANCE: ChatGoogleGenerativeAI | None = None
+_EMBEDDINGS_MODEL_INSTANCE: GoogleGenerativeAIEmbeddings | None = None
+
 
 # ── Internal helpers ───────────────────────────────────────────────────────────
 
 
 def _chat_llm() -> ChatGoogleGenerativeAI:
-    """Return a ChatGoogleGenerativeAI instance for text generation (courses, quizzes)."""
-    return ChatGoogleGenerativeAI(
-        model=GEMINI_MODEL,
-        google_api_key=GOOGLE_API_KEY,
-        temperature=0.7,
-    )
+    """Return the shared ChatGoogleGenerativeAI instance for text generation (courses, quizzes)."""
+    global _CHAT_LLM_INSTANCE
+    if _CHAT_LLM_INSTANCE is None:
+        _CHAT_LLM_INSTANCE = ChatGoogleGenerativeAI(
+            model=GEMINI_MODEL,
+            google_api_key=GOOGLE_API_KEY,
+            temperature=0.7,
+        )
+    return _CHAT_LLM_INSTANCE
 
 
 def _chatbot_llm() -> ChatGoogleGenerativeAI:
-    """Return a ChatGoogleGenerativeAI instance for the chatbot (streaming)."""
-    return ChatGoogleGenerativeAI(
-        model=CHATBOT_MODEL,
-        google_api_key=GOOGLE_API_KEY,
-        temperature=0.7,
-    )
+    """Return the shared ChatGoogleGenerativeAI instance for the chatbot (streaming)."""
+    global _CHATBOT_LLM_INSTANCE
+    if _CHATBOT_LLM_INSTANCE is None:
+        _CHATBOT_LLM_INSTANCE = ChatGoogleGenerativeAI(
+            model=CHATBOT_MODEL,
+            google_api_key=GOOGLE_API_KEY,
+            temperature=0.7,
+        )
+    return _CHATBOT_LLM_INSTANCE
 
 
 def _embeddings_model() -> GoogleGenerativeAIEmbeddings:
-    """Return a configured GoogleGenerativeAIEmbeddings instance."""
-    return GoogleGenerativeAIEmbeddings(
-        model=EMBEDDING_MODEL,
-        google_api_key=GOOGLE_API_KEY,
-    )
+    """Return the shared GoogleGenerativeAIEmbeddings instance (connection pool kept warm)."""
+    global _EMBEDDINGS_MODEL_INSTANCE
+    if _EMBEDDINGS_MODEL_INSTANCE is None:
+        _EMBEDDINGS_MODEL_INSTANCE = GoogleGenerativeAIEmbeddings(
+            model=EMBEDDING_MODEL,
+            google_api_key=GOOGLE_API_KEY,
+        )
+    return _EMBEDDINGS_MODEL_INSTANCE
 
 
 def _build_messages(
@@ -245,11 +262,7 @@ async def stream_text(
     Handles both plain-string and list-of-blocks content formats from newer Gemini models.
     Falls back to yielding FALLBACK_MESSAGE as a single chunk on error.
     """
-    llm = ChatGoogleGenerativeAI(
-        model=CHATBOT_MODEL,
-        google_api_key=GOOGLE_API_KEY,
-        temperature=0.7,
-    )
+    llm = _chatbot_llm()
     messages = (
         [SystemMessage(content=system_prompt), HumanMessage(content=prompt)]
         if system_prompt

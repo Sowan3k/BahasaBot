@@ -177,11 +177,22 @@ export default function ChatMessage({
         ) : (
           /* Assistant messages: full markdown + vocab pills */
           <div className="text-base leading-relaxed">
-            <ReactMarkdown components={mdComponents}>
-              {processedContent}
-            </ReactMarkdown>
-            {isStreaming && (
-              <span className="inline-block w-1.5 h-4 bg-primary ml-0.5 animate-pulse rounded-sm" />
+            {content === "" && isStreaming ? (
+              /* Typing dots — shown while waiting for the first token */
+              <span className="flex gap-1 items-center py-0.5">
+                <span className="w-2 h-2 bg-primary/50 rounded-full animate-bounce [animation-delay:0ms]" />
+                <span className="w-2 h-2 bg-primary/50 rounded-full animate-bounce [animation-delay:150ms]" />
+                <span className="w-2 h-2 bg-primary/50 rounded-full animate-bounce [animation-delay:300ms]" />
+              </span>
+            ) : (
+              <>
+                <ReactMarkdown components={mdComponents}>
+                  {processedContent}
+                </ReactMarkdown>
+                {isStreaming && (
+                  <span className="inline-block w-1.5 h-4 bg-primary ml-0.5 animate-pulse rounded-sm" />
+                )}
+              </>
             )}
           </div>
         )}

@@ -157,11 +157,14 @@ export default function ChatbotPage() {
 
           try {
             const event = JSON.parse(raw) as {
-              type: "token" | "done" | "error";
+              type: "token" | "done" | "error" | "ping";
               content?: string;
               session_id?: string;
               message?: string;
             };
+
+            // ping = server acknowledged the request; typing dots already shown
+            if (event.type === "ping") continue;
 
             if (event.type === "token" && event.content) {
               setMessages((prev) =>

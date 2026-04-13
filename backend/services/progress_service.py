@@ -229,67 +229,58 @@ async def get_dashboard_summary(user_id: UUID, db: AsyncSession) -> dict:
         logger.info("Dashboard summary served from cache", user_id=str(user_id))
         return cached
 
-    # ── User proficiency level ────────────────────────────────────────────────
-    user_result = await db.execute(select(User).where(User.id == user_id))
-    user = user_result.scalar_one_or_none()
-    proficiency_level: str = user.proficiency_level if user else "BPS-1"
-    streak_count: int = user.streak_count if user else 0
-    xp_total: int = user.xp_total if user else 0
+    # ── Round trip 1: user profile columns only (avoid loading full ORM object) ─
+    user_result = await db.execute(
+        select(User.proficiency_level, User.streak_count, User.xp_total)
+        .where(User.id == user_id)
+    )
+    user_row = user_result.one_or_none()
+    proficiency_level: str = user_row.proficiency_level if user_row else "BPS-1"
+    streak_count: int = user_row.streak_count if user_row else 0
+    xp_total: int = user_row.xp_total if user_row else 0
 
-    # ── Aggregate counts ──────────────────────────────────────────────────────
-    courses_created: int = (
-        await db.execute(select(func.count(Course.id)).where(Course.user_id == user_id))
-    ).scalar() or 0
-
-    modules_completed: int = (
-        await db.execute(
-            select(func.count(UserProgress.id)).where(
-                UserProgress.user_id == user_id,
-                UserProgress.class_id.is_(None),
-            )
+    # ── Round trip 2: all 7 aggregate counts in a single query ────────────────
+    # PostgreSQL evaluates each scalar subquery in parallel under the hood,
+    # and we avoid 7 separate network round-trips to the DB.
+    counts_result = await db.execute(
+        select(
+            select(func.count(Course.id))
+            .where(Course.user_id == user_id)
+            .scalar_subquery()
+            .label("courses_created"),
+            select(func.count(UserProgress.id))
+            .where(UserProgress.user_id == user_id, UserProgress.class_id.is_(None))
+            .scalar_subquery()
+            .label("modules_completed"),
+            select(func.count(UserProgress.id))
+            .where(UserProgress.user_id == user_id, UserProgress.class_id.isnot(None))
+            .scalar_subquery()
+            .label("classes_completed"),
+            select(func.count(ModuleQuizAttempt.id))
+            .where(ModuleQuizAttempt.user_id == user_id)
+            .scalar_subquery()
+            .label("mq_count"),
+            select(func.count(StandaloneQuizAttempt.id))
+            .where(StandaloneQuizAttempt.user_id == user_id)
+            .scalar_subquery()
+            .label("sq_count"),
+            select(func.count(VocabularyLearned.id))
+            .where(VocabularyLearned.user_id == user_id)
+            .scalar_subquery()
+            .label("vocab_count"),
+            select(func.count(GrammarLearned.id))
+            .where(GrammarLearned.user_id == user_id)
+            .scalar_subquery()
+            .label("grammar_count"),
         )
-    ).scalar() or 0
-
-    classes_completed: int = (
-        await db.execute(
-            select(func.count(UserProgress.id)).where(
-                UserProgress.user_id == user_id,
-                UserProgress.class_id.isnot(None),
-            )
-        )
-    ).scalar() or 0
-
-    mq_count: int = (
-        await db.execute(
-            select(func.count(ModuleQuizAttempt.id)).where(
-                ModuleQuizAttempt.user_id == user_id
-            )
-        )
-    ).scalar() or 0
-    sq_count: int = (
-        await db.execute(
-            select(func.count(StandaloneQuizAttempt.id)).where(
-                StandaloneQuizAttempt.user_id == user_id
-            )
-        )
-    ).scalar() or 0
-    quizzes_taken = mq_count + sq_count
-
-    vocabulary_count: int = (
-        await db.execute(
-            select(func.count(VocabularyLearned.id)).where(
-                VocabularyLearned.user_id == user_id
-            )
-        )
-    ).scalar() or 0
-
-    grammar_count: int = (
-        await db.execute(
-            select(func.count(GrammarLearned.id)).where(
-                GrammarLearned.user_id == user_id
-            )
-        )
-    ).scalar() or 0
+    )
+    c = counts_result.one()
+    courses_created: int = c.courses_created or 0
+    modules_completed: int = c.modules_completed or 0
+    classes_completed: int = c.classes_completed or 0
+    quizzes_taken: int = (c.mq_count or 0) + (c.sq_count or 0)
+    vocabulary_count: int = c.vocab_count or 0
+    grammar_count: int = c.grammar_count or 0
 
     stats = {
         "courses_created": courses_created,

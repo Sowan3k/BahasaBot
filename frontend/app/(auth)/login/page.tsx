@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 
 import { AuthCard } from "@/components/ui/auth-card";
+import { useTheme } from "@/lib/use-theme";
 import type { TokenResponse } from "@/lib/types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -54,6 +55,7 @@ async function storeSession(data: TokenResponse): Promise<boolean> {
 
 export default function LoginPage() {
   const router = useRouter();
+  const { setTheme } = useTheme();
   const [authError, setAuthError] = useState<string | null>(null);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
@@ -77,6 +79,8 @@ export default function LoginPage() {
       );
       const ok = await storeSession(tokenData);
       if (!ok) { setAuthError("Sign in failed. Please try again."); return; }
+      // Force light mode on every sign-in — updates React context + localStorage + DOM in one call
+      setTheme("light");
       setRedirecting(true);
       router.push("/dashboard");
     } catch (err: unknown) {
@@ -111,6 +115,8 @@ export default function LoginPage() {
       );
       const ok = await storeSession(data);
       if (!ok) { setAuthError("Google sign-in failed. Please try again."); return; }
+      // Force light mode on every sign-in — updates React context + localStorage + DOM in one call
+      setTheme("light");
       setRedirecting(true);
       router.push("/dashboard");
     } catch {

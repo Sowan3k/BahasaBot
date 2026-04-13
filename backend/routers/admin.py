@@ -24,6 +24,7 @@ from backend.db.database import get_db
 from backend.middleware.auth_middleware import get_current_user
 from backend.models.user import User
 from backend.services import admin_service
+from backend.utils.cache import cache_delete, cache_get, cache_set
 from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -68,9 +69,18 @@ async def get_admin_stats(
     _admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    """Aggregate system metrics for the admin overview dashboard."""
+    """Aggregate system metrics for the admin overview dashboard.
+
+    Cached in Redis for 2 minutes (key: admin:stats) to avoid 8 sequential
+    DB queries on every page load. Cache is invalidated automatically on TTL.
+    """
+    cached = await cache_get("admin:stats")
+    if cached:
+        return cached
     try:
-        return await admin_service.get_stats(db)
+        result = await admin_service.get_stats(db)
+        await cache_set("admin:stats", result, ttl=120)
+        return result
     except Exception as exc:
         logger.error("Failed to fetch admin stats", error=str(exc))
         raise HTTPException(status_code=500, detail="Failed to fetch stats")

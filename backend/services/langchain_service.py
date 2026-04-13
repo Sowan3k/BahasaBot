@@ -14,6 +14,7 @@ Builds the chatbot response pipeline using LangChain + Google Gemini.
 """
 
 import asyncio
+import hashlib
 import uuid
 from typing import AsyncIterator
 
@@ -89,10 +90,20 @@ Return ONLY a valid JSON object with this exact structure (empty arrays if nothi
 """
 
 # History kept in memory per session (last N turns)
-HISTORY_WINDOW = 10
+# Reduced from 10 → 6 to keep the prompt smaller and reduce Gemini TTFT
+HISTORY_WINDOW = 6
 
 # Redis TTL for conversation history (30 minutes)
 HISTORY_CACHE_TTL = 1800
+
+# RAG context cache — avoids re-embedding + re-searching on repeated/similar queries
+_RAG_CACHE_TTL = 300  # 5 minutes
+
+
+def _rag_cache_key(message: str) -> str:
+    """Redis key for cached RAG context — hashed on first 150 chars (case-insensitive)."""
+    digest = hashlib.sha256(message[:150].strip().lower().encode()).hexdigest()[:16]
+    return f"rag:ctx:{digest}"
 
 
 # ── History helpers ────────────────────────────────────────────────────────────
@@ -193,13 +204,20 @@ async def stream_chat_response(
     db.add(user_msg)
     await db.commit()
 
-    # 2. RAG retrieval — get relevant Malay knowledge chunks
-    rag_docs = await rag_service.similarity_search(user_message, k=5, db=db)
-    context_text = (
-        "\n\n".join(doc.content for doc in rag_docs)
-        if rag_docs
-        else "No specific reference material found — use your general Malay knowledge."
-    )
+    # 2. RAG retrieval — get relevant Malay knowledge chunks (Redis-cached 5 min)
+    rag_cache_key = _rag_cache_key(user_message)
+    context_text: str | None = await cache_get(rag_cache_key)
+    if context_text is None:
+        rag_docs = await rag_service.similarity_search(user_message, k=5, db=db)
+        context_text = (
+            "\n\n".join(doc.content for doc in rag_docs)
+            if rag_docs
+            else "No specific reference material found — use your general Malay knowledge."
+        )
+        await cache_set(rag_cache_key, context_text, ttl=_RAG_CACHE_TTL)
+        logger.info("RAG cache miss — search completed", query_preview=user_message[:40])
+    else:
+        logger.info("RAG cache hit", query_preview=user_message[:40])
 
     # 3. Fetch user profile for personalised tutor context
     profile_result = await db.execute(

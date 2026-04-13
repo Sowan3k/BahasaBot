@@ -17,6 +17,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import {
   AlertCircle,
   Calendar,
@@ -30,7 +31,7 @@ import {
   Map,
   PartyPopper,
   RefreshCw,
-  Settings,
+  Trash2,
   Sparkles,
   Trophy,
   X,
@@ -742,8 +743,22 @@ export default function JourneyPage() {
   // ── Obstacle click handler ──────────────────────────────────────────────
 
   function handleObstacleClick(elem: RoadmapElement) {
-    const topic = encodeURIComponent(elem.topic);
-    router.push(`/courses?generate=${topic}`);
+    // CASE 1: already completed — view the completed course
+    if (elem.completed && elem.course_id) {
+      router.push(`/courses/${elem.course_id}`);
+      return;
+    }
+
+    // CASE 2: course exists but not yet completed — continue it
+    if (elem.exists && elem.course_id && !elem.completed) {
+      router.push(`/courses/${elem.course_id}`);
+      return;
+    }
+
+    // CASE 3 (locked) is already blocked by ObstacleNode before reaching here.
+
+    // CASE 4: no existing course — trigger generation for this topic
+    router.push(`/courses?generate=${encodeURIComponent(elem.topic)}`);
   }
 
   // ── Loading ─────────────────────────────────────────────────────────────
@@ -835,7 +850,7 @@ export default function JourneyPage() {
           className="shrink-0 rounded-lg border border-border p-2 text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors"
           title="Delete roadmap"
         >
-          <Settings className="h-4 w-4" />
+          <Trash2 className="h-4 w-4" />
         </button>
       </div>
 
@@ -944,12 +959,24 @@ export default function JourneyPage() {
       )}
 
       {/* ── Road: vertical winding path with obstacle nodes ── */}
-      <div className="space-y-0 relative">
+      <motion.div
+        className="space-y-0 relative"
+        initial="hidden"
+        animate="show"
+        variants={{ hidden: {}, show: { transition: { staggerChildren: 0.08 } } }}
+      >
         {/* Vertical connector line */}
         <div className="absolute left-6 top-6 bottom-6 w-0.5 bg-gradient-to-b from-primary/40 via-border to-border/20 rounded-full" />
 
         {elements.map((elem, i) => (
-          <div key={`${elem.order}-${elem.topic}`} className="relative pl-16">
+          <motion.div
+            key={`${elem.order}-${elem.topic}`}
+            className="relative pl-16"
+            variants={{
+              hidden: { opacity: 0, y: 20 },
+              show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" } },
+            }}
+          >
             {/* Road segment dot */}
             <div
               className={`absolute left-4 top-6 h-4 w-4 rounded-full border-2 z-10 transition-all ${
@@ -966,7 +993,7 @@ export default function JourneyPage() {
               elements={elements}
               onClickUnlocked={handleObstacleClick}
             />
-          </div>
+          </motion.div>
         ))}
 
         {/* End flag */}
@@ -980,7 +1007,7 @@ export default function JourneyPage() {
               : `${totalCount - completedCount} obstacle${totalCount - completedCount !== 1 ? "s" : ""} remaining`}
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* ── Past Journeys ── */}
       {history.length > 0 && (

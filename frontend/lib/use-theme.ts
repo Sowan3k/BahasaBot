@@ -7,11 +7,14 @@ type Theme = "light" | "dark";
 interface ThemeContextValue {
   theme: Theme;
   toggle: () => void;
+  /** Directly set a specific theme — use this instead of raw localStorage/DOM manipulation */
+  setTheme: (t: Theme) => void;
 }
 
 export const ThemeContext = createContext<ThemeContextValue>({
   theme: "light",
   toggle: () => {},
+  setTheme: () => {},
 });
 
 /** Consumer hook — use anywhere inside the app to read theme and call toggle. */
@@ -21,9 +24,9 @@ export function useTheme() {
 
 /** Internal hook — used only by ThemeProvider in providers.tsx.
  *  Reads localStorage / system preference on mount, applies the class,
- *  and returns reactive state + toggle for the context value. */
+ *  and returns reactive state + toggle + setTheme for the context value. */
 export function useThemeState(): ThemeContextValue {
-  const [theme, setTheme] = useState<Theme>("light");
+  const [theme, setThemeState] = useState<Theme>("light");
 
   useEffect(() => {
     const saved = localStorage.getItem("theme") as Theme | null;
@@ -31,12 +34,18 @@ export function useThemeState(): ThemeContextValue {
       ? "dark"
       : "light";
     const initial = saved ?? system;
-    setTheme(initial);
+    setThemeState(initial);
     document.documentElement.classList.toggle("dark", initial === "dark");
   }, []);
 
+  function setTheme(next: Theme) {
+    setThemeState(next);
+    localStorage.setItem("theme", next);
+    document.documentElement.classList.toggle("dark", next === "dark");
+  }
+
   function toggle() {
-    setTheme((prev) => {
+    setThemeState((prev) => {
       const next: Theme = prev === "dark" ? "light" : "dark";
       localStorage.setItem("theme", next);
       document.documentElement.classList.toggle("dark", next === "dark");
@@ -44,5 +53,5 @@ export function useThemeState(): ThemeContextValue {
     });
   }
 
-  return { theme, toggle };
+  return { theme, toggle, setTheme };
 }
