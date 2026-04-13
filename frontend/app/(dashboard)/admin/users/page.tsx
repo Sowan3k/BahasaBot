@@ -131,7 +131,8 @@ export default function AdminUsersPage() {
           ))}
         </GlowCard>
       ) : data && data.items.length > 0 ? (
-        <GlowCard className="bg-card overflow-hidden !rounded-xl">
+        <GlowCard className="bg-card overflow-x-auto !rounded-xl">
+          <div className="min-w-[700px]">
           {/* Table header */}
           <div className="grid grid-cols-[2fr_2fr_1fr_1fr_1fr_auto] gap-4 px-5 py-3 bg-muted/50 border-b border-border text-xs font-semibold text-muted-foreground uppercase tracking-wide">
             <span>User</span>
@@ -203,6 +204,7 @@ export default function AdminUsersPage() {
               </div>
             </div>
           ))}
+          </div>
         </GlowCard>
       ) : (
         !loading && (

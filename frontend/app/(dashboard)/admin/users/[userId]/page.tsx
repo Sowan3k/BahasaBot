@@ -265,7 +265,7 @@ export default function AdminUserDetailPage() {
       <div className="max-w-4xl mx-auto py-8 px-4 space-y-6">
         <div className="h-8 w-48 rounded-lg bg-muted animate-pulse" />
         <div className="h-40 rounded-2xl bg-muted animate-pulse" />
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[...Array(8)].map((_, i) => <div key={i} className="h-24 rounded-xl bg-muted animate-pulse" />)}
         </div>
       </div>
@@ -310,7 +310,7 @@ export default function AdminUserDetailPage() {
       <div className="max-w-4xl mx-auto py-8 px-4 space-y-8">
 
         {/* ── Header ── */}
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Link href="/admin/users" className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
               <ArrowLeft size={18} />
@@ -381,7 +381,7 @@ export default function AdminUserDetailPage() {
         {/* ── Activity stats ── */}
         <div>
           <h2 className="font-heading text-base font-semibold text-foreground mb-3">Learning Activity</h2>
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <StatPill icon={BookOpen} label="Courses" value={user.stats.courses_count} color="text-green-500" />
             <StatPill icon={BookOpen} label="Classes Done" value={user.stats.classes_completed} color="text-primary" />
             <StatPill icon={Brain} label="Words Learned" value={user.stats.vocab_count} color="text-purple-500" />

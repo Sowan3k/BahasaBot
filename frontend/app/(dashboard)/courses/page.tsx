@@ -10,6 +10,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { coursesApi } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import dynamic from "next/dynamic";
 import { useCourseGeneration } from "@/lib/course-generation-context";
 import { useTheme } from "@/lib/use-theme";
@@ -260,7 +261,15 @@ export default function CoursesPage() {
         {isLoading && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-44 rounded-lg border bg-card/80 animate-pulse" />
+              <div key={i} className="rounded-lg border bg-card/80 overflow-hidden">
+                <Skeleton className="h-32 w-full rounded-none" />
+                <div className="p-5 space-y-3">
+                  <Skeleton className="h-3 w-24 rounded" />
+                  <Skeleton className="h-5 w-full rounded" />
+                  <Skeleton className="h-4 w-3/4 rounded" />
+                  <Skeleton className="h-3 w-1/2 rounded" />
+                </div>
+              </div>
             ))}
           </div>
         )}

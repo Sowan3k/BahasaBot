@@ -865,12 +865,13 @@ _Status: ✅ Complete_
 ---
 
 ## Phase 22 — Image Generation (Nano Banana 2)
-_Status: ✅ Complete_
+_Status: ✅ Complete + Bug fixed (2026-04-13)_
 
 **Goal:** Generate personalized visual assets for Journey banners, BPS milestone cards, and course covers.
 
 - [x] backend/services/image_service.py — generate_image() core + generate_journey_banner(), generate_course_cover(), generate_milestone_card()
-- [x] Model: gemini-3.1-flash-image-preview via google.generativeai SDK; response_modalities=["IMAGE","TEXT"]
+- [x] Model: gemini-3.1-flash-image-preview — called via Gemini REST API (httpx), NOT via google-generativeai SDK
+  - **Bug fixed 2026-04-13:** SDK v0.7.2 raised `TypeError` on `response_modalities` → silently returned None → zero API calls made. Rewrote generate_image() to call `v1beta/models/{model}:generateContent` directly via httpx. Verified: HTTP 200, ~800 KB JPEG returned.
 - [x] Images stored as base64 data URLs in TEXT columns (VARCHAR(1000) → TEXT migration applied)
 - [x] generate_journey_banner() — asyncio.create_task() after roadmap save in journey_service.py
 - [x] generate_course_cover() — asyncio.create_task() after course save in course_service.py
@@ -879,16 +880,22 @@ _Status: ✅ Complete_
 - [x] GEMINI_IMAGE_MODEL=gemini-3.1-flash-image-preview already in .env.example
 - [x] Alembic migration: 20260408_1200_phase22_image_columns.py
 - [x] ORM models updated: Course.cover_image_url TEXT, LearningRoadmap.banner_image_url TEXT, Notification.image_url TEXT
-- [x] get_courses_list() includes cover_image_url; NotificationResponse includes image_url
-- [x] Frontend: CourseSummary + AppNotification types updated
-- [x] CourseCard: h-32 cover image or gradient placeholder
+- [x] get_courses_list() includes cover_image_url; also retroactively triggers _generate_and_save_cover() for courses with cover_image_url = NULL
+- [x] get_course_with_progress() now includes cover_image_url (added 2026-04-13 Session 13)
+- [x] NotificationResponse includes image_url
+- [x] Frontend: CourseSummary + AppNotification + Course types updated (cover_image_url on Course interface added 2026-04-13)
+- [x] CourseCard: h-32 cover image or gradient placeholder; 12s re-fetch already in place
+- [x] Course detail page hero banner: full-width 56–64px banner with cover_image_url as object-cover bg, dark gradient overlay (from-black/70 to transparent), white title + topic text bottom-left, frosted glass Back pill top-left, gradient fallback when no cover (added 2026-04-13 Session 13)
 - [x] RoadmapView: banner already handled (opacity-20 overlay) — no changes needed
 - [x] NotificationPanel: bps_milestone amber trophy icon + inline milestone card image
+
+#### Known issue (fixed 2026-04-13 Session 13)
+Backend must be **manually restarted** after any code change — uvicorn runs without `--reload` in prod mode. Session 12 fixes were not live until the process was killed and restarted in Session 13.
 
 ---
 
 ## Phase 23 — Loading Skeletons + Demo Seed Data + Final Polish
-_Status: 🔲 Not started_
+_Status: 🔄 In progress_
 
 **Goal:** Make the app feel polished and demo-ready.
 
@@ -898,9 +905,9 @@ _Status: 🔲 Not started_
 ### Loading Skeletons
 - [ ] frontend/components/dashboard/ — add skeleton states to all dashboard components (StatsCards, VocabularyTable, WeakPointsChart)
 - [ ] frontend/app/(dashboard)/journey/page.tsx — skeleton while roadmap loads
-- [ ] frontend/app/(dashboard)/courses/page.tsx — skeleton for course library grid
+- [x] frontend/app/(dashboard)/courses/page.tsx — skeleton for course library grid (shadcn Skeleton used)
 - [ ] frontend/app/(dashboard)/admin/ — skeleton for stats and tables
-- [ ] Use shadcn/ui Skeleton component throughout
+- [x] frontend/components/ui/skeleton.tsx — shadcn/ui Skeleton component added
 
 ### Demo Seed Script
 - [ ] backend/data/seed_demo.py — script to insert demo data: 3 pre-created user accounts, 2 completed courses per user, quiz attempts with scores, vocab learned, weak points populated, streak and XP values set
@@ -908,8 +915,11 @@ _Status: 🔲 Not started_
 - [ ] Document how to run: python backend/data/seed_demo.py
 
 ### Mobile Responsiveness Check
-- [ ] Test all new pages on mobile viewport: /journey, /admin, /games/spelling, /settings/*, /chatbot/history
-- [ ] Fix any layout breaks on screens < 768px
+- [x] Audited all 13 target pages for mobile viewport (<768px) issues
+- [x] admin/users/page.tsx — table grid wrapped in overflow-x-auto + min-w-[700px] inner wrapper; GlowCard changed from overflow-hidden to overflow-x-auto
+- [x] admin/users/[userId]/page.tsx — loading skeleton + stats grid changed from grid-cols-4 to grid-cols-2 md:grid-cols-4; header flex-wrap added for Reset/Delete buttons
+- [x] All other pages clean — journey, admin/index, admin/feedback, admin/journeys, spelling game, settings/*, chatbot/history all use responsive patterns already
+- [x] tsc --noEmit: zero TypeScript errors after changes
 
 ### Final Polish
 - [ ] Verify all sidebar links are present and correct

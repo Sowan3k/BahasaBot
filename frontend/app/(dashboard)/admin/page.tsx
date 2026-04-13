@@ -18,6 +18,7 @@ import {
 import { adminApi, profileApi } from "@/lib/api";
 import type { AdminStats } from "@/lib/types";
 import { GlowCard } from "@/components/ui/glow-card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // ── Admin sub-sections ────────────────────────────────────────────────────────
 
@@ -104,10 +105,16 @@ export default function AdminPage() {
   if (loading) {
     return (
       <div className="max-w-4xl mx-auto py-8 px-4 space-y-6">
-        <div className="h-8 w-48 rounded-lg bg-muted animate-pulse" />
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-10 w-10 rounded-xl" />
+          <div className="space-y-2">
+            <Skeleton className="h-6 w-36 rounded" />
+            <Skeleton className="h-4 w-52 rounded" />
+          </div>
+        </div>
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="h-28 rounded-xl bg-muted animate-pulse" />
+            <Skeleton key={i} className="h-28 rounded-xl" />
           ))}
         </div>
       </div>

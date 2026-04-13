@@ -148,67 +148,97 @@ export default function CourseDetailPage({
       : 0;
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
-      {/* Back button */}
-      <Link href="/courses" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
-        <ArrowLeft size={16} />
-        Back to Courses
-      </Link>
+    <div className="space-y-0">
+      {/* ── Hero banner — course cover as full-width background ── */}
+      <div className="relative w-full h-56 sm:h-64 overflow-hidden">
+        {course.cover_image_url ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            src={course.cover_image_url}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-primary/15 to-transparent" />
+        )}
+        {/* Dark gradient overlay so text is readable over any image */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
 
-      {/* Breadcrumb */}
-      <nav className="text-sm text-muted-foreground">
-        <Link href="/courses" className="hover:text-foreground">Courses</Link>
-        <span className="mx-2">/</span>
-        <span className="text-foreground">{course.title}</span>
-      </nav>
+        {/* Back button — top-left, over the image */}
+        <Link
+          href="/courses"
+          className="absolute top-4 left-4 inline-flex items-center gap-1.5 text-sm text-white/90 hover:text-white transition-colors bg-black/30 hover:bg-black/50 rounded-full px-3 py-1.5 backdrop-blur-sm"
+        >
+          <ArrowLeft size={15} />
+          Back
+        </Link>
 
-      {/* Course header */}
-      <div className="space-y-3">
-        <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-          {course.topic}
-        </p>
-        <h1 className="text-3xl font-bold tracking-tight leading-tight">{course.title}</h1>
-        <p className="text-muted-foreground leading-relaxed">{course.description}</p>
-
-        {/* Overall progress */}
-        <div className="space-y-1 pt-1">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">
-              {course.completed_classes} / {course.total_classes} classes completed
-            </span>
-            <span className="font-medium">{overallPct}%</span>
-          </div>
-          <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
-            <div
-              className="h-full rounded-full bg-primary transition-all"
-              style={{ width: `${overallPct}%` }}
-            />
-          </div>
+        {/* Title + topic — bottom-left, over the image */}
+        <div className="absolute bottom-0 left-0 right-0 px-4 sm:px-6 pb-5 pt-8">
+          <p className="text-xs font-medium uppercase tracking-widest text-white/70 mb-1">
+            {course.topic}
+          </p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight leading-tight text-white drop-shadow">
+            {course.title}
+          </h1>
         </div>
       </div>
 
-      {/* Learning objectives */}
-      {course.objectives.length > 0 && (
-        <div className="rounded-lg border bg-card p-5 space-y-2">
-          <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Learning Objectives</h2>
-          <ul className="space-y-1">
-            {course.objectives.map((obj, i) => (
-              <li key={i} className="flex gap-2 text-sm text-muted-foreground">
-                <span className="text-primary mt-0.5">✓</span>
-                <span>{obj}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      {/* ── Page body ── */}
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 space-y-6">
 
-      {/* Modules */}
-      <div className="space-y-4">
-        <h2 className="text-lg font-semibold tracking-tight">Modules</h2>
-        {course.modules.map((module) => (
-          <ModuleCard key={module.id} module={module} courseId={courseId} />
-        ))}
-      </div>
+        {/* Breadcrumb */}
+        <nav className="text-sm text-muted-foreground">
+          <Link href="/courses" className="hover:text-foreground">Courses</Link>
+          <span className="mx-2">/</span>
+          <span className="text-foreground">{course.title}</span>
+        </nav>
+
+        {/* Course description + overall progress */}
+        <div className="space-y-3">
+          <p className="text-muted-foreground leading-relaxed">{course.description}</p>
+
+          {/* Overall progress */}
+          <div className="space-y-1 pt-1">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">
+                {course.completed_classes} / {course.total_classes} classes completed
+              </span>
+              <span className="font-medium">{overallPct}%</span>
+            </div>
+            <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full rounded-full bg-primary transition-all"
+                style={{ width: `${overallPct}%` }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Learning objectives */}
+        {course.objectives.length > 0 && (
+          <div className="rounded-lg border bg-card p-5 space-y-2">
+            <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Learning Objectives</h2>
+            <ul className="space-y-1">
+              {course.objectives.map((obj, i) => (
+                <li key={i} className="flex gap-2 text-sm text-muted-foreground">
+                  <span className="text-primary mt-0.5">✓</span>
+                  <span>{obj}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Modules */}
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold tracking-tight">Modules</h2>
+          {course.modules.map((module) => (
+            <ModuleCard key={module.id} module={module} courseId={courseId} />
+          ))}
+        </div>
+
+      </div>{/* end page body */}
     </div>
   );
 }

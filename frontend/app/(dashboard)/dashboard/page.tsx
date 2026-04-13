@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 
 import { dashboardApi } from "@/lib/api";
+import { Skeleton } from "@/components/ui/skeleton";
 import type {
   DashboardSummary,
   GrammarEntry,
@@ -263,13 +264,17 @@ export default function DashboardPage() {
       {activeTab === "overview" && (
         <div className="space-y-6">
           {summaryLoading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="rounded-lg border bg-muted/40 p-5 h-24 animate-pulse"
-                />
-              ))}
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <Skeleton key={i} className="h-24 rounded-lg" />
+                ))}
+              </div>
+              <Skeleton className="h-24 w-full rounded-xl" />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Skeleton className="h-64 rounded-xl" />
+                <Skeleton className="h-64 rounded-xl" />
+              </div>
             </div>
           ) : summary ? (
             <>

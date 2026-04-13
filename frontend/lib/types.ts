@@ -126,6 +126,7 @@ export interface Course {
   modules: Module[];
   total_classes: number;
   completed_classes: number;
+  cover_image_url: string | null;
 }
 
 export interface CourseSummary {

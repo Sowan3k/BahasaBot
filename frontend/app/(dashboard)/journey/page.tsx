@@ -39,6 +39,7 @@ import {
 
 import type { JourneyIntent, PastJourneyItem, RoadmapElement, UserRoadmap } from "@/lib/types";
 import { journeyApi, profileApi } from "@/lib/api";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -749,14 +750,14 @@ export default function JourneyPage() {
 
   if (roadmap === undefined) {
     return (
-      <div className="w-full p-4 sm:p-6 space-y-4 animate-pulse max-w-xl mx-auto">
-        <div className="h-8 w-48 rounded bg-muted" />
-        <div className="h-4 w-72 rounded bg-muted" />
-        <div className="rounded-2xl bg-muted h-36 w-full" />
-        {[1, 2, 3, 4].map((i) => (
+      <div className="w-full p-4 sm:p-6 space-y-4 max-w-xl mx-auto">
+        <Skeleton className="h-8 w-48 rounded" />
+        <Skeleton className="h-4 w-72 rounded" />
+        <Skeleton className="h-32 w-full rounded-2xl" />
+        {[1, 2, 3, 4, 5].map((i) => (
           <div key={i} className="flex items-center gap-4">
-            <div className="h-12 w-12 rounded-full bg-muted shrink-0" />
-            <div className="flex-1 h-16 rounded-xl bg-muted" />
+            <Skeleton className="h-12 w-12 rounded-full shrink-0" />
+            <Skeleton className="flex-1 h-16 rounded-xl" />
           </div>
         ))}
       </div>

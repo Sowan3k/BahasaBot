@@ -558,6 +558,10 @@ async def generate_course(
         pass
 
     # Generate cover image in background — never blocks the response
+    logger.info(
+        f"[IMAGE] Scheduling cover image generation for course_id={course.id}, "
+        f"title={course.title!r}"
+    )
     asyncio.create_task(
         _generate_and_save_cover(
             course_id=str(course.id),
@@ -581,9 +585,14 @@ async def _generate_and_save_cover(
     from backend.db.database import AsyncSessionLocal
     from backend.services.image_service import generate_course_cover
 
+    logger.info(f"[IMAGE] _generate_and_save_cover started for course_id={course_id}")
     try:
         image_url = await generate_course_cover(course_title, topic)
         if not image_url:
+            logger.warning(
+                f"[IMAGE] generate_course_cover returned None — "
+                f"cover image not saved for course_id={course_id}"
+            )
             return
 
         async with AsyncSessionLocal() as db:
@@ -592,9 +601,16 @@ async def _generate_and_save_cover(
             if course and not course.cover_image_url:
                 course.cover_image_url = image_url
                 await db.commit()
-                logger.info("Cover image saved to course", course_id=course_id)
+                logger.info(f"[IMAGE] Cover image URL saved to DB for course_id={course_id}")
+            elif course and course.cover_image_url:
+                logger.info(
+                    f"[IMAGE] Cover image already exists for course_id={course_id} — skipping"
+                )
     except Exception as exc:
-        logger.error("Cover generation background task failed", course_id=course_id, error=str(exc))
+        logger.error(
+            f"[IMAGE] Cover generation background task FAILED for course_id={course_id}: {exc}",
+            exc_info=True,
+        )
 
 
 # ── Course retrieval ───────────────────────────────────────────────────────────
@@ -689,6 +705,7 @@ async def get_course_with_progress(
         "modules": modules_out,
         "total_classes": total_classes,
         "completed_classes": completed_classes,
+        "cover_image_url": course.cover_image_url,
     }
 
 
@@ -730,6 +747,23 @@ async def get_courses_list(
             )
         )
         completed_cls: int = completed_result.scalar() or 0
+
+        # Retroactively generate missing cover images for courses created before
+        # Phase 22 was fixed (image generation was silently failing due to SDK
+        # version mismatch).  Fire-and-forget — _generate_and_save_cover has its
+        # own DB session and already guards against overwriting an existing URL.
+        if not course.cover_image_url:
+            logger.info(
+                f"[IMAGE] Course missing cover, scheduling background generation "
+                f"(course_id={course.id}, title={course.title!r})"
+            )
+            asyncio.create_task(
+                _generate_and_save_cover(
+                    course_id=str(course.id),
+                    course_title=course.title,
+                    topic=course.topic,
+                )
+            )
 
         items.append({
             "id": str(course.id),

@@ -2,8 +2,13 @@
 Image Generation Service — Phase 22 (Nano Banana 2)
 
 Generates personalized visual assets using gemini-3.1-flash-image-preview
-(verified 2026-04-13 against Google AI docs — this is the current image gen model).
-Returns base64 data URLs (data:image/png;base64,...) for storage in TEXT DB columns.
+via the Gemini REST API (v1beta).  Uses httpx for direct async HTTP calls
+instead of the google-generativeai SDK — the SDK (v0.7.x) does NOT support
+response_modalities in GenerationConfig, which caused a silent TypeError
+that meant zero image API calls were ever made.
+
+Returns base64 data URLs (data:image/png;base64,...) for storage in TEXT DB
+columns.
 
 Rule: NEVER regenerate if a URL already exists in the DB.
       Always check the caller before invoking these functions.
@@ -14,12 +19,9 @@ Three entry points:
   generate_milestone_card(bps_level, user_name)       → celebratory BPS level-up card
 """
 
-import asyncio
-import base64
 import os
-from concurrent.futures import ThreadPoolExecutor
 
-import google.generativeai as genai
+import httpx
 
 from backend.utils.logger import get_logger
 
@@ -28,54 +30,70 @@ logger = get_logger(__name__)
 GEMINI_IMAGE_MODEL = os.getenv("GEMINI_IMAGE_MODEL", "gemini-3.1-flash-image-preview")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
 
-# Configure SDK once at module load — avoids repeated configure() calls in the executor
-genai.configure(api_key=GOOGLE_API_KEY)
-
-# Thread pool for blocking Gemini SDK calls — keeps the async event loop free
-_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="image_gen")
+_GEMINI_REST_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 
 
 # ── Core generator ─────────────────────────────────────────────────────────────
 
 
-def _generate_sync(prompt: str) -> str | None:
+async def generate_image(prompt: str) -> str | None:
     """
-    Blocking call to the Gemini image model.
-    Run via executor so it does not block the event loop.
+    Async call to the Gemini image generation REST API.
 
-    Returns a base64 data URL string, or None on failure.
+    Returns a base64 data URL string (data:image/png;base64,...), or None on
+    failure.  Uses httpx directly to avoid google-generativeai SDK v0.7.x which
+    does not support response_modalities in GenerationConfig.
     """
+    if not GOOGLE_API_KEY:
+        logger.error("[IMAGE] GOOGLE_API_KEY is not set — cannot generate images")
+        return None
+
+    url = f"{_GEMINI_REST_BASE}/{GEMINI_IMAGE_MODEL}:generateContent?key={GOOGLE_API_KEY}"
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "responseModalities": ["IMAGE"],
+        },
+    }
+
+    logger.info(f"[IMAGE] Sending request to Gemini REST API (model={GEMINI_IMAGE_MODEL})")
+
     try:
-        model = genai.GenerativeModel(model_name=GEMINI_IMAGE_MODEL)
-        response = model.generate_content(
-            prompt,
-            generation_config=genai.types.GenerationConfig(
-                response_modalities=["IMAGE"],
-            ),
-        )
-        for part in response.candidates[0].content.parts:
-            if hasattr(part, "inline_data") and part.inline_data is not None:
-                mime = part.inline_data.mime_type or "image/png"
-                b64 = base64.b64encode(part.inline_data.data).decode("utf-8")
-                return f"data:{mime};base64,{b64}"
+        async with httpx.AsyncClient(timeout=90.0) as client:
+            response = await client.post(url, json=payload)
+
+        if response.status_code != 200:
+            logger.error(
+                f"[IMAGE] Gemini REST API returned HTTP {response.status_code}: "
+                f"{response.text[:400]}"
+            )
+            return None
+
+        data = response.json()
+
+        for candidate in data.get("candidates", []):
+            for part in candidate.get("content", {}).get("parts", []):
+                if "inlineData" in part:
+                    mime = part["inlineData"].get("mimeType", "image/png")
+                    b64 = part["inlineData"]["data"]
+                    logger.info(
+                        f"[IMAGE] Image received from Gemini "
+                        f"(mime={mime}, b64_len={len(b64)})"
+                    )
+                    return f"data:{mime};base64,{b64}"
+
         logger.warning(
-            "Gemini image response contained no inline_data parts",
-            model=GEMINI_IMAGE_MODEL,
+            "[IMAGE] Gemini response contained no inlineData parts — "
+            f"top-level keys: {list(data.keys())}",
         )
+        return None
+
+    except httpx.TimeoutException:
+        logger.error("[IMAGE] Gemini REST API request timed out after 90 s")
         return None
     except Exception as exc:
-        logger.error(
-            "Gemini image generation failed",
-            model=GEMINI_IMAGE_MODEL,
-            error=str(exc),
-        )
+        logger.error(f"[IMAGE] Image generation FAILED: {exc}", exc_info=True)
         return None
-
-
-async def generate_image(prompt: str) -> str | None:
-    """Async wrapper — runs the blocking Gemini SDK call in a thread pool."""
-    loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(_executor, _generate_sync, prompt)
 
 
 # ── Specialised generators ─────────────────────────────────────────────────────
@@ -101,10 +119,15 @@ async def generate_journey_banner(goal_type: str, deadline_months: int) -> str |
         f"traditional architecture silhouettes), inspirational and energetic atmosphere. "
         f"No text overlay. Wide landscape format (16:9). High-quality digital illustration."
     )
-    logger.info("Generating journey banner", goal_type=goal_type, deadline_months=deadline_months)
+    logger.info(
+        f"[IMAGE] generate_journey_banner called "
+        f"(goal_type={goal_type}, deadline_months={deadline_months})"
+    )
     url = await generate_image(prompt)
     if url:
-        logger.info("Journey banner generated", goal_type=goal_type)
+        logger.info(f"[IMAGE] Journey banner generated successfully (goal_type={goal_type})")
+    else:
+        logger.warning(f"[IMAGE] Journey banner generation returned None (goal_type={goal_type})")
     return url
 
 
@@ -121,10 +144,12 @@ async def generate_course_cover(course_title: str, topic: str) -> str | None:
         f"professional e-learning aesthetic. No text. Square format. "
         f"Suitable as a course card thumbnail."
     )
-    logger.info("Generating course cover", title=course_title, topic=topic)
+    logger.info(f"[IMAGE] generate_course_cover called (title={course_title!r}, topic={topic!r})")
     url = await generate_image(prompt)
     if url:
-        logger.info("Course cover generated", title=course_title)
+        logger.info(f"[IMAGE] Course cover generated successfully (title={course_title!r})")
+    else:
+        logger.warning(f"[IMAGE] Course cover generation returned None (title={course_title!r})")
     return url
 
 
@@ -149,8 +174,10 @@ async def generate_milestone_card(bps_level: str, user_name: str) -> str | None:
         f"Warm tropical colours. No text. Square format. "
         f"High-quality illustration, suitable as a badge or achievement card."
     )
-    logger.info("Generating BPS milestone card", bps_level=bps_level, user=user_name)
+    logger.info(f"[IMAGE] generate_milestone_card called (bps_level={bps_level}, user={user_name})")
     url = await generate_image(prompt)
     if url:
-        logger.info("BPS milestone card generated", bps_level=bps_level)
+        logger.info(f"[IMAGE] Milestone card generated successfully (bps_level={bps_level})")
+    else:
+        logger.warning(f"[IMAGE] Milestone card generation returned None (bps_level={bps_level})")
     return url

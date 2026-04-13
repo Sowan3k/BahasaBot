@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-13 (Session 10 — v1 Journey cleanup + Login fix + Gemini model fix)
+## Last Updated: 2026-04-13 (Session 13 — Course cover hero banner + image generation root cause fix)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -30,7 +30,7 @@ _Update this file at the end of every session_
 | Sidebar Polish | ✅ Complete | Double divider removed (no border-b on logo area); ThemeToggle repositioned to header row; footer items centered except XP bar; collapsed tooltips use theme-aware bg-popover |
 | My Journey — Learning Roadmap (Phase 20) | ✅ Complete (v2 + patches) | New user_roadmaps table; flat course-obstacle model; 3-question modal; road/path UI; overdue+extend; BPS upgrade banner; identity-verified delete; check_roadmap_progress hook; admin journeys page. Phase 20 fully complete including all 7 post-implementation patches: fuzzy match (fuzzywuzzy token_sort_ratio ≥ 70%), sequential completion enforcement, Gemini failure UX with Try Again, estimated_weeks displayed on nodes, streak hook, Other intent free text, past journeys history section. |
 | Chat History Page (Phase 21) | ✅ Complete | /chatbot/history; ChatHistoryList (paginated, title from first user msg, message count); session detail read-only view; History button in chatbot header; backend ChatSessionResponse extended with title + message_count |
-| Image Generation — Nano Banana 2 (Phase 22) | ✅ Complete | image_service.py (generate_image, generate_journey_banner, generate_course_cover, generate_milestone_card); background asyncio tasks; Alembic migration (TEXT columns + notifications.image_url); CourseCard cover image; NotificationPanel BPS milestone card |
+| Image Generation — Nano Banana 2 (Phase 22) | ✅ Complete + Bug fixed + Hero banner | image_service.py uses Gemini REST API via httpx; get_courses_list() retroactive cover healing; cover_image_url now included in get_course_with_progress(); course detail page shows full-width hero banner with cover as background + dark gradient overlay + white title text |
 | Spelling Practice Game (Phase 19) | ✅ Complete + v2 redesign | Leitner-box word selection; Levenshtein fuzzy matching; Start screen → 3-2-1 countdown → 10s per-word timer (green→yellow→red pulse) → Time's Up screen with Next/Start Over; combo multiplier; session summary; keyboard shortcuts (Enter/Space/Escape); personal best; Games link in sidebar |
 | Chatbot vocab pipeline fix | ✅ Fixed | _extract_and_save() now opens its own AsyncSessionLocal session — asyncio.create_task with request-scoped session was silently failing after SSE stream ended; vocab/grammar now reliably saved after every chatbot response |
 | Frontend Performance Optimizations | ✅ Complete | Session cache in api.ts (60s TTL, eliminates /api/auth/session round-trip on every API call); profile fetch deduplication via shared useQuery(['profile']) key in AppSidebar + OnboardingChecker; login router.refresh() race condition removed; redirect loading overlay added |
@@ -47,6 +47,86 @@ _Update this file at the end of every session_
 ## ✅ Fixed Issues (Session 10)
 - **Login broken (2026-04-13):** `fuzzywuzzy` and `python-Levenshtein` were in `requirements.txt` but not installed in the venv. `journey_service.py` imports `fuzzywuzzy`, so backend crashed on startup — port 8000 never opened, all API calls returned "connection refused". Fix: `pip install fuzzywuzzy==0.18.0 python-Levenshtein==0.25.1` (packages confirmed installed via `pip check`).
 - **Gemini image model name (2026-04-13):** `backend/.env` and `image_service.py` fallback had old model `gemini-2.0-flash-preview-image-generation`. That model is **deprecated and shuts down June 1, 2026**. Correct model is `gemini-3.1-flash-image-preview` (released Feb 26, 2026 — matches CLAUDE.md and .env.example). Updated: `backend/.env`, `image_service.py` default + docstring.
+
+## ✅ Fixed Issues (Session 13)
+- **Course covers not appearing (2026-04-13):** Session 12 correctly fixed `image_service.py` (httpx REST API) and `course_service.py` (retroactive healing + `asyncio.create_task`), but the backend was **never restarted** after those changes were made. Uvicorn started at 08:19, files modified at 14:22–14:28 — old broken code was still running. Fix: killed old uvicorn PIDs (18316, 25012), started fresh process on port 8000. Also manually ran `_generate_and_save_cover()` for all 3 existing courses that had `cover_image_url = NULL`. All verified: Gemini REST API returns JPEG (~1.1 MB base64, ~17s), DB save works, `GET /api/courses/` returns cover correctly. **Important**: after any code change to the backend, the uvicorn process MUST be restarted manually (no `--reload` flag in prod mode).
+
+---
+
+## What Was Done This Session (2026-04-13 Session 13 — Course cover hero banner + image fix)
+
+### Root cause of "cover not appearing" confirmed
+- Traced that uvicorn was started at 08:19 AM but Session 12's `image_service.py` and `course_service.py` were written at 14:22–14:28. No `--reload` flag → old broken code was still serving requests.
+- Killed old uvicorn PIDs (18316, 25012), started fresh backend process. Verified health check passes.
+- Manually ran `_generate_and_save_cover()` via Python test script for all 3 courses that had `cover_image_url = NULL` — covers now saved in DB (~1.1 MB base64 JPEG each).
+
+### Course cover used as hero banner on course detail page
+**3 files changed:**
+- `frontend/lib/types.ts` — added `cover_image_url: string | null` to `Course` interface
+- `backend/services/course_service.py` — `get_course_with_progress()` return dict now includes `cover_image_url`
+- `frontend/app/(dashboard)/courses/[courseId]/page.tsx` — replaced flat header with full-width hero:
+  - Cover image fills a 56–64px tall banner as `object-cover`
+  - Dark gradient overlay (`from-black/70` to transparent) keeps text readable
+  - Course topic label + title sit bottom-left in white with `drop-shadow`
+  - "Back" pill floats top-left with `backdrop-blur-sm` frosted glass style
+  - Falls back to primary gradient if `cover_image_url` is null
+  - Page body scoped to `max-w-3xl` below the full-bleed hero
+
+---
+
+## What Was Done This Session (2026-04-13 Session 12 — Image Generation bug fix)
+
+### Root cause
+`image_service.py` used `google-generativeai==0.7.2` which raises:
+```
+TypeError: GenerationConfig.__init__() got an unexpected keyword argument 'response_modalities'
+```
+This was caught by the broad `except Exception` in `_generate_sync()`, silently returning `None` on every call. **Zero Gemini image API calls were ever made** — confirmed via Google AI Studio showing no image generation traffic.
+
+Could not install `google-genai` (new SDK) to fix it — that package requires `google-auth>=2.48.1` but the project pins `==2.29.0` to avoid Google OAuth conflicts (CLAUDE.md Known Issues).
+
+### Fix — `backend/services/image_service.py` (full rewrite)
+- Dropped `google.generativeai` SDK and `ThreadPoolExecutor` entirely
+- Rewrote `generate_image()` as a direct async `httpx` call to the Gemini REST API (`v1beta/models/{model}:generateContent`)
+- REST API accepts `generationConfig.responseModalities: ["IMAGE"]` (camelCase — no SDK version constraint)
+- `httpx==0.27.0` is already a declared dependency — no new packages added
+- Verified: `generate_image()` returns an `image/jpeg` base64 data URL (~800 KB) in ~22 seconds
+- Added `[IMAGE]` diagnostic logging throughout (`generate_image`, `generate_course_cover`, `generate_journey_banner`, `generate_milestone_card`)
+
+### Fix — `backend/services/course_service.py`
+- Added `[IMAGE]` log at the `asyncio.create_task()` trigger inside `generate_course()`
+- Added `[IMAGE]` logs inside `_generate_and_save_cover()` at every step (start, None-guard, DB-save, already-exists guard)
+- **Retroactive healing:** `get_courses_list()` now calls `asyncio.create_task(_generate_and_save_cover(...))` for any course with `cover_image_url = NULL` — courses created while the bug was active will get their cover generated the next time the user visits `/courses`. The frontend's existing 12-second re-fetch picks it up automatically
+
+---
+
+## What Was Done This Session (2026-04-13 Session 11 — Phase 23 Mobile Responsiveness Check)
+
+### Mobile Responsiveness Audit — 13 pages checked
+
+Pages audited for mobile viewport (<768px) issues — hardcoded widths, non-collapsing grids, table overflow, oversized text, modal sizing:
+
+**2 files fixed:**
+
+- **`frontend/app/(dashboard)/admin/users/page.tsx`**
+  - Table used `grid-cols-[2fr_2fr_1fr_1fr_1fr_auto]` inside `overflow-hidden` GlowCard — no horizontal scroll on mobile
+  - Fix: Changed GlowCard to `overflow-x-auto`; wrapped header + all rows in `<div className="min-w-[700px]">` for clean horizontal scroll
+
+- **`frontend/app/(dashboard)/admin/users/[userId]/page.tsx`**
+  - Loading skeleton grid: `grid-cols-4` → `grid-cols-2 md:grid-cols-4`
+  - Stats grid (8 StatPill cards): `grid-cols-4` → `grid-cols-2 md:grid-cols-4` (2×4 on mobile, 4×2 on desktop)
+  - Page header: added `flex-wrap` so Reset Data + Delete buttons wrap below name/email on narrow viewports
+
+**11 pages with no issues:**
+- `/journey` — SetupModal `w-full max-w-md`; road view `max-w-xl mx-auto`; all responsive
+- `/admin` (index) — already uses `grid-cols-2 lg:grid-cols-3`
+- `/admin/feedback` — flex-col layout, no tables
+- `/admin/journeys` — table already wrapped in `overflow-x-auto`
+- `/games/spelling` — `max-w-md mx-auto` throughout all phases
+- `/settings`, `/settings/profile`, `/settings/password`, `/settings/about` — all `max-w-2xl mx-auto px-4`
+- `/chatbot/history` — `max-w-3xl w-full mx-auto`
+
+`tsc --noEmit` → exit 0, zero TypeScript errors.
 
 ---
 
