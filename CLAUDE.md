@@ -269,6 +269,7 @@ The dashboard must display:
 - Shown to new users on first login only (tracked via onboarding_completed boolean on users table)
 - Multi-step modal/page: Welcome → What is your native language? → Why are you learning Malay? → Set your first goal (optional — can skip to Journey later) → Tour of sidebar features
 - Data collected feeds into Journey roadmap personalization and chatbot tone
+- Note: If the user later creates a Journey roadmap, the Journey's goal text overwrites the onboarding learning_goal on the users table, ensuring chatbot personalization stays current.
 
 ### 5.10 Pronunciation Audio
 
