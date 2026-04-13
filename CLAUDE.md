@@ -298,12 +298,21 @@ The dashboard must display:
 ### 5.13 In-App Notification System
 
 - Bell icon in top navigation bar showing unread count badge
-- Notification types: streak milestones, XP milestones, Journey deadline reminders, roadmap phase completions, course generation complete (already planned in Phase 9)
+- Notification types (verified against codebase — all strings stored in notifications.type):
+  - `streak_milestone` — fired at 3/7/14/30-day streak milestones (gamification_service.py)
+  - `xp_milestone` — fired every 100 XP (gamification_service.py)
+  - `course_complete` — fired when background course generation finishes (routers/courses.py)
+  - `bps_milestone` — fired when user advances BPS level after a standalone quiz (quiz_service.py)
+  - `journey_reminder` — reused for all four Phase 20 v2 journey hooks (journey_service.py):
+    - Obstacle cleared: "You cleared an obstacle! ✅ '[topic]' is done."
+    - Halfway-timeline warning: >50% of timeline elapsed but <30% of elements completed (one-time, Redis-gated)
+    - 7-day deadline warning: deadline ≤ 7 days away and roadmap not completed (one-time, Redis-gated)
+    - Journey completed: "You completed your entire journey! 🎉"
 - Notifications stored in notifications table (user_id, type, message, read, created_at)
-- GET /api/notifications/ — list unread notifications
+- GET /api/notifications/ — list last 20 notifications with unread count
 - POST /api/notifications/{id}/read — mark as read
-- Journey deadline reminder: if user has not completed this week's activities by Friday, show reminder notification
-- Notifications panel: dropdown from bell icon showing last 10 notifications
+- POST /api/notifications/read-all — mark all read
+- Notifications panel: dropdown from bell icon showing last 20 notifications
 
 ### 5.14 Forgot Password
 
@@ -371,13 +380,13 @@ The dashboard must display:
 
 ```sql
 -- Users
+-- proficiency_level stores BPS values (BPS-1 through BPS-4); the column name was never changed
 users (id, email, password_hash, name, created_at, proficiency_level,
        onboarding_completed, native_language, learning_goal,
-       profile_picture_url, role, streak_count, xp_total, bps_level)
--- Note: cefr_level column renamed to bps_level via Alembic migration
+       profile_picture_url, role, streak_count, xp_total)
 
 -- Courses
-courses (id, user_id, title, description, topic, objectives, created_at)
+courses (id, user_id, title, description, topic, objectives, created_at, cover_image_url TEXT)
 modules (id, course_id, title, description, order_index)
 classes (id, module_id, title, content, vocabulary_json, examples_json, order_index)
 
@@ -392,18 +401,23 @@ grammar_learned (id, user_id, rule, example, source_type, source_id, learned_at)
 weak_points (id, user_id, topic, type [vocab/grammar], strength_score, updated_at)
 
 -- Chatbot
-chat_sessions (id, user_id, created_at)
+chat_sessions (id, user_id, title TEXT, created_at)
 chat_messages (id, session_id, role [user/assistant], content, created_at)
 
 -- RAG
 documents (id, content, embedding vector(768), metadata_json, created_at)
 
 -- Journey / Roadmap
-learning_roadmaps (id, user_id, deadline_date, goal_type, created_at, roadmap_json JSONB)
-roadmap_activity_completions (id, user_id, activity_id, completed_at)
+-- Partial unique index on user_id WHERE status = 'active' enforces one active roadmap per user
+user_roadmaps (id UUID, user_id UUID FK users, intent VARCHAR(100), goal TEXT,
+               timeline_months INTEGER CHECK (timeline_months BETWEEN 1 AND 6),
+               elements JSONB, status VARCHAR(20) DEFAULT 'active', deadline DATE,
+               extended BOOLEAN DEFAULT false, created_at TIMESTAMPTZ,
+               completed_at TIMESTAMPTZ, bps_level_at_creation VARCHAR(10),
+               banner_image_url TEXT)
 
 -- Notifications
-notifications (id, user_id, type, message, read BOOLEAN, created_at)
+notifications (id, user_id, type, message, read BOOLEAN, image_url TEXT, created_at)
 
 -- Auth
 password_reset_tokens (id, user_id, token_hash, expires_at, used BOOLEAN, created_at)
@@ -413,6 +427,10 @@ evaluation_feedback (id, user_id, quiz_type, rating, weak_points_relevant, comme
 
 -- Games
 spelling_game_scores (id, user_id, words_correct, words_attempted, session_date)
+
+-- Analytics / Monitoring
+token_usage_logs (id, user_id, feature, input_tokens, output_tokens, total_tokens, created_at)
+activity_logs (id, user_id, feature, duration_seconds, created_at)
 ```
 
 ---
@@ -432,7 +450,8 @@ POST   /api/chatbot/message          # Send message, get AI response
 GET    /api/chatbot/history          # Get chat history for user
 GET    /api/chatbot/sessions         # List user's sessions
 
-POST   /api/courses/generate         # Generate a new course from topic
+POST   /api/courses/generate         # Generate a new course from topic (enqueues background job)
+GET    /api/courses/jobs/{job_id}    # Poll background course generation status
 GET    /api/courses/                 # List user's courses
 GET    /api/courses/{course_id}      # Get full course structure
 POST   /api/courses/{course_id}/modules/{module_id}/complete   # Mark module done
@@ -450,22 +469,31 @@ GET    /api/dashboard/weak-points    # Get weak points
 
 GET    /api/profile/                 # Get current user profile
 PATCH  /api/profile/                 # Update profile fields
+POST   /api/profile/change-password  # Change password (Google-account guard)
 
 GET    /api/admin/stats              # Admin dashboard stats
 GET    /api/admin/users              # Admin user list
 GET    /api/admin/feedback           # Admin evaluation feedback view
+GET    /api/admin/journeys           # Admin: all user roadmaps (read-only)
 
-GET    /api/journey/                 # Get active roadmap
-POST   /api/journey/                 # Generate new roadmap
-DELETE /api/journey/                 # Delete current roadmap
+POST   /api/journey/roadmap/generate          # Generate new roadmap (3-question input)
+GET    /api/journey/roadmap                    # Get active roadmap + flags
+GET    /api/journey/roadmap/history            # Get past completed/deleted roadmaps
+POST   /api/journey/roadmap/verify-and-delete  # Identity-verified deletion
+PATCH  /api/journey/roadmap/extend             # Extend deadline (one-time)
+POST   /api/journey/roadmap/regenerate         # Regen uncompleted after BPS upgrade
+DELETE /api/journey/roadmap/dismiss-upgrade    # Clear BPS upgrade flag
 
 GET    /api/notifications/           # List unread notifications
 POST   /api/notifications/{id}/read  # Mark notification as read
+POST   /api/notifications/read-all   # Mark all notifications read
 
 GET    /api/games/spelling/word      # Get next spelling word
 POST   /api/games/spelling/submit    # Submit spelling attempt
+POST   /api/games/spelling/session   # Save session score
+GET    /api/games/spelling/best      # Get personal best
 
-POST   /api/evaluation/feedback      # Submit in-app feedback survey
+POST   /api/evaluation/feedback      # Submit optional user feedback
 ```
 
 ---
@@ -641,7 +669,7 @@ ADMIN_EMAIL=                  # Email address that gets admin role on first regi
 ### Dashboard
 - frontend/app/(dashboard)/dashboard/page.tsx
 - frontend/components/dashboard/StatsCards.tsx
-- frontend/components/dashboard/CEFRProgressBar.tsx
+- frontend/components/dashboard/BPSProgressBar.tsx
 - frontend/components/dashboard/WeakPointsChart.tsx
 - frontend/components/dashboard/VocabularyTable.tsx
 - frontend/components/dashboard/QuizHistoryTable.tsx
@@ -658,17 +686,19 @@ ADMIN_EMAIL=                  # Email address that gets admin role on first regi
 ### Admin Panel
 - frontend/app/(dashboard)/admin/page.tsx
 - frontend/app/(dashboard)/admin/users/page.tsx
+- frontend/app/(dashboard)/admin/users/[userId]/page.tsx
 - frontend/app/(dashboard)/admin/feedback/page.tsx
+- frontend/app/(dashboard)/admin/journeys/page.tsx
 - backend/routers/admin.py
 - backend/services/admin_service.py
+- backend/models/analytics.py
+- backend/utils/analytics.py
 
 ### My Journey
-- frontend/app/(dashboard)/journey/page.tsx
-- frontend/components/journey/RoadmapView.tsx
-- frontend/components/journey/ActivityCard.tsx
-- frontend/components/journey/PhaseAccordion.tsx
+- frontend/app/(dashboard)/journey/page.tsx (self-contained road UI + 3-question modal + all states)
 - backend/routers/journey.py
 - backend/services/journey_service.py
+- backend/models/journey.py (UserRoadmap ORM model)
 
 ### Onboarding
 - frontend/components/onboarding/OnboardingModal.tsx
