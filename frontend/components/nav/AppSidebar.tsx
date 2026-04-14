@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { Button } from "@/components/ui/button";
 import { profileApi } from "@/lib/api";
 
 const BASE_NAV_ITEMS = [
@@ -45,20 +46,17 @@ export function AppSidebar() {
   const pathname = usePathname();
   const { data: session, status } = useSession();
 
-  // Persist collapsed state
   const handleCollapse = (value: boolean) => {
     setCollapsed(value);
     localStorage.setItem("sidebar-collapsed", String(value));
   };
 
-  // Shared profile query — same key as OnboardingChecker in layout.tsx.
-  // React Query deduplicates concurrent calls: only one /api/profile/ request fires per staleTime window.
   const { data: profileData } = useQuery({
     queryKey: ["profile"],
     queryFn: () => profileApi.getProfile().then((r) => r.data),
     enabled: status === "authenticated",
-    staleTime: 30_000,          // 30 s — shows fresh XP/streak after returning from an activity
-    refetchOnWindowFocus: true, // re-fetch when user tabs back in after earning XP
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
   });
 
   const isAdmin = profileData?.role === "admin";
@@ -78,7 +76,6 @@ export function AppSidebar() {
   const userInitial = session?.user?.name?.[0]?.toUpperCase() ?? "U";
   const userName = session?.user?.name ?? "";
 
-  // XP progress toward next 100-pt milestone
   const xpInBand = xpTotal % 100;
   const nextMilestone = Math.floor(xpTotal / 100) * 100 + 100;
 
@@ -96,7 +93,6 @@ export function AppSidebar() {
         <div className="flex items-center">
           <Image src="/Logo new (1).svg" width={113} height={36} alt="BahasaBot" className="object-contain" />
         </div>
-        {/* Notification bell + theme toggle — right side of mobile header */}
         <div className="flex items-center gap-1">
           <NotificationBell panelSide="left" />
           <ThemeToggle variant="icon" />
@@ -183,31 +179,46 @@ export function AppSidebar() {
       </div>
 
       {/* ── DESKTOP: collapsible sidebar ── */}
+      {/*
+        relative so the collapse/expand handle button can be absolutely positioned
+        on the right border at vertical center.
+      */}
       <aside
-        className={`hidden md:flex flex-col h-full bg-sidebar border-r flex-shrink-0 transition-all duration-300 ease-in-out ${
+        className={`hidden md:flex flex-col h-full bg-sidebar border-r flex-shrink-0 transition-all duration-300 ease-in-out relative ${
           collapsed ? "w-[60px]" : "w-60"
         }`}
       >
-        {/* ── Logo area — NO border-b (single divider only above footer) ── */}
+        {/* ── Collapse / Expand handle — sits on the right border, vertically centered ── */}
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => handleCollapse(!collapsed)}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-10 w-6 h-6 rounded-full bg-card border border-border shadow-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+        >
+          {collapsed
+            ? <ChevronRight size={12} strokeWidth={2.5} />
+            : <ChevronLeft size={12} strokeWidth={2.5} />
+          }
+        </Button>
+
+        {/* ── Logo area ── */}
         <div
-          className={`flex items-center h-14 shrink-0 ${
-            collapsed ? "justify-center px-0" : "justify-between px-4"
+          className={`flex items-center h-16 shrink-0 ${
+            collapsed ? "justify-center px-0" : "justify-start px-3"
           }`}
         >
           {collapsed ? (
             <Link href="/dashboard" className="flex items-center justify-center">
-              <div className="relative w-8 h-8 flex-shrink-0">
-                <Image src="/Logo new only box (1).svg" alt="BahasaBot" fill sizes="32px" className="object-contain" />
+              <div className="relative w-9 h-9 flex-shrink-0">
+                <Image src="/Logo new only box (1).svg" alt="BahasaBot" fill sizes="36px" className="object-contain" />
               </div>
             </Link>
           ) : (
-            <>
-              <Link href="/dashboard" className="flex items-center min-w-0">
-                <Image src="/Logo new (1).svg" width={140} height={44} alt="BahasaBot" className="object-contain" />
-              </Link>
-              {/* Theme toggle only — notification bell lives in the footer */}
-              <ThemeToggle variant="icon" className="shrink-0 ml-2" />
-            </>
+            /* Full-width logo — fills the space left by the removed ThemeToggle */
+            <Link href="/dashboard" className="flex items-center w-full">
+              <Image src="/Logo new (1).svg" width={176} height={52} alt="BahasaBot" className="object-contain" />
+            </Link>
           )}
         </div>
 
@@ -246,11 +257,26 @@ export function AppSidebar() {
           })}
         </nav>
 
+        {/* ── Utility strip — Bell + ThemeToggle, below nav items above footer ── */}
+        {collapsed ? (
+          /* Collapsed: stack icons vertically, centered */
+          <div className="flex flex-col items-center gap-2 py-3 px-2">
+            <NotificationBell panelSide="right" panelDirection="up" />
+            <ThemeToggle variant="icon" />
+          </div>
+        ) : (
+          /* Expanded: row of icons, left-aligned with nav padding */
+          <div className="flex items-center gap-2 px-4 py-3">
+            <NotificationBell panelSide="right" panelDirection="up" />
+            <ThemeToggle variant="icon" />
+          </div>
+        )}
+
         {/* ── Footer — single border-t divider ── */}
         <div className="border-t shrink-0">
           {collapsed ? (
             /* ── Collapsed footer ── */
-            <div className="flex flex-col items-center gap-1.5 py-3">
+            <div className="flex flex-col items-center gap-2 py-3">
               {/* Avatar */}
               {userName && (
                 <div className="relative group/user">
@@ -262,10 +288,6 @@ export function AppSidebar() {
                   </span>
                 </div>
               )}
-              {/* Notification bell (collapsed: panel opens right+up — footer position) */}
-              <div className="flex items-center justify-center">
-                <NotificationBell panelSide="right" panelDirection="up" />
-              </div>
               {/* Streak */}
               <div className="relative group/streak w-10 h-8 flex items-center justify-center">
                 <div className="flex items-center gap-0.5">
@@ -286,8 +308,6 @@ export function AppSidebar() {
                   {xpTotal} XP total
                 </span>
               </div>
-              {/* Theme toggle icon */}
-              <ThemeToggle variant="icon" />
               {/* Sign out */}
               <button
                 onClick={() => signOut({ callbackUrl: "/login" })}
@@ -296,31 +316,21 @@ export function AppSidebar() {
               >
                 <LogOut size={16} />
               </button>
-              {/* Expand */}
-              <button
-                onClick={() => handleCollapse(false)}
-                title="Expand sidebar"
-                className="w-8 h-7 flex items-center justify-center rounded-md border border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-              >
-                <ChevronRight size={13} strokeWidth={2.5} />
-              </button>
             </div>
           ) : (
             /* ── Expanded footer ── */
-            <div className="flex flex-col items-center gap-3 py-4 px-4">
-              {/* User row + notification bell on the right */}
+            <div className="flex flex-col gap-3 py-4 px-4">
+              {/* User row */}
               {userName && (
                 <div className="flex items-center gap-2 w-full">
                   <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-[11px] font-bold shrink-0">
                     {userInitial}
                   </div>
-                  <span className="text-sm font-medium text-foreground truncate flex-1 min-w-0">{userName}</span>
-                  {/* Bell opens upward (footer is at the bottom of the viewport) */}
-                  <NotificationBell panelSide="right" panelDirection="up" />
+                  <span className="text-sm font-medium text-foreground truncate">{userName}</span>
                 </div>
               )}
 
-              {/* Streak + XP — inline, centered */}
+              {/* Streak + XP */}
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-1.5">
                   <Flame size={13} className={streakCount > 0 ? "text-orange-500" : "text-muted-foreground"} />
@@ -334,7 +344,7 @@ export function AppSidebar() {
                 </div>
               </div>
 
-              {/* XP bar — full width */}
+              {/* XP progress bar */}
               <div className="w-full space-y-1">
                 <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                   <div
@@ -347,22 +357,13 @@ export function AppSidebar() {
                 </p>
               </div>
 
-              {/* Sign out — centered */}
+              {/* Sign out */}
               <button
                 onClick={() => signOut({ callbackUrl: "/login" })}
-                className="flex items-center gap-2 py-1.5 px-3 rounded-lg text-sm text-muted-foreground hover:text-destructive hover:bg-muted transition-colors"
+                className="flex items-center gap-2 py-1.5 px-3 rounded-lg text-sm text-muted-foreground hover:text-destructive hover:bg-muted transition-colors w-full"
               >
                 <LogOut size={15} className="shrink-0" />
                 Sign out
-              </button>
-
-              {/* Collapse — centered */}
-              <button
-                onClick={() => handleCollapse(true)}
-                className="flex items-center gap-1.5 py-1 px-2 rounded-lg text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-              >
-                <ChevronLeft size={13} strokeWidth={2.5} />
-                Collapse
               </button>
             </div>
           )}
