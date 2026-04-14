@@ -2,6 +2,7 @@
   "name": "bahasabot-frontend",
   "version": "0.1.0",
   "private": true,
+  "_": "trigger vercel redeploy 2026-04-14",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
