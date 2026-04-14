@@ -1,3 +1,4 @@
+// BahasaBot — Next.js configuration
 import { withSentryConfig } from "@sentry/nextjs";
 
 /** @type {import('next').NextConfig} */
