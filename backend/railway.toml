@@ -1,14 +1,12 @@
 [build]
 builder = "DOCKERFILE"
-dockerfilePath = "backend/Dockerfile"
-# Build context is the project root so that:
-#   - 'from backend.X import Y' imports resolve correctly
-#   - alembic.ini (at project root) is accessible
-#   - backend/requirements.txt is referenced as backend/requirements.txt
+# Dockerfile path is relative to the root directory configured in Railway dashboard.
+# Set Root Directory = backend/ in the Railway project settings.
+# With root = backend/, this Dockerfile is at the root of the build context.
+dockerfilePath = "Dockerfile"
 
 [deploy]
-# CMD in Dockerfile runs: alembic upgrade head && uvicorn backend.main:app ...
-# No startCommand override needed — let the Dockerfile CMD handle startup.
+# CMD in Dockerfile handles startup: alembic upgrade head && uvicorn backend.main:app
 healthcheckPath = "/health"
 healthcheckTimeout = 60
 restartPolicyType = "ON_FAILURE"
