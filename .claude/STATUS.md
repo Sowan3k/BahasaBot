@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-15 (Session 23 — Forgot password rebuilt: 6-digit code flow)
+## Last Updated: 2026-04-15 (Session 23 — Forgot password + global mobile scrollbar hide)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -105,6 +105,21 @@ Driver.js spotlight tour that shows once after onboarding completes, walking use
 - `frontend/components/providers.tsx` — `<Toaster />` from sonner
 
 **New packages:** `sonner@^2.0.7`, `driver.js@^1.4.0`
+
+---
+
+## What Was Done This Session (2026-04-15 Session 23 — Forgot password + global mobile scrollbar hide)
+
+### Fix: Mobile Scrollbar Hidden Globally
+
+**Problem:** A visible scrollbar track/thumb was showing on the right side of all pages (Dashboard, Courses, and any scrollable page) on mobile view. The existing global CSS forced a `width: 6px` scrollbar via `::-webkit-scrollbar` and `scrollbar-width: thin` on all elements, overriding the browser's native "no scrollbar on touch" behaviour.
+
+**Fix — `frontend/app/globals.css`:**
+- Wrapped the existing themed scrollbar rules in `@media (pointer: fine)` — this targets desktop/mouse users only. Mouse-driven browsers get the slim 6px olive-themed scrollbar as before.
+- Added `@media (pointer: coarse)` block that applies `scrollbar-width: none`, `-ms-overflow-style: none`, and `display: none` / `width: 0` on `::-webkit-scrollbar` to ALL elements on touch/mobile devices. Pages remain fully scrollable via touch gestures — only the visual track is hidden.
+- Added `@layer utilities { .scrollbar-none { ... } }` — defines the `.scrollbar-none` CSS utility class used in the dashboard tab bar and anywhere else it's referenced in the codebase (the Tailwind config has no scrollbar plugin, so this was silently missing).
+
+**Scope:** Single file change (`globals.css`) fixes every page globally — Dashboard, Courses, Chatbot, Journey, Settings, Auth pages, etc.
 
 ---
 

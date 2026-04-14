@@ -117,26 +117,60 @@
     transition: background-color 5000s ease-in-out 0s;
   }
 
-  /* ── Theme-aware scrollbar ─────────────────────────────────────────────── */
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+  /* ── Scrollbar: hidden on touch/mobile, themed on desktop ─────────────── */
+
+  /* Touch/mobile devices (pointer: coarse = finger, not mouse) — hide all
+     scrollbar chrome. Pages remain fully scrollable by touch. */
+  @media (pointer: coarse) {
+    * {
+      scrollbar-width: none !important;
+      -ms-overflow-style: none !important;
+    }
+    *::-webkit-scrollbar {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
+    }
   }
-  ::-webkit-scrollbar-track {
-    background: var(--muted);
-    border-radius: var(--radius);
+
+  /* Desktop/mouse devices — show a slim themed scrollbar */
+  @media (pointer: fine) {
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--muted);
+      border-radius: var(--radius);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: var(--radius);
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--muted-foreground);
+    }
+    /* Firefox */
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) var(--muted);
+    }
   }
-  ::-webkit-scrollbar-thumb {
-    background: var(--border);
-    border-radius: var(--radius);
+}
+
+/* ── Scrollbar utility class ─────────────────────────────────────────────────
+   Use `scrollbar-none` on any element to hide its scrollbar while keeping
+   it scrollable (used on tab bars, dropdowns, any overflow container).
+   ─────────────────────────────────────────────────────────────────────────── */
+@layer utilities {
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
   }
-  ::-webkit-scrollbar-thumb:hover {
-    background: var(--muted-foreground);
-  }
-  /* Firefox */
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: var(--border) var(--muted);
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
   }
 }
 
