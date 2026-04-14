@@ -101,7 +101,7 @@ export function NotificationBell({ panelSide = "left", panelDirection = "down" }
   // ── Clear all ─────────────────────────────────────────────────────────────
 
   const handleClearAll = useCallback(async () => {
-    await notificationsApi.clearAll();
+    await notificationsApi.clearAll(); // let error propagate — popover's try/catch handles it
     setItems([]);
   }, []);
 
