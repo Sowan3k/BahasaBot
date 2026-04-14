@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-15 (Session 25 — Modal lock, banner GC, Google OAuth hardening)
+## Last Updated: 2026-04-15 (Session 27 — Journey SetupModal dismissible)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -22,7 +22,7 @@ _Update this file at the end of every session_
 | DB Schema (Phase 11) | ✅ Complete + Applied | 6 new tables + 8 new columns; ORM models written; migration applied successfully |
 | Forgot Password (Phase 12) | ✅ Rebuilt — 6-digit code flow | 3-endpoint backend (forgot/verify/reset); 4-step frontend (email→code→password→success); OTP boxes + resend cooldown; old link page deprecated; full E2E verified |
 | User Profile + Settings (Phase 13) | ✅ Complete | GET + PATCH /api/profile/, change-password endpoint; /settings hub + /profile + /password + /about pages; Settings in sidebar |
-| Onboarding Flow (Phase 14) | ✅ Complete + Enhanced (Session 21) | 7-step questionnaire (Welcome → NativeLang → WhyLearning → CurrentLevel → Goal → Timeline → DailyStudy); roadmap auto-generated on finish; loading screen during generation; sonner toast on roadmap_ready; skip at any step saves partial data |
+| Onboarding Flow (Phase 14) | ✅ Complete + Enhanced (Session 26) | 8-step questionnaire (Welcome → Gender/Age → NativeLang → WhyLearning → CurrentLevel → Goal → Timeline → DailyStudy); gender + age_range collected for personalised roadmap banner; roadmap auto-generated on finish; loading screen during generation; sonner toast on roadmap_ready; skip at any step saves partial data |
 | First-Login UI Tour | ✅ Complete (Session 21) | driver.js spotlight tour; 8 steps covering sidebar + all nav sections; triggers once after onboarding; has_seen_tour flag on users table; PATCH saves flag on tour done/skip |
 | Admin Control Panel (Phase 15) | ✅ Complete + Verified | /api/admin/* fully tested; stats, users (search + detail + delete + reset + analytics), feedback; password guards verified; recharts LineChart + BarChart confirmed working; analytics bug fixed (NullType → timedelta) |
 | Pronunciation Audio (Phase 16) | ✅ Complete + Debugged | usePronunciation hook (ms-MY → ms → default fallback); SpeakerButton component; wired into VocabPills (chatbot), course class vocab cards, quiz results breakdown, dashboard vocabulary table; 3 post-implementation bugs fixed |
@@ -31,7 +31,7 @@ _Update this file at the end of every session_
 | Sidebar Polish | ✅ Complete | Double divider removed (no border-b on logo area); ThemeToggle repositioned to header row; footer items centered except XP bar; collapsed tooltips use theme-aware bg-popover |
 | My Journey — Learning Roadmap (Phase 20) | ✅ Complete (v2 + patches + Session 16 fixes) | New user_roadmaps table; flat course-obstacle model; 3-question modal; road/path UI; overdue+extend; BPS upgrade banner; identity-verified delete; check_roadmap_progress hook; admin journeys page. Phase 20 fully complete including all 7 post-implementation patches + Session 16: obstacle → existing course navigation fixed (get_roadmap enriches elements with exists/course_id via fuzzy match); obstacle completion fix (check_roadmap_progress now uses course.topic for better fuzzy match); journey cache invalidated on new course save. |
 | Chat History Page (Phase 21) | ✅ Complete + Session Delete | /chatbot/history; ChatHistoryList (paginated, title from first user msg, message count); session detail read-only view; History button in chatbot header; backend ChatSessionResponse extended with title + message_count; DELETE /api/chatbot/sessions/{id} (ownership-verified, cascade messages, preserves vocab/grammar); Trash2 icon + inline confirm strip per row; error banner with 4s auto-dismiss |
-| Image Generation — Nano Banana 2 (Phase 22) | ✅ Complete + Bug fixed + Hero banner | image_service.py uses Gemini REST API via httpx; get_courses_list() retroactive cover healing; cover_image_url now included in get_course_with_progress(); course detail page shows full-width hero banner with cover as background + dark gradient overlay + white title text |
+| Image Generation — Nano Banana 2 (Phase 22) | ✅ Complete + Personalised banners (Session 26) | image_service.py uses Gemini REST API via httpx; get_courses_list() retroactive cover healing; cover_image_url now included in get_course_with_progress(); course detail page hero banner; journey banners now use gender + age_range to build subject-specific prompt ("adult male student") |
 | Course Deduplication + Clone System (Phase 24) | ✅ Complete | topic_slug + is_template + cloned_from columns on courses; Alembic migration applied; _make_topic_slug(), _find_template(), _clone_course() in course_service.py; generate_course() checks for template before calling Gemini — clone path completes in milliseconds; frontend/router unchanged |
 | Spelling Practice Game (Phase 19) | ✅ Complete + v2 redesign | Leitner-box word selection; Levenshtein fuzzy matching; Start screen → 3-2-1 countdown → 10s per-word timer (green→yellow→red pulse) → Time's Up screen with Next/Start Over; combo multiplier; session summary; keyboard shortcuts (Enter/Space/Escape); personal best; Games link in sidebar |
 | Chatbot vocab pipeline fix | ✅ Fixed | _extract_and_save() now opens its own AsyncSessionLocal session — asyncio.create_task with request-scoped session was silently failing after SSE stream ended; vocab/grammar now reliably saved after every chatbot response |
@@ -62,6 +62,79 @@ _Update this file at the end of every session_
 
 ## ✅ Fixed Issues (Session 13)
 - **Course covers not appearing (2026-04-13):** Session 12 correctly fixed `image_service.py` (httpx REST API) and `course_service.py` (retroactive healing + `asyncio.create_task`), but the backend was **never restarted** after those changes were made. Uvicorn started at 08:19, files modified at 14:22–14:28 — old broken code was still running. Fix: killed old uvicorn PIDs (18316, 25012), started fresh process on port 8000. Also manually ran `_generate_and_save_cover()` for all 3 existing courses that had `cover_image_url = NULL`. All verified: Gemini REST API returns JPEG (~1.1 MB base64, ~17s), DB save works, `GET /api/courses/` returns cover correctly. **Important**: after any code change to the backend, the uvicorn process MUST be restarted manually (no `--reload` flag in prod mode).
+
+---
+
+## What Was Done This Session (2026-04-15 Session 27 — Journey SetupModal dismissible)
+
+### Fix: SetupModal blocks all navigation when user has no roadmap
+
+After deleting a roadmap, the `SetupModal` auto-opened with no way to close it. The sidebar was visible but the modal card covered the content area and there was no X button, forcing the user to create a roadmap immediately or be stuck.
+
+**`frontend/app/(dashboard)/journey/page.tsx`**:
+- Added `onDismiss: () => void` to `SetupModalProps`.
+- Added X (`<X />`) button in the modal header (top-right of the `bg-primary/10` header bar) that calls `onDismiss`.
+- Added `showSetupModal` state (default `true`) to the main `JourneyPage` component.
+- No-roadmap render block now:
+  - Wraps `<SetupModal>` in `{showSetupModal && ...}` — dismissing hides the modal and restores full page access.
+  - Shows a "Create My Roadmap" `<Sparkles>` button in the empty-state placeholder when `showSetupModal=false`, so the user can reopen the modal whenever ready.
+- Behaviour unchanged for first visit — modal still auto-shows on page load.
+
+---
+
+## What Was Done This Session (2026-04-15 Session 26 — Google button full-size fix, gender/age onboarding + personalised banner)
+
+### Fix 1: Google Sign-In button dead-click bug
+
+Root cause: Google Identity Services renders the Sign-In button inside a cross-origin `<iframe>` from `accounts.google.com`. A programmatic `.click()` on an iframe fires at coordinate (0, 0) of the iframe element. The hidden container was `width:1px; height:1px`, so the button rendered at its natural size (≈300×44px) but its centre was far outside the (0,0) hit-point — every custom-button click missed.
+
+**Fix (`frontend/app/(auth)/login/page.tsx`)**:
+- Changed hidden container positioning from `width:1; height:1` (1px box) to:
+  ```tsx
+  position: "absolute", top: "-9999px", left: "-9999px",
+  width: "340px", height: "44px", overflow: "hidden"
+  ```
+  The container is now offscreen but full-size, so the iframe button is centred and its (0,0) hit point overlaps the actual button element. Click path: custom-styled button → `gsiButtonRef.current.click()` → 340×44 hidden iframe → Google Sign-In button centred inside it → OAuth popup opens.
+
+### Feature: Collect gender + age range in onboarding for personalised roadmap banners
+
+**Problem:** Roadmap banner images were generating a generic young woman figure regardless of user demographics. Gemini defaults to that archetype without an explicit subject description.
+
+**Solution (8 files):**
+
+1. **`backend/models/user.py`** — added `gender: Mapped[str | None]` and `age_range: Mapped[str | None]` nullable columns.
+
+2. **`backend/db/migrations/versions/20260415_2200_add_gender_age_range.py`** — Alembic migration (rev `f3a4b5c6d7e8`, down_rev `e2f3a4b5c6d7`). Adds `gender VARCHAR(20) NULL` and `age_range VARCHAR(20) NULL` to users table. Run `alembic upgrade head` to apply.
+
+3. **`backend/schemas/profile.py`** — `gender: str | None` and `age_range: str | None` added to both `ProfileResponse` and `ProfileUpdateRequest`.
+
+4. **`backend/routers/profile.py`** — PATCH handler now writes `gender` and `age_range` when present in request body.
+
+5. **`frontend/lib/types.ts`** — `UserProfile` gets `gender: string | null` and `age_range: string | null`; `ProfileUpdatePayload` gets `gender?: string | null` and `age_range?: string | null`.
+
+6. **`frontend/components/onboarding/OnboardingModal.tsx`** — New Step 2 "Tell us about yourself":
+   - `TOTAL_STEPS` bumped 7 → 8; gender/ageRange state added.
+   - `GENDER_OPTIONS`: Male / Female / Non-binary / Prefer not to say.
+   - `AGE_OPTIONS`: Under 18 / 18–24 / 25–34 / 35–44 / 45+.
+   - Both use pill-button grids (same style as WhyLearning step). Both are optional — user can skip.
+   - All subsequent steps renumbered (old 2→3 through old 7→8). `buildProfilePayload()` includes `gender` and `age_range`.
+
+7. **`backend/services/journey_service.py`** — `_fetch_user_context()` now SELECTs `User.gender` and `User.age_range` and returns them in the context dict. `generate_roadmap()` passes `gender=ctx.get("gender")` and `age_range=ctx.get("age_range")` to the banner background task.
+
+8. **`backend/services/image_service.py`** — `generate_journey_banner()` signature gains `gender: str | None = None` and `age_range: str | None = None`. Prompt now builds a specific subject string:
+   ```python
+   gender_map = {"male": "a male student", "female": "a female student", ...}
+   age_map = {"18-24": "young adult", "25-34": "adult", "45+": "mature adult", ...}
+   subject = f"{age} {gender}".strip()  # e.g. "adult male student"
+   # → "The central figure is adult male student studying Malay with enthusiasm."
+   ```
+   Safe null fallback: if either field is missing, `subject_gender` defaults to `"a student"`.
+
+**Rule unchanged:** banner is still generated only once per roadmap — no regeneration if `banner_image_url` already exists. Existing users who want gender-personalised banner must delete and regenerate their roadmap.
+
+### ⚠️ Manual action required after this session
+- Run `alembic upgrade head` on the backend to apply migration `f3a4b5c6d7e8` (gender + age_range columns).
+- Restart the uvicorn process after migration so the new ORM column mappings are loaded.
 
 ---
 

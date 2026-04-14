@@ -87,9 +87,10 @@ function getElementState(
 
 interface SetupModalProps {
   onGenerated: (roadmap: UserRoadmap) => void;
+  onDismiss: () => void;
 }
 
-function SetupModal({ onGenerated }: SetupModalProps) {
+function SetupModal({ onGenerated, onDismiss }: SetupModalProps) {
   const [step, setStep]               = useState<1 | 2 | 3>(1);
   const [intent, setIntent]           = useState<JourneyIntent | "">("");
   const [intentOther, setIntentOther] = useState("");
@@ -129,11 +130,20 @@ function SetupModal({ onGenerated }: SetupModalProps) {
       <div className="pointer-events-auto w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="bg-primary/10 border-b border-border px-6 py-5">
-          <div className="flex items-center gap-2 mb-1">
-            <Map className="h-5 w-5 text-primary" />
-            <span className="text-sm font-semibold text-primary uppercase tracking-wider">
-              My Journey
-            </span>
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <Map className="h-5 w-5 text-primary" />
+              <span className="text-sm font-semibold text-primary uppercase tracking-wider">
+                My Journey
+              </span>
+            </div>
+            <button
+              onClick={onDismiss}
+              className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-lg hover:bg-muted/30"
+              aria-label="Dismiss — create roadmap later"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
           <h2 className="text-xl font-bold text-foreground">
             Let&apos;s build your roadmap
@@ -641,7 +651,8 @@ function CelebrationPage({ roadmap, userName, provider, userEmail, onStartNew }:
 export default function JourneyPage() {
   const router = useRouter();
 
-  const [roadmap, setRoadmap]   = useState<UserRoadmap | null | undefined>(undefined);
+  const [roadmap, setRoadmap]       = useState<UserRoadmap | null | undefined>(undefined);
+  const [showSetupModal, setShowSetupModal] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [userName, setUserName] = useState("Learner");
   const [userEmail, setUserEmail] = useState("");
@@ -796,7 +807,7 @@ export default function JourneyPage() {
     );
   }
 
-  // ── No roadmap — show setup modal ───────────────────────────────────────
+  // ── No roadmap — show setup modal (dismissible) ────────────────────────
 
   if (!roadmap) {
     return (
@@ -808,8 +819,22 @@ export default function JourneyPage() {
           <p className="text-sm text-muted-foreground max-w-xs">
             Your personalised learning roadmap will appear here.
           </p>
+          {!showSetupModal && (
+            <button
+              onClick={() => setShowSetupModal(true)}
+              className="mt-2 flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-all"
+            >
+              <Sparkles className="h-4 w-4" />
+              Create My Roadmap
+            </button>
+          )}
         </div>
-        <SetupModal onGenerated={(rm) => setRoadmap(rm)} />
+        {showSetupModal && (
+          <SetupModal
+            onGenerated={(rm) => setRoadmap(rm)}
+            onDismiss={() => setShowSetupModal(false)}
+          />
+        )}
       </>
     );
   }
