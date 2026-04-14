@@ -20,8 +20,14 @@ export function ThemeToggle({ variant = "pill", className }: ThemeToggleProps) {
         onClick={toggle}
         aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
         className={cn(
-          "w-8 h-8 flex items-center justify-center rounded-lg transition-colors",
-          "text-muted-foreground hover:text-foreground hover:bg-muted",
+          // Match the NotificationBell button exactly — same size, shape, border, shadow
+          "w-10 h-10 flex items-center justify-center rounded-full",
+          "bg-card/90 hover:bg-card dark:bg-card/95",
+          "border border-border",
+          "shadow-md hover:shadow-lg",
+          "text-foreground/70 hover:text-foreground",
+          "transition-all duration-200 ease-out",
+          "hover:scale-105 active:scale-90 active:shadow-sm",
           className
         )}
       >
