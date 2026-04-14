@@ -1,10 +1,15 @@
-// Landing page — redirects authenticated users to /dashboard
-// TODO: Implement in Phase 1
-export default function Home() {
-  return (
-    <main>
-      <h1>BahasaBot</h1>
-      <p>Learn Bahasa Melayu with AI</p>
-    </main>
-  );
+// Root page — redirects based on auth state:
+//   authenticated   → /dashboard
+//   unauthenticated → /login
+
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
+
+export default async function Home() {
+  const session = await auth();
+  if (session) {
+    redirect("/dashboard");
+  } else {
+    redirect("/login");
+  }
 }
