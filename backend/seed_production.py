@@ -103,7 +103,7 @@ async def seed_corpus() -> None:
         existing = result.scalar_one()
 
         if existing > 0:
-            print(f"\n✓ Corpus already seeded ({existing} documents found). Nothing to do.")
+            print(f"\nDONE: Corpus already seeded ({existing} documents found). Nothing to do.")
             logger.info("Corpus already seeded — skipping", existing_documents=existing)
             await engine.dispose()
             return
@@ -150,7 +150,7 @@ async def seed_corpus() -> None:
                     error=str(exc),
                     preview=content[:60],
                 )
-                print(f"  ✗ Chunk {i} failed: {exc}")
+                print(f"  FAILED chunk {i}: {exc}")
                 # Continue with remaining chunks rather than aborting
 
         # Final commit for any remaining docs
@@ -170,7 +170,7 @@ async def seed_corpus() -> None:
         print("         Existing documents will be skipped automatically.")
         logger.warning("Some chunks failed", failed=failed, ingested=ingested)
     else:
-        print("\n✓ All chunks seeded successfully. The chatbot RAG pipeline is ready.")
+        print("\nDONE: All chunks seeded successfully. The chatbot RAG pipeline is ready.")
         logger.info("Corpus seeding complete", ingested=ingested, failed=0)
 
 
