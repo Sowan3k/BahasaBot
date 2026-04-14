@@ -249,7 +249,7 @@ export default function DashboardPage() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
+    <div className="max-w-5xl mx-auto px-3 sm:px-4 py-4 sm:py-8 space-y-4 sm:space-y-6 overflow-x-hidden">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
@@ -266,12 +266,12 @@ export default function DashboardPage() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b">
+      <div className="flex gap-0.5 sm:gap-1 border-b overflow-x-auto scrollbar-none">
         {TABS.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 text-sm font-medium tracking-wide border-b-2 transition-colors -mb-px ${
+            className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium tracking-wide border-b-2 transition-colors -mb-px whitespace-nowrap flex-shrink-0 ${
               activeTab === tab.id
                 ? "border-primary text-primary"
                 : "border-transparent text-muted-foreground hover:text-foreground"

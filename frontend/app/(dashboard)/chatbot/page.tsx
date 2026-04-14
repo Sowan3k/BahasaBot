@@ -316,7 +316,7 @@ export default function ChatbotPage() {
       </main>
 
       {/* ── Input area ── */}
-      <footer className="bg-card border-t px-4 py-3 shrink-0 relative">
+      <footer className="bg-card border-t px-3 sm:px-4 py-2.5 sm:py-3 shrink-0 relative">
         <div className="flex items-end gap-2 max-w-3xl mx-auto">
           <textarea
             ref={inputRef}
@@ -326,11 +326,12 @@ export default function ChatbotPage() {
             placeholder="Ask anything about Bahasa Melayu…"
             rows={1}
             disabled={isStreaming}
-            className="flex-1 resize-none rounded-xl border px-4 py-3 text-base bg-background
+            autoComplete="off"
+            className="flex-1 resize-none rounded-xl border px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base bg-background
                        text-foreground placeholder:text-muted-foreground focus:outline-none
                        focus:ring-2 focus:ring-ring focus:border-transparent
                        disabled:opacity-50 max-h-32 overflow-y-auto leading-relaxed"
-            style={{ minHeight: "48px" }}
+            style={{ minHeight: "44px" }}
           />
           <button
             onClick={sendMessage}

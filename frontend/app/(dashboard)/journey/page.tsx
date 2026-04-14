@@ -831,7 +831,7 @@ export default function JourneyPage() {
   const progressPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   return (
-    <div className="w-full max-w-xl mx-auto p-4 sm:p-6 space-y-5">
+    <div className="w-full max-w-xl mx-auto p-3 sm:p-6 space-y-4 sm:space-y-5 overflow-x-hidden">
 
       {/* ── Header ── */}
       <div className="flex items-start justify-between gap-4">

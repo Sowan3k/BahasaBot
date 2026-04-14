@@ -101,13 +101,13 @@ function CourseCard({ course }: { course: CourseSummary }) {
           <img
             src={course.cover_image_url}
             alt={`Cover for ${course.title}`}
-            className="w-full h-32 object-cover"
+            className="w-full h-24 sm:h-32 object-cover"
           />
         ) : (
-          <div className="w-full h-32 bg-gradient-to-br from-primary/20 via-primary/10 to-transparent" />
+          <div className="w-full h-24 sm:h-32 bg-gradient-to-br from-primary/20 via-primary/10 to-transparent" />
         )}
 
-        <div className="p-5 space-y-3">
+        <div className="p-3 sm:p-5 space-y-2 sm:space-y-3">
           <div>
             <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-1">
               {course.topic}
@@ -264,10 +264,10 @@ export default function CoursesPage() {
       <div className="relative z-10 max-w-5xl mx-auto px-4 py-8 space-y-6">
 
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">My Courses</h1>
-            <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">My Courses</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1 leading-relaxed">
               AI-generated Malay language courses personalised to your topics
             </p>
           </div>
@@ -275,6 +275,7 @@ export default function CoursesPage() {
             onClick={() => setShowModal(true)}
             disabled={!!activeJobId}
             title={activeJobId ? "A course is already being generated" : undefined}
+            className="shrink-0"
           >
             {activeJobId ? "Generating…" : "+ New Course"}
           </Button>

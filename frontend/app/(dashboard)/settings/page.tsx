@@ -33,7 +33,7 @@ const SETTINGS_ITEMS = [
 
 export default function SettingsPage() {
   return (
-    <div className="max-w-2xl mx-auto py-8 px-4 space-y-6">
+    <div className="max-w-2xl mx-auto py-6 px-4 space-y-6">
       <div>
         <h1 className="font-heading text-2xl font-bold text-foreground">Settings</h1>
         <p className="text-sm text-muted-foreground mt-1">

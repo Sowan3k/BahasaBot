@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-14 (Session 21 — Enhanced onboarding + first-login UI tour)
+## Last Updated: 2026-04-14 (Session 22 — Mobile/responsive UI fixes + forgot-password verified)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -105,6 +105,60 @@ Driver.js spotlight tour that shows once after onboarding completes, walking use
 - `frontend/components/providers.tsx` — `<Toaster />` from sonner
 
 **New packages:** `sonner@^2.0.7`, `driver.js@^1.4.0`
+
+---
+
+## What Was Done This Session (2026-04-14 Session 22 — Mobile/responsive UI fixes)
+
+13 targeted mobile/responsive fixes applied to the frontend. No backend changes.
+
+**FIX 1 — Auth card mobile (auth-card.tsx):**
+- Mobile logo size increased: w-8→w-12, h-8→h-12, sizes="32px"→"48px"
+- Logo bar padding: `gap-2.5 px-8 pt-10` → `gap-3 px-6 pt-8`; brand text: `text-sm` → `text-base`
+- Right panel: `min-h-screen` → `lg:min-h-screen min-h-[100dvh]`; `bg-black/50 backdrop-blur-2xl` → `bg-black/60 backdrop-blur-xl`; added `lg:rounded-none sm:rounded-none`
+- Form container: `px-8 py-10` → `px-6 sm:px-8 py-6 sm:py-10`
+
+**FIX 2 — Fresh chat on login (login/page.tsx):**
+- After storeSession() succeeds in both `onSubmit` and `handleGoogleSuccess`, clears `chatbot_messages` and `chatbot_session_id` from sessionStorage before setTheme/redirect.
+
+**FIX 3 — Fresh chat on register (register/page.tsx):**
+- Same sessionStorage clear in both `onSubmit` and `handleGoogleSuccess` before `router.push("/dashboard")`.
+
+**FIX 4 — Chatbot textarea mobile (chatbot/page.tsx):**
+- Added `autoComplete="off"`; responsive padding/text size; minHeight 48→44px; footer responsive padding.
+
+**FIX 5 — Chat text size (ChatMessage.tsx):**
+- User + assistant message text: `text-base` → `text-sm sm:text-base`
+
+**FIX 6 — Dashboard mobile (dashboard/page.tsx):**
+- Outer container: added responsive px/py/spacing + `overflow-x-hidden`
+- Tabs: `overflow-x-auto scrollbar-none`; tab buttons: responsive px/text + `whitespace-nowrap flex-shrink-0`
+
+**FIX 7 — StatsCards mobile (StatsCards.tsx):**
+- Card inner: `gap-4 p-5` → `gap-3 sm:gap-4 p-3 sm:p-5`; stat value: `text-3xl` → `text-2xl sm:text-3xl`; label: `text-xs` → `text-[10px] sm:text-xs`
+
+**FIX 8 — Courses card mobile (courses/page.tsx):**
+- Cover/placeholder height: `h-32` → `h-24 sm:h-32`; card padding: `p-5 space-y-3` → `p-3 sm:p-5 space-y-2 sm:space-y-3`
+
+**FIX 9 — Settings page padding (settings/page.tsx):** `py-8` → `py-6`
+
+**FIX 10 — Journey overflow (journey/page.tsx):** Active roadmap container: added responsive padding + `overflow-x-hidden`
+
+**FIX 11 — Sidebar mobile (AppSidebar.tsx):**
+- Hamburger + close buttons: `p-2` → `p-2.5`, added 44px min touch targets
+- Mobile header logo: wrapped in `<Link href="/dashboard">`
+- Nav links: `py-2.5` → `py-3`, added `min-h-[44px]`
+- Drawer width: `w-64` → `w-[280px]`
+
+**FIX 12 — Settings sub-pages:** All four (profile, password, about, feedback) already had correct back buttons to `/settings`. No changes required.
+
+**FIX 13 — Courses header mobile (courses/page.tsx):**
+- `items-center justify-between` → `items-start justify-between gap-3`; H1 `text-3xl` → `text-2xl sm:text-3xl`; subtitle `text-sm` → `text-xs sm:text-sm`; button: added `shrink-0`
+
+**Forgot Password — Email Delivery Verified:**
+- `backend/services/email_service.py` + `backend/.env` already had `RESEND_FROM_EMAIL=onboarding@resend.dev` correctly set. No code change required.
+- End-to-end test: `POST /api/auth/forgot-password` with a registered email/password account returns `200 OK` with `{"message":"If that email is registered, you'll receive a reset link shortly."}`.
+- Google account guard confirmed: `POST /api/auth/forgot-password` with a Google-only account returns `400 {"detail":"google_account_no_password"}` as expected.
 
 ---
 

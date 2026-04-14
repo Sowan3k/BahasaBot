@@ -79,6 +79,9 @@ export default function LoginPage() {
       );
       const ok = await storeSession(tokenData);
       if (!ok) { setAuthError("Sign in failed. Please try again."); return; }
+      // Clear any previous chat session so each login starts fresh
+      sessionStorage.removeItem("chatbot_messages");
+      sessionStorage.removeItem("chatbot_session_id");
       // Force light mode on every sign-in — updates React context + localStorage + DOM in one call
       setTheme("light");
       setRedirecting(true);
@@ -115,6 +118,9 @@ export default function LoginPage() {
       );
       const ok = await storeSession(data);
       if (!ok) { setAuthError("Google sign-in failed. Please try again."); return; }
+      // Clear any previous chat session so each login starts fresh
+      sessionStorage.removeItem("chatbot_messages");
+      sessionStorage.removeItem("chatbot_session_id");
       // Force light mode on every sign-in — updates React context + localStorage + DOM in one call
       setTheme("light");
       setRedirecting(true);

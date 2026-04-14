@@ -79,25 +79,26 @@ export function AuthCard({ children }: { children: React.ReactNode }) {
       {/* ── RIGHT: Glass form panel ── */}
       <div
         className="relative z-10 w-full lg:w-[460px] flex-shrink-0 flex flex-col
-                   min-h-screen bg-black/50 backdrop-blur-2xl
-                   border-l border-white/[0.07] overflow-y-auto"
+                   lg:min-h-screen min-h-[100dvh] bg-black/60 backdrop-blur-xl
+                   border-l border-white/[0.07] overflow-y-auto
+                   lg:rounded-none sm:rounded-none"
       >
         {/* Mobile-only compact brand bar */}
-        <div className="lg:hidden flex items-center gap-2.5 px-8 pt-10">
-          <div className="relative w-8 h-8 flex-shrink-0">
+        <div className="lg:hidden flex items-center gap-3 px-6 pt-8">
+          <div className="relative w-12 h-12 flex-shrink-0">
             <Image
               src="/Logo new only box (1).svg"
               fill
-              sizes="32px"
+              sizes="48px"
               alt="BahasaBot"
               className="object-contain"
             />
           </div>
-          <span className="text-white font-bold text-sm tracking-tight">BahasaBot</span>
+          <span className="text-white font-bold text-base tracking-tight">BahasaBot</span>
         </div>
 
         {/* Form — vertically centered in remaining space */}
-        <div className="flex-1 flex flex-col justify-center px-8 py-10">
+        <div className="flex-1 flex flex-col justify-center px-6 sm:px-8 py-6 sm:py-10">
           <div className="w-full max-w-[340px] mx-auto">
             {children}
           </div>

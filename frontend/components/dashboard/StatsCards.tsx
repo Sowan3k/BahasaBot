@@ -95,14 +95,14 @@ export default function StatsCards({ stats }: Props) {
               inactiveZone={0.01}
               borderWidth={3}
             />
-            <div className="relative flex h-full flex-col justify-between gap-4 overflow-hidden rounded-xl border-[0.75px] border-border bg-background p-5 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
+            <div className="relative flex h-full flex-col justify-between gap-3 sm:gap-4 overflow-hidden rounded-xl border-[0.75px] border-border bg-background p-3 sm:p-5 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
               <div className={`w-fit rounded-lg border-[0.75px] p-2 ${card.iconClass}`}>
                 {card.icon}
               </div>
               <div className="space-y-0.5">
-                <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">{card.label}</p>
+                <p className="text-[10px] sm:text-xs font-medium uppercase tracking-widest text-muted-foreground">{card.label}</p>
                 {/* Use ?? 0 so undefined values (stale cache) still render as 0 */}
-                <p className="text-3xl font-bold tabular-nums font-heading text-foreground">
+                <p className="text-2xl sm:text-3xl font-bold tabular-nums font-heading text-foreground">
                   {card.value ?? 0}
                 </p>
                 <p className="text-xs text-muted-foreground">{card.description}</p>

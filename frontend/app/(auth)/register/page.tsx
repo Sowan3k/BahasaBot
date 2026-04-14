@@ -78,6 +78,8 @@ export default function RegisterPage() {
       );
       const ok = await storeSession(tokenData);
       if (!ok) { setServerError("Account created but sign-in failed. Please go to Login."); return; }
+      sessionStorage.removeItem("chatbot_messages");
+      sessionStorage.removeItem("chatbot_session_id");
       router.push("/dashboard");
       router.refresh();
     } catch (err: unknown) {
@@ -105,6 +107,8 @@ export default function RegisterPage() {
       );
       const ok = await storeSession(data);
       if (!ok) { setServerError("Google sign-up failed. Please try again."); return; }
+      sessionStorage.removeItem("chatbot_messages");
+      sessionStorage.removeItem("chatbot_session_id");
       router.push("/dashboard");
       router.refresh();
     } catch {

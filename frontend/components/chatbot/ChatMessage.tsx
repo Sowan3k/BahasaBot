@@ -171,12 +171,12 @@ export default function ChatMessage({
       >
         {isUser ? (
           /* User messages: plain text, no markdown parsing */
-          <p className="text-base leading-relaxed whitespace-pre-wrap break-words">
+          <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap break-words">
             {content}
           </p>
         ) : (
           /* Assistant messages: full markdown + vocab pills */
-          <div className="text-base leading-relaxed">
+          <div className="text-sm sm:text-base leading-relaxed">
             {content === "" && isStreaming ? (
               /* Typing dots — shown while waiting for the first token */
               <span className="flex gap-1 items-center py-0.5">

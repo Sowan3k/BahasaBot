@@ -84,14 +84,14 @@ export function AppSidebar() {
       <header className="md:hidden fixed top-0 inset-x-0 z-50 flex items-center justify-between px-4 h-14 bg-card border-b">
         <button
           onClick={() => setMobileOpen(true)}
-          className="p-2 rounded-md text-foreground hover:bg-muted transition-colors"
+          className="p-2.5 rounded-md text-foreground hover:bg-muted transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
           aria-label="Open navigation"
         >
           <Menu size={20} />
         </button>
-        <div className="flex items-center">
+        <Link href="/dashboard" className="flex items-center">
           <Image src="/Logo new (1).svg" width={113} height={36} alt="BahasaBot" className="object-contain" />
-        </div>
+        </Link>
         <div className="flex items-center gap-1">
           <ThemeToggle variant="icon" />
           <NotificationBell panelSide="left" />
@@ -108,7 +108,7 @@ export function AppSidebar() {
 
       {/* ── MOBILE: slide-in drawer ── */}
       <div
-        className={`md:hidden fixed inset-y-0 left-0 z-[70] w-64 bg-sidebar border-r flex flex-col transition-transform duration-300 ease-in-out ${
+        className={`md:hidden fixed inset-y-0 left-0 z-[70] w-[280px] bg-sidebar border-r flex flex-col transition-transform duration-300 ease-in-out ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -118,7 +118,7 @@ export function AppSidebar() {
           </div>
           <button
             onClick={() => setMobileOpen(false)}
-            className="p-2 rounded-md text-foreground hover:bg-muted transition-colors"
+            className="p-2.5 rounded-md text-foreground hover:bg-muted transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
             aria-label="Close navigation"
           >
             <X size={20} />
@@ -133,7 +133,7 @@ export function AppSidebar() {
                 key={href}
                 href={href}
                 onClick={() => setMobileOpen(false)}
-                className={`flex items-center gap-3 py-2.5 px-3 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex items-center gap-3 py-3 px-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${
                   active
                     ? "bg-primary/15 text-primary"
                     : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-muted/40"
