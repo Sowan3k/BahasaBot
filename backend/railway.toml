@@ -1,9 +1,15 @@
 [build]
-builder = "NIXPACKS"
+builder = "DOCKERFILE"
+dockerfilePath = "backend/Dockerfile"
+# Build context is the project root so that:
+#   - 'from backend.X import Y' imports resolve correctly
+#   - alembic.ini (at project root) is accessible
+#   - backend/requirements.txt is referenced as backend/requirements.txt
 
 [deploy]
-startCommand = "uvicorn backend.main:app --host 0.0.0.0 --port $PORT --workers 2"
+# CMD in Dockerfile runs: alembic upgrade head && uvicorn backend.main:app ...
+# No startCommand override needed — let the Dockerfile CMD handle startup.
 healthcheckPath = "/health"
-healthcheckTimeout = 30
+healthcheckTimeout = 60
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3
