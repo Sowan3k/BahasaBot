@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-15 (Session 27 — Journey SetupModal dismissible)
+## Last Updated: 2026-04-15 (Session 28 — Onboarding / UITour race condition fix)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -23,7 +23,7 @@ _Update this file at the end of every session_
 | Forgot Password (Phase 12) | ✅ Rebuilt — 6-digit code flow | 3-endpoint backend (forgot/verify/reset); 4-step frontend (email→code→password→success); OTP boxes + resend cooldown; old link page deprecated; full E2E verified |
 | User Profile + Settings (Phase 13) | ✅ Complete | GET + PATCH /api/profile/, change-password endpoint; /settings hub + /profile + /password + /about pages; Settings in sidebar |
 | Onboarding Flow (Phase 14) | ✅ Complete + Enhanced (Session 26) | 8-step questionnaire (Welcome → Gender/Age → NativeLang → WhyLearning → CurrentLevel → Goal → Timeline → DailyStudy); gender + age_range collected for personalised roadmap banner; roadmap auto-generated on finish; loading screen during generation; sonner toast on roadmap_ready; skip at any step saves partial data |
-| First-Login UI Tour | ✅ Complete (Session 21) | driver.js spotlight tour; 8 steps covering sidebar + all nav sections; triggers once after onboarding; has_seen_tour flag on users table; PATCH saves flag on tour done/skip |
+| First-Login UI Tour | ✅ Complete + Race-fix (Session 28) | driver.js spotlight tour; 8 steps covering sidebar + all nav sections; triggers once after onboarding; has_seen_tour flag on users table; PATCH saves flag on tour done/skip. Race condition fixed: `active={showTour && !showOnboarding}` prevents tour from starting while onboarding modal is visible |
 | Admin Control Panel (Phase 15) | ✅ Complete + Verified | /api/admin/* fully tested; stats, users (search + detail + delete + reset + analytics), feedback; password guards verified; recharts LineChart + BarChart confirmed working; analytics bug fixed (NullType → timedelta) |
 | Pronunciation Audio (Phase 16) | ✅ Complete + Debugged | usePronunciation hook (ms-MY → ms → default fallback); SpeakerButton component; wired into VocabPills (chatbot), course class vocab cards, quiz results breakdown, dashboard vocabulary table; 3 post-implementation bugs fixed |
 | Notification System (Phase 17) | ✅ Complete | GET /api/notifications/ (last 20 + unread_count), POST mark-read, POST read-all; NotificationBell (60s polling, unread badge) + NotificationPanel; floating global icon in layout.tsx |
@@ -62,6 +62,21 @@ _Update this file at the end of every session_
 
 ## ✅ Fixed Issues (Session 13)
 - **Course covers not appearing (2026-04-13):** Session 12 correctly fixed `image_service.py` (httpx REST API) and `course_service.py` (retroactive healing + `asyncio.create_task`), but the backend was **never restarted** after those changes were made. Uvicorn started at 08:19, files modified at 14:22–14:28 — old broken code was still running. Fix: killed old uvicorn PIDs (18316, 25012), started fresh process on port 8000. Also manually ran `_generate_and_save_cover()` for all 3 existing courses that had `cover_image_url = NULL`. All verified: Gemini REST API returns JPEG (~1.1 MB base64, ~17s), DB save works, `GET /api/courses/` returns cover correctly. **Important**: after any code change to the backend, the uvicorn process MUST be restarted manually (no `--reload` flag in prod mode).
+
+---
+
+## What Was Done This Session (2026-04-15 Session 28 — Onboarding / UITour race condition fix)
+
+### Fix: driver.js UI tour fires on top of onboarding welcome modal
+
+New users saw both modals simultaneously — the Driver.js spotlight tooltip ("Your navigation hub", 1 of 8) appeared over the blurred onboarding welcome screen, pointing at the sidebar behind it.
+
+**Root cause:** `OnboardingChecker` and `UITourChecker` both react to the same `["profile"]` React Query result. When data first arrives, both `useEffect` hooks fire synchronously. `UITourChecker` reads `blocked=false` (the `setShowOnboarding(true)` from `OnboardingChecker` hasn't applied yet) and schedules a 600ms timer. After 600ms the tour starts even though `showOnboarding` is now `true`.
+
+**`frontend/app/(dashboard)/layout.tsx`**:
+- Changed `<UITour active={showTour} ...>` → `<UITour active={showTour && !showOnboarding} ...>`
+- The tour's `active` prop is now gated so it can never visually fire while the onboarding modal is present
+- When the timer fires during onboarding, `showTour` becomes `true` but `active` stays `false`; the tour starts naturally the moment onboarding closes and `showOnboarding` flips to `false`
 
 ---
 
