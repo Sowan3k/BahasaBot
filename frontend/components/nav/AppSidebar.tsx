@@ -194,7 +194,7 @@ export function AppSidebar() {
           size="icon"
           onClick={() => handleCollapse(!collapsed)}
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-10 w-6 h-6 rounded-full bg-card border border-border shadow-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-[60] w-6 h-6 rounded-full bg-card border border-border shadow-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
         >
           {collapsed
             ? <ChevronRight size={12} strokeWidth={2.5} />
@@ -257,20 +257,11 @@ export function AppSidebar() {
           })}
         </nav>
 
-        {/* ── Utility strip — Bell + ThemeToggle, below nav items above footer ── */}
-        {collapsed ? (
-          /* Collapsed: stack icons vertically, centered */
-          <div className="flex flex-col items-center gap-2 py-3 px-2">
-            <NotificationBell panelSide="right" panelDirection="up" />
-            <ThemeToggle variant="icon" />
-          </div>
-        ) : (
-          /* Expanded: row of icons, left-aligned with nav padding */
-          <div className="flex items-center gap-2 px-4 py-3">
-            <NotificationBell panelSide="right" panelDirection="up" />
-            <ThemeToggle variant="icon" />
-          </div>
-        )}
+        {/* ── Utility strip — Bell + ThemeToggle, centered below nav ── */}
+        <div className={`flex items-center justify-center gap-3 py-3 ${collapsed ? "flex-col" : "flex-row"}`}>
+          <NotificationBell panelSide="right" panelDirection="up" />
+          <ThemeToggle variant="icon" />
+        </div>
 
         {/* ── Footer — single border-t divider ── */}
         <div className="border-t shrink-0">

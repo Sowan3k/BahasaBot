@@ -185,6 +185,8 @@ export const NotificationPopover = ({
       await onClearAll();
       setNotifications([]);
       onNotificationsChange?.([]);
+    } catch {
+      // API failed — notifications stay, user can retry; error is already logged server-side
     } finally {
       setClearing(false);
     }
