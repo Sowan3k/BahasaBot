@@ -7,12 +7,14 @@ python-multipart==0.0.9
 sqlalchemy[asyncio]==2.0.30
 asyncpg==0.29.0
 alembic==1.13.1
-pgvector==0.3.2
+pgvector==0.2.5
 psycopg2-binary==2.9.9
 
 # ── Authentication ──────────────────────────────────────────────────────────────
 python-jose[cryptography]==3.3.0
-passlib[bcrypt]==1.7.4
+# passlib is NOT used — code calls bcrypt.hashpw/checkpw directly (see CLAUDE.md §14)
+# bcrypt is pinned explicitly here instead of relying on passlib's unpinned transitive dep
+bcrypt==4.0.1
 python-dotenv==1.0.1
 google-auth==2.29.0
 
