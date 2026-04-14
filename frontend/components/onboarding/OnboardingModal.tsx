@@ -189,8 +189,10 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
 
   if (generating) {
     return (
-      <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-        <div className="w-full max-w-md bg-card rounded-2xl shadow-2xl border border-border p-10 flex flex-col items-center gap-6 text-center">
+      // During active roadmap generation the card is pointer-events-auto but the backdrop
+      // keeps pointer-events-none so the sidebar remains accessible.
+      <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4 pointer-events-none">
+        <div className="pointer-events-auto w-full max-w-md bg-card rounded-2xl shadow-2xl border border-border p-10 flex flex-col items-center gap-6 text-center">
           {genError ? (
             <>
               <p className="text-sm text-muted-foreground leading-relaxed">{genError}</p>
@@ -232,6 +234,8 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
             subtitle="Your AI-powered companion for learning Bahasa Melayu. Let us take 60 seconds to personalise your experience."
             nextLabel="Get Started"
             onNext={next}
+            onSkip={skip}
+            loading={saving}
           >
             <div className="flex justify-center py-2">
               <Image
@@ -445,8 +449,10 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
   // ── Render ────────────────────────────────────────────────────────────────────
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-      <div className="w-full max-w-md bg-card rounded-2xl shadow-2xl border border-border p-8 max-h-[90vh] overflow-y-auto">
+    // pointer-events-none on the backdrop so the sidebar and other layout elements
+    // remain clickable while the modal is visible.  The card itself is pointer-events-auto.
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4 pointer-events-none">
+      <div className="pointer-events-auto w-full max-w-md bg-card rounded-2xl shadow-2xl border border-border p-8 max-h-[90vh] overflow-y-auto">
         {renderStep()}
       </div>
     </div>

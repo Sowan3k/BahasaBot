@@ -123,8 +123,10 @@ function SetupModal({ onGenerated }: SetupModalProps) {
   const step1Disabled = !intent || (intent === "other" && !intentOther.trim());
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
-      <div className="w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl overflow-hidden">
+    // pointer-events-none on backdrop so the sidebar remains clickable.
+    // The card itself is pointer-events-auto.
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4 pointer-events-none">
+      <div className="pointer-events-auto w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="bg-primary/10 border-b border-border px-6 py-5">
           <div className="flex items-center gap-2 mb-1">

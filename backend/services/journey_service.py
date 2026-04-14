@@ -43,6 +43,19 @@ from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
+# Strong references for fire-and-forget background tasks.
+# asyncio.create_task() without a reference can be GC-collected before the
+# coroutine finishes (Python docs warning).  This set holds each task alive
+# until its done_callback removes it.
+_background_tasks: set[asyncio.Task] = set()
+
+
+def _fire_background(coro) -> None:
+    """Schedule *coro* as a background task, keeping a strong reference."""
+    task = asyncio.create_task(coro)
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
+
 
 class RoadmapGenerationError(Exception):
     """Raised when Gemini fails to produce a valid roadmap (API error or bad response)."""
@@ -336,11 +349,13 @@ async def generate_roadmap(
             error=str(exc),
         )
 
-    # Generate banner image in background — does not block response
-    roadmap_id_str = str(roadmap.id)
-    asyncio.create_task(
+    # Generate banner image in background — does not block response.
+    # _fire_background() keeps a strong reference so Python GC cannot collect
+    # the task before the 17–90 s Gemini image call completes.
+    _fire_background(
         _generate_and_save_banner(
-            roadmap_id=roadmap_id_str,
+            roadmap_id=roadmap.id,
+            user_id=user_id,
             intent=intent,
             timeline_months=timeline_months,
         )
@@ -350,17 +365,27 @@ async def generate_roadmap(
 
 
 async def _generate_and_save_banner(
-    roadmap_id: str,
+    roadmap_id: UUID,
+    user_id: UUID,
     intent: str,
     timeline_months: int,
 ) -> None:
-    """Background task: generate and persist the roadmap banner image."""
+    """
+    Background task: generate and persist the roadmap banner image.
+
+    Receives UUID objects directly (not strings) to avoid any asyncpg
+    type-coercion ambiguity.  After saving, invalidates the roadmap cache
+    so the next GET /api/journey/roadmap returns the URL immediately rather
+    than serving a cached response that still has banner_image_url=None.
+    """
     from backend.db.database import AsyncSessionLocal
     from backend.services.image_service import generate_journey_banner
 
+    roadmap_id_str = str(roadmap_id)
     try:
         image_url = await generate_journey_banner(intent, timeline_months)
         if not image_url:
+            logger.warning("Banner generation returned None — skipping DB save", roadmap_id=roadmap_id_str)
             return
         async with AsyncSessionLocal() as db:
             result = await db.execute(
@@ -370,9 +395,14 @@ async def _generate_and_save_banner(
             if roadmap and not roadmap.banner_image_url:
                 roadmap.banner_image_url = image_url
                 await db.commit()
-                logger.info("Banner saved to user_roadmap", roadmap_id=roadmap_id)
+                logger.info("Banner saved to user_roadmap", roadmap_id=roadmap_id_str)
+                # Invalidate cache so the next GET returns the banner URL immediately
+                # instead of serving the pre-banner cached response (TTL 1 hr).
+                await cache_delete(_ROADMAP_CACHE_KEY.format(user_id))
+            elif roadmap and roadmap.banner_image_url:
+                logger.info("Banner already set — skipping (NEVER_REGENERATE rule)", roadmap_id=roadmap_id_str)
     except Exception as exc:
-        logger.error("Banner generation failed", roadmap_id=roadmap_id, error=str(exc))
+        logger.error("Banner generation failed", roadmap_id=roadmap_id_str, error=str(exc), exc_info=True)
 
 
 async def get_roadmap(user_id: UUID, db: AsyncSession) -> dict | None:
@@ -455,7 +485,7 @@ async def get_roadmap(user_id: UUID, db: AsyncSession) -> dict | None:
 
     # ── Notification triggers (fire-and-forget, checked on every GET) ─────
     if roadmap.status in ("active", "overdue") and not all_done:
-        asyncio.create_task(
+        _fire_background(
             _check_and_send_timeline_notifications(
                 user_id=user_id,
                 roadmap=roadmap,

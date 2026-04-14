@@ -19,6 +19,12 @@ import type { TokenResponse } from "@/lib/types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+// If NEXT_PUBLIC_GOOGLE_CLIENT_ID is absent (e.g. not set in Vercel env vars)
+// the GoogleLogin button renders with clientId="" and Google immediately returns
+// "invalid_request: missing client_id".  Guard here so we can show a clear
+// disabled state rather than a confusing error from Google's servers.
+const GOOGLE_CLIENT_ID_PRESENT = Boolean(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID);
+
 // ── Zod schema ──────────────────────────────────────────────────────────────
 
 const loginSchema = z.object({
@@ -290,33 +296,42 @@ export default function LoginPage() {
 
         {/* Google sign-in — hidden real button + custom themed overlay */}
         <div className="relative">
-          {/* Hidden GoogleLogin — handles actual OAuth credential flow */}
-          <div
-            ref={googleBtnRef}
-            className="absolute opacity-0 pointer-events-none"
-            style={{ width: 1, height: 1, overflow: "hidden" }}
-          >
-            <GoogleLogin
-              onSuccess={handleGoogleSuccess}
-              onError={() => setAuthError("Google sign-in failed. Please try again.")}
-              useOneTap={false}
-              text="signin_with"
-              shape="rectangular"
-              theme="filled_black"
-              size="large"
-              width="340"
-            />
-          </div>
+          {/* Hidden GoogleLogin — handles actual OAuth credential flow.
+              Only rendered when NEXT_PUBLIC_GOOGLE_CLIENT_ID is present;
+              if absent, GoogleOAuthProvider receives clientId="" and Google
+              immediately returns "invalid_request: missing client_id". */}
+          {GOOGLE_CLIENT_ID_PRESENT && (
+            <div
+              ref={googleBtnRef}
+              className="absolute opacity-0 pointer-events-none"
+              style={{ width: 1, height: 1, overflow: "hidden" }}
+            >
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => setAuthError("Google sign-in failed. Please try again.")}
+                useOneTap={false}
+                text="signin_with"
+                shape="rectangular"
+                theme="filled_black"
+                size="large"
+                width="340"
+              />
+            </div>
+          )}
 
-          {/* Visible themed button */}
+          {/* Visible themed button — disabled + tooltip when client ID absent */}
           <button
             type="button"
-            disabled={isLoading}
-            onClick={() => googleBtnRef.current?.querySelector<HTMLElement>("div[role=button], iframe")?.click()}
+            disabled={isLoading || !GOOGLE_CLIENT_ID_PRESENT}
+            title={!GOOGLE_CLIENT_ID_PRESENT ? "Google sign-in is not configured" : undefined}
+            onClick={() => {
+              if (!GOOGLE_CLIENT_ID_PRESENT) return;
+              googleBtnRef.current?.querySelector<HTMLElement>("div[role=button], iframe")?.click();
+            }}
             className="w-full flex items-center justify-center gap-3 h-10 rounded-lg
                        border border-white/15 bg-white/[0.06] hover:bg-white/10
                        text-white/75 hover:text-white text-sm font-medium
-                       transition-all duration-200 disabled:opacity-40"
+                       transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>

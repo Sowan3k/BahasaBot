@@ -12,6 +12,17 @@ import { ThemeContext, useThemeState } from "@/lib/use-theme";
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
 
+// Fail loudly in development if the env var is missing so it is caught before
+// deploying.  In production a missing value causes a silent "invalid_request:
+// missing client_id" from Google — much harder to debug than this message.
+if (!GOOGLE_CLIENT_ID && process.env.NODE_ENV !== "test") {
+  console.error(
+    "[BahasaBot] NEXT_PUBLIC_GOOGLE_CLIENT_ID is not set. " +
+    "Google sign-in will fail with 'invalid_request: missing client_id'. " +
+    "Add the variable to .env.local (dev) or Vercel environment variables (prod)."
+  );
+}
+
 export function Providers({ children }: { children: React.ReactNode }) {
   // Create QueryClient once per mount — stable across re-renders
   const [queryClient] = useState(

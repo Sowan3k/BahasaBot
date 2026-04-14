@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-15 (Session 24 — Dashboard + Journey mobile layout fixes)
+## Last Updated: 2026-04-15 (Session 25 — Modal lock, banner GC, Google OAuth hardening)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -48,6 +48,11 @@ _Update this file at the end of every session_
 ## Missing / Broken
 - `frontend/app/(dashboard)/quiz/adaptive/results/page.tsx` — redirects back to `/quiz/adaptive` (inline results used instead). Deep-link works but no standalone results page.
 
+## ⚠️ Manual Action Required (Google OAuth Production)
+- Add the production Vercel URL to **Authorized JavaScript origins** in Google Cloud Console (OAuth Client → your client ID)
+- Add `NEXT_PUBLIC_GOOGLE_CLIENT_ID` to Vercel environment variables (must match `backend/.env` `GOOGLE_CLIENT_ID`)
+- Redeploy after adding the Vercel env var — it is not hot-reloaded
+
 ## Known Pre-existing Issue (not caused by recent changes)
 - Module quiz cache-vs-submission misalignment: if a quiz attempt fails (0%) the cache clears and Gemini regenerates new questions. If the user re-submits using answers from the *first* GET, they score 0% again. Mitigation: frontend should re-fetch GET before showing quiz form if previous submission failed. This is a UI flow issue, not a backend bug.
 
@@ -57,6 +62,38 @@ _Update this file at the end of every session_
 
 ## ✅ Fixed Issues (Session 13)
 - **Course covers not appearing (2026-04-13):** Session 12 correctly fixed `image_service.py` (httpx REST API) and `course_service.py` (retroactive healing + `asyncio.create_task`), but the backend was **never restarted** after those changes were made. Uvicorn started at 08:19, files modified at 14:22–14:28 — old broken code was still running. Fix: killed old uvicorn PIDs (18316, 25012), started fresh process on port 8000. Also manually ran `_generate_and_save_cover()` for all 3 existing courses that had `cover_image_url = NULL`. All verified: Gemini REST API returns JPEG (~1.1 MB base64, ~17s), DB save works, `GET /api/courses/` returns cover correctly. **Important**: after any code change to the backend, the uvicorn process MUST be restarted manually (no `--reload` flag in prod mode).
+
+---
+
+## What Was Done This Session (2026-04-15 Session 25 — Modal lock, banner GC, Google OAuth hardening)
+
+### Fix 1: Onboarding & Journey modal navigation lock
+
+Both `OnboardingModal` and the Journey `SetupModal` used `fixed inset-0` backdrop divs with no `pointer-events-none`. This captured all pointer events across the viewport, blocking sidebar navigation while the modal was visible.
+
+- **`frontend/components/onboarding/OnboardingModal.tsx`**: Outer backdrop div gets `pointer-events-none`; inner card gets `pointer-events-auto`. Applied to both the step-wizard render path and the loading-screen path. Added `onSkip={skip}` + `loading={saving}` to Step 1 so users have an explicit escape hatch from the very first screen (previously Step 1 had no Skip).
+- **`frontend/app/(dashboard)/journey/page.tsx`** (`SetupModal`): Same `pointer-events-none` + `pointer-events-auto` pattern on backdrop/card.
+- **UITour**: No change needed — `UITourChecker` already uses `blocked={showOnboarding}` to prevent the driver.js tour from starting while the onboarding modal is open.
+
+### Fix 2: Roadmap banner generation — asyncio GC + cache invalidation
+
+Two root causes made banner images fail non-deterministically:
+
+1. **GC cancellation**: `asyncio.create_task()` returns a task with no strong reference. Python GC can collect (and silently cancel) the task during the 17–90 s Gemini image request.
+2. **Cache not invalidated**: After `_generate_and_save_banner` saved `banner_image_url` to the DB, it never called `cache_delete` on the roadmap Redis key. Users saw `banner_image_url=null` for up to 1 hour (the cache TTL) even when the URL was correctly stored.
+
+**`backend/services/journey_service.py`**:
+- Added module-level `_background_tasks: set[asyncio.Task]` and `_fire_background(coro)` helper — keeps a strong reference per Python docs recommendation.
+- Replaced both `asyncio.create_task()` calls (banner generation at line ~341, timeline notifications at `get_roadmap`) with `_fire_background()`.
+- `_generate_and_save_banner` now accepts `roadmap_id: UUID, user_id: UUID` (UUID objects, not strings) and calls `cache_delete(_ROADMAP_CACHE_KEY.format(user_id))` immediately after a successful DB commit.
+
+### Fix 3: Google OAuth production hardening
+
+Two root causes: (a) `NEXT_PUBLIC_GOOGLE_CLIENT_ID` not set in Vercel env vars → `GoogleOAuthProvider clientId=""` → Google returns `invalid_request: missing client_id`; (b) Vercel deployment URL not in Google Cloud Console authorized origins → `400: origin_mismatch`.
+
+- **`frontend/components/providers.tsx`**: `console.error` fires at app startup when `NEXT_PUBLIC_GOOGLE_CLIENT_ID` is absent, surfacing the misconfiguration before users encounter a cryptic Google error.
+- **`frontend/app/(auth)/login/page.tsx`**: `GOOGLE_CLIENT_ID_PRESENT` boolean guards the `<GoogleLogin>` component render — when the env var is absent, the component is never mounted (preventing the Google SDK error), and the visible button is `disabled` + `cursor-not-allowed` with a descriptive tooltip. No more silent failure.
+- **Remaining manual steps**: Add Vercel URL to Google Console authorized origins; add `NEXT_PUBLIC_GOOGLE_CLIENT_ID` to Vercel env vars; redeploy. (See ⚠️ section above.)
 
 ---
 
