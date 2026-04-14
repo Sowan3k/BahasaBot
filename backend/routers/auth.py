@@ -2,13 +2,14 @@
 Auth Router — /api/auth/*
 
 Endpoints:
-  POST /api/auth/register         — create new user (email/password)
-  POST /api/auth/login            — login with email/password, receive JWT tokens
-  POST /api/auth/google           — verify Google ID token, receive our JWT tokens
-  POST /api/auth/refresh          — exchange refresh token for a new access token
-  GET  /api/auth/me               — get current authenticated user
-  POST /api/auth/forgot-password  — request password-reset email (email/password accounts only)
-  POST /api/auth/reset-password   — set new password using reset token from email
+  POST /api/auth/register            — create new user (email/password)
+  POST /api/auth/login               — login with email/password, receive JWT tokens
+  POST /api/auth/google              — verify Google ID token, receive our JWT tokens
+  POST /api/auth/refresh             — exchange refresh token for a new access token
+  GET  /api/auth/me                  — get current authenticated user
+  POST /api/auth/forgot-password     — send 6-digit verification code to email
+  POST /api/auth/verify-reset-code   — verify the 6-digit code is valid
+  POST /api/auth/reset-password      — set new password using verified code
 """
 
 import hashlib
@@ -40,6 +41,8 @@ from backend.schemas.auth import (
     ResetPasswordResponse,
     TokenResponse,
     UserResponse,
+    VerifyResetCodeRequest,
+    VerifyResetCodeResponse,
 )
 from backend.services.email_service import send_reset_email
 from backend.utils.logger import get_logger
@@ -279,31 +282,32 @@ async def me(current_user: User = Depends(get_current_user)) -> UserResponse:
     return UserResponse.model_validate(current_user)
 
 
-# ── Forgot / Reset password ───────────────────────────────────────────────────
+# ── Forgot / Reset password (6-digit code flow) ───────────────────────────────
 
-RESET_TOKEN_TTL_MINUTES = 15
+RESET_CODE_TTL_MINUTES = 10
+
+
+def _make_code_hash(email: str, code: str) -> str:
+    """SHA-256 of 'email:code' — ties the code to the specific email address."""
+    return hashlib.sha256(f"{email.lower().strip()}:{code}".encode()).hexdigest()
 
 
 @router.post("/forgot-password", status_code=status.HTTP_200_OK, response_model=ForgotPasswordResponse)
 async def forgot_password(body: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)) -> ForgotPasswordResponse:
     """
-    Request a password-reset link.
+    Send a 6-digit verification code to the user's email.
 
-    - Google OAuth accounts: returns 400 with detail 'google_account_no_password'
-      so the frontend can show a helpful message.
-    - Email/password accounts: generates a 15-minute token, stores its SHA-256
-      hash in password_reset_tokens, and sends the raw token to the user's email.
-    - Non-existent email: returns 200 with the generic success message (prevents
-      email enumeration).
+    - Google OAuth accounts: returns 400 with detail 'google_account_no_password'.
+    - Email/password accounts: generates a 10-minute 6-digit code, stores its
+      SHA-256(email:code) hash in password_reset_tokens, and emails the code.
+    - Non-existent email: returns 200 (prevents email enumeration).
     """
     result = await db.execute(select(User).where(User.email == body.email))
     user = result.scalar_one_or_none()
 
     # User not found — return generic success to prevent email enumeration
     if user is None:
-        return ForgotPasswordResponse(
-            message="If that email is registered, you'll receive a reset link shortly."
-        )
+        return ForgotPasswordResponse(message="If that email is registered, you'll receive a code shortly.")
 
     # Google-only account — no password to reset
     if user.provider == "google" or user.password_hash is None:
@@ -312,52 +316,47 @@ async def forgot_password(body: ForgotPasswordRequest, db: AsyncSession = Depend
             detail="google_account_no_password",
         )
 
-    # Invalidate any existing unused tokens for this user to keep the table clean
-    existing_tokens_result = await db.execute(
+    # Invalidate any existing unused codes for this user
+    existing_result = await db.execute(
         select(PasswordResetToken).where(
             PasswordResetToken.user_id == user.id,
             PasswordResetToken.used == False,  # noqa: E712
         )
     )
-    for old_token in existing_tokens_result.scalars().all():
+    for old_token in existing_result.scalars().all():
         old_token.used = True
 
-    # Generate a cryptographically secure raw token (never stored)
-    raw_token = secrets.token_urlsafe(32)
-    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+    # Generate a 6-digit numeric code (zero-padded so always exactly 6 digits)
+    code = str(secrets.randbelow(1_000_000)).zfill(6)
+    token_hash = _make_code_hash(str(body.email), code)
 
     reset_record = PasswordResetToken(
         user_id=user.id,
         token_hash=token_hash,
-        expires_at=datetime.now(timezone.utc) + timedelta(minutes=RESET_TOKEN_TTL_MINUTES),
+        expires_at=datetime.now(timezone.utc) + timedelta(minutes=RESET_CODE_TTL_MINUTES),
     )
     db.add(reset_record)
     await db.commit()
 
-    # Send email — fire-and-forget; log failure but still return success to user
-    email_sent = await send_reset_email(to_email=user.email, reset_token=raw_token)
+    # Send the code via email — fire-and-forget; log failure but return success
+    email_sent = await send_reset_email(to_email=user.email, code=code)
     if not email_sent:
-        logger.warning("Reset email delivery failed — token stored but not delivered", user_id=str(user.id))
+        logger.warning("Reset code email delivery failed — code stored but not delivered", user_id=str(user.id))
 
-    logger.info("Password reset requested", user_id=str(user.id), email_sent=email_sent)
-    return ForgotPasswordResponse(
-        message="If that email is registered, you'll receive a reset link shortly."
-    )
+    logger.info("Password reset code sent", user_id=str(user.id), email_sent=email_sent)
+    return ForgotPasswordResponse(message="If that email is registered, you'll receive a code shortly.")
 
 
-@router.post("/reset-password", status_code=status.HTTP_200_OK, response_model=ResetPasswordResponse)
-async def reset_password(body: ResetPasswordRequest, db: AsyncSession = Depends(get_db)) -> ResetPasswordResponse:
+@router.post("/verify-reset-code", status_code=status.HTTP_200_OK, response_model=VerifyResetCodeResponse)
+async def verify_reset_code(body: VerifyResetCodeRequest, db: AsyncSession = Depends(get_db)) -> VerifyResetCodeResponse:
     """
-    Consume a reset token and update the user's password.
+    Verify that the 6-digit code is valid (not expired, not used).
 
-    Validates:
-      - Token exists in DB (by SHA-256 hash)
-      - Token has not been used
-      - Token has not expired (15-minute TTL)
-
-    On success: updates password_hash on the user, marks token as used.
+    Called by the frontend after the user enters their code. On success the
+    frontend advances to the new-password step. The code is NOT consumed here —
+    it is consumed in /reset-password so the final step is atomic.
     """
-    token_hash = hashlib.sha256(body.token.encode()).hexdigest()
+    token_hash = _make_code_hash(str(body.email), body.code.strip())
 
     result = await db.execute(
         select(PasswordResetToken).where(PasswordResetToken.token_hash == token_hash)
@@ -366,17 +365,50 @@ async def reset_password(body: ResetPasswordRequest, db: AsyncSession = Depends(
 
     invalid_exc = HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
-        detail="Reset link is invalid or has expired. Please request a new one.",
+        detail="Invalid or expired code. Please request a new one.",
     )
 
-    if reset_record is None:
-        raise invalid_exc
-
-    if reset_record.used:
+    if reset_record is None or reset_record.used:
         raise invalid_exc
 
     now = datetime.now(timezone.utc)
-    # expires_at may be timezone-naive (stored as UTC without tz info) — normalise
+    expires_at = reset_record.expires_at
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+
+    if now > expires_at:
+        raise invalid_exc
+
+    return VerifyResetCodeResponse(message="Code verified.")
+
+
+@router.post("/reset-password", status_code=status.HTTP_200_OK, response_model=ResetPasswordResponse)
+async def reset_password(body: ResetPasswordRequest, db: AsyncSession = Depends(get_db)) -> ResetPasswordResponse:
+    """
+    Consume the verified 6-digit code and update the user's password.
+
+    Validates:
+      - SHA-256(email:code) exists in DB and has not been used
+      - Code has not expired (10-minute TTL)
+
+    On success: updates password_hash, marks the code record as used.
+    """
+    token_hash = _make_code_hash(str(body.email), body.code.strip())
+
+    result = await db.execute(
+        select(PasswordResetToken).where(PasswordResetToken.token_hash == token_hash)
+    )
+    reset_record = result.scalar_one_or_none()
+
+    invalid_exc = HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="Invalid or expired code. Please request a new one.",
+    )
+
+    if reset_record is None or reset_record.used:
+        raise invalid_exc
+
+    now = datetime.now(timezone.utc)
     expires_at = reset_record.expires_at
     if expires_at.tzinfo is None:
         expires_at = expires_at.replace(tzinfo=timezone.utc)
@@ -396,5 +428,5 @@ async def reset_password(body: ResetPasswordRequest, db: AsyncSession = Depends(
     await db.commit()
 
     logger.info("Password reset successful", user_id=str(user.id))
-    return ResetPasswordResponse(message="Password updated successfully. You can now log in.")
+    return ResetPasswordResponse(message="Password updated successfully. You can now sign in.")
 

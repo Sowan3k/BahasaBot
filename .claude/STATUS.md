@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-14 (Session 22 — Mobile/responsive UI fixes + forgot-password verified)
+## Last Updated: 2026-04-15 (Session 23 — Forgot password rebuilt: 6-digit code flow)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -20,7 +20,7 @@ _Update this file at the end of every session_
 | Background Course Generation | ✅ Complete | Non-blocking modal; floating progress card; BackgroundTasks + Redis job state; React Query polling |
 | BPS Migration | ✅ Complete | CEFR labels fully retired; BPS-1/2/3/4 across DB, backend, frontend; Alembic migration written |
 | DB Schema (Phase 11) | ✅ Complete + Applied | 6 new tables + 8 new columns; ORM models written; migration applied successfully |
-| Forgot Password (Phase 12) | ✅ Complete | Resend email, token hashing, 15-min TTL; Google account guard; 2 frontend pages |
+| Forgot Password (Phase 12) | ✅ Rebuilt — 6-digit code flow | 3-endpoint backend (forgot/verify/reset); 4-step frontend (email→code→password→success); OTP boxes + resend cooldown; old link page deprecated; full E2E verified |
 | User Profile + Settings (Phase 13) | ✅ Complete | GET + PATCH /api/profile/, change-password endpoint; /settings hub + /profile + /password + /about pages; Settings in sidebar |
 | Onboarding Flow (Phase 14) | ✅ Complete + Enhanced (Session 21) | 7-step questionnaire (Welcome → NativeLang → WhyLearning → CurrentLevel → Goal → Timeline → DailyStudy); roadmap auto-generated on finish; loading screen during generation; sonner toast on roadmap_ready; skip at any step saves partial data |
 | First-Login UI Tour | ✅ Complete (Session 21) | driver.js spotlight tour; 8 steps covering sidebar + all nav sections; triggers once after onboarding; has_seen_tour flag on users table; PATCH saves flag on tour done/skip |
@@ -108,6 +108,50 @@ Driver.js spotlight tour that shows once after onboarding completes, walking use
 
 ---
 
+## What Was Done This Session (2026-04-15 Session 23 — Forgot password: 6-digit code flow)
+
+Replaced the old "click-a-link" forgot-password flow with a modern 6-digit verification code flow. No DB schema changes required (reused `password_reset_tokens` table).
+
+**Backend — 5 files changed:**
+
+`backend/schemas/auth.py`:
+- Added `VerifyResetCodeRequest(email, code)` + `VerifyResetCodeResponse`
+- Changed `ResetPasswordRequest` from `{token, new_password}` to `{email, code, new_password}` — `email` is needed to reconstruct the `SHA256(email:code)` hash
+
+`backend/services/email_service.py`:
+- Replaced `send_reset_email(to, reset_token)` with `send_reset_email(to, code)`
+- Email template now shows a large styled 6-digit code box instead of a "Reset Password" button
+- Subject line: `"{code} is your BahasaBot verification code"`
+
+`backend/routers/auth.py`:
+- `POST /forgot-password` — generates `secrets.randbelow(1_000_000)` zero-padded to 6 digits; stores `SHA256(email.lower():code)`; TTL 10 min (was 15 min); calls new `send_reset_email(email, code)`
+- `POST /verify-reset-code` (new) — validates hash + expiry + used; returns 200 if valid; does NOT mark as used (read-only check)
+- `POST /reset-password` — validates hash + expiry + used again (atomic); marks used, updates bcrypt hash
+- Added `_make_code_hash(email, code)` helper; imported new schemas
+
+`frontend/app/(auth)/forgot-password/page.tsx`:
+- Full rewrite as 4-step single-page component:
+  - Step 1 (Email): email input, sends code, Google guard message
+  - Step 2 (Code): 6 individual digit input boxes, handles paste, auto-advances focus; 60s resend cooldown; calls `/verify-reset-code`
+  - Step 3 (Password): new password + confirm, calls `/reset-password` with email+code+password
+  - Step 4 (Success): checkmark, auto-redirect to /login after 4s
+- Progress bar shows 3 steps (email/code/password); step-specific title + subtitle
+
+`frontend/app/(auth)/reset-password/page.tsx`:
+- Replaced with a simple "links no longer supported" page that auto-redirects to `/forgot-password` in 3s
+
+**End-to-end verified:**
+1. `POST /forgot-password` → 200 (email/password account) ✅
+2. `POST /forgot-password` → 400 `google_account_no_password` (Google account) ✅
+3. `POST /forgot-password` → 200 (non-existent email, enumeration protection) ✅
+4. `POST /verify-reset-code` correct code → 200 ✅
+5. `POST /verify-reset-code` wrong code → 400 ✅
+6. `POST /reset-password` → 200, password updated ✅
+7. Code reuse blocked → 400 ✅
+8. `POST /login` with new password → 200 ✅
+
+---
+
 ## What Was Done This Session (2026-04-14 Session 22 — Mobile/responsive UI fixes)
 
 13 targeted mobile/responsive fixes applied to the frontend. No backend changes.
@@ -154,11 +198,6 @@ Driver.js spotlight tour that shows once after onboarding completes, walking use
 
 **FIX 13 — Courses header mobile (courses/page.tsx):**
 - `items-center justify-between` → `items-start justify-between gap-3`; H1 `text-3xl` → `text-2xl sm:text-3xl`; subtitle `text-sm` → `text-xs sm:text-sm`; button: added `shrink-0`
-
-**Forgot Password — Email Delivery Verified:**
-- `backend/services/email_service.py` + `backend/.env` already had `RESEND_FROM_EMAIL=onboarding@resend.dev` correctly set. No code change required.
-- End-to-end test: `POST /api/auth/forgot-password` with a registered email/password account returns `200 OK` with `{"message":"If that email is registered, you'll receive a reset link shortly."}`.
-- Google account guard confirmed: `POST /api/auth/forgot-password` with a Google-only account returns `400 {"detail":"google_account_no_password"}` as expected.
 
 ---
 

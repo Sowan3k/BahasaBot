@@ -225,21 +225,28 @@ _Status: ✅ Complete_
 ---
 
 ## Phase 12 — Forgot Password
-_Status: ✅ Complete — pending: add RESEND_API_KEY to backend/.env_
+_Status: ✅ Complete + Rebuilt (6-digit code flow, 2026-04-15)_
 
-**Goal:** Allow email/password users to reset their password via a Resend email link.
+**Goal:** Allow email/password users to reset their password via a 6-digit verification code sent to their inbox (no clickable link).
 
 ### Backend
-- [x] backend/services/email_service.py — Resend SDK integration, send_reset_email() function
-- [x] backend/routers/auth.py — add POST /api/auth/forgot-password (generate token, store hash, send email)
-- [x] backend/routers/auth.py — add POST /api/auth/reset-password (validate token, update password, mark token used)
-- [x] Add RESEND_API_KEY to backend/.env.example
+- [x] backend/services/email_service.py — Resend SDK, sends 6-digit code email (code displayed in styled box, not a link)
+- [x] backend/routers/auth.py — POST /api/auth/forgot-password: generates 6-digit code, stores SHA256(email:code) hash (10-min TTL)
+- [x] backend/routers/auth.py — POST /api/auth/verify-reset-code: validates email+code, returns 200 (code not consumed yet)
+- [x] backend/routers/auth.py — POST /api/auth/reset-password: validates email+code again (atomic), updates password, marks code used
+- [x] backend/schemas/auth.py — VerifyResetCodeRequest + VerifyResetCodeResponse; ResetPasswordRequest updated (email+code+new_password)
 
 ### Frontend
-- [x] frontend/app/(auth)/forgot-password/page.tsx — email input form, submit triggers API call, show success message
-- [x] frontend/app/(auth)/reset-password/page.tsx — reads token from URL query param, new password form, submit triggers API call
+- [x] frontend/app/(auth)/forgot-password/page.tsx — 4-step single-page flow: Email → Code (OTP boxes + resend cooldown) → New Password → Success (auto-redirect 4s)
+- [x] frontend/app/(auth)/reset-password/page.tsx — deprecated page: shows "links no longer supported" + redirects to /forgot-password
 - [x] Add "Forgot password?" link on login page pointing to /forgot-password
 - [x] Handle Google OAuth accounts: show "Use Google to reset your password" message instead of form
+
+### Verified end-to-end (2026-04-15)
+- Step 1 (request): 200 for valid email; 400 google_account_no_password for Google accounts; 200 for non-existent email (enumeration protection)
+- Step 2 (verify): 200 for correct code; 400 for wrong/expired/used code
+- Step 3 (reset): 200 + password updated; 400 for invalid code; code marked used atomically
+- Step 4: login with new password returns 200 JWT
 
 ---
 

@@ -108,10 +108,24 @@ class ForgotPasswordResponse(BaseModel):
     message: str
 
 
+class VerifyResetCodeRequest(BaseModel):
+    """Payload for POST /api/auth/verify-reset-code."""
+
+    email: EmailStr
+    code: str  # 6-digit numeric code entered by the user
+
+
+class VerifyResetCodeResponse(BaseModel):
+    """Response after successful code verification."""
+
+    message: str
+
+
 class ResetPasswordRequest(BaseModel):
     """Payload for POST /api/auth/reset-password."""
 
-    token: str  # raw token from URL query param
+    email: EmailStr   # required to reconstruct the hash (email + code)
+    code: str         # the same 6-digit code verified in the previous step
     new_password: str
 
     @field_validator("new_password")
