@@ -303,8 +303,19 @@ export default function LoginPage() {
           {GOOGLE_CLIENT_ID_PRESENT && (
             <div
               ref={googleBtnRef}
-              className="absolute opacity-0 pointer-events-none"
-              style={{ width: 1, height: 1, overflow: "hidden" }}
+              // Position offscreen at full size. Google's GIS renders the button
+              // inside a cross-origin iframe (accounts.google.com/gsi/button).
+              // A 1×1 container offsets the button away from (0,0), so the
+              // programmatic .click() misses it. Full dimensions ensure the
+              // iframe loads the button centred and clickable.
+              style={{
+                position: "absolute",
+                top: "-9999px",
+                left: "-9999px",
+                width: "340px",
+                height: "44px",
+                overflow: "hidden",
+              }}
             >
               <GoogleLogin
                 onSuccess={handleGoogleSuccess}
