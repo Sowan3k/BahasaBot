@@ -192,8 +192,11 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         {showOnboarding && (
           <OnboardingModal onComplete={handleOnboardingComplete} />
         )}
-        {/* UI spotlight tour — shown once after onboarding completes */}
-        <UITour active={showTour} onDone={handleTourDone} />
+        {/* UI spotlight tour — shown once after onboarding completes.
+            Guard with !showOnboarding so a race condition between the two
+            React Query effects can never fire the tour while the welcome
+            modal is still visible. */}
+        <UITour active={showTour && !showOnboarding} onDone={handleTourDone} />
       </div>
     </CourseGenerationProvider>
   );
