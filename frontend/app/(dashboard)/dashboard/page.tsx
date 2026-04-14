@@ -252,8 +252,8 @@ export default function DashboardPage() {
     <div className="max-w-5xl mx-auto px-3 sm:px-4 py-4 sm:py-8 space-y-4 sm:space-y-6 overflow-x-hidden">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground mt-1 leading-relaxed">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
+        <p className="text-sm sm:text-base text-muted-foreground mt-1 leading-relaxed break-words">
           Your Bahasa Melayu learning progress at a glance.
         </p>
       </div>
@@ -266,12 +266,12 @@ export default function DashboardPage() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-0.5 sm:gap-1 border-b overflow-x-auto scrollbar-none">
+      <div className="w-full flex gap-0.5 sm:gap-1 border-b overflow-x-auto scrollbar-none">
         {TABS.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium tracking-wide border-b-2 transition-colors -mb-px whitespace-nowrap flex-shrink-0 ${
+            className={`px-2.5 sm:px-4 py-2 text-xs sm:text-sm font-medium tracking-wide border-b-2 transition-colors -mb-px whitespace-nowrap flex-shrink-0 ${
               activeTab === tab.id
                 ? "border-primary text-primary"
                 : "border-transparent text-muted-foreground hover:text-foreground"

@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-15 (Session 23 — Forgot password + global mobile scrollbar hide)
+## Last Updated: 2026-04-15 (Session 24 — Dashboard + Journey mobile layout fixes)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -43,6 +43,7 @@ _Update this file at the end of every session_
 | XP / Streak Display (Session 18) | ✅ Fixed | Dashboard refetches on window focus/visibilitychange (30s throttle); sidebar profile staleTime 60→30s + refetchOnWindowFocus; bps_milestone added to notification title map + TrendingUp icon |
 | User Feedback — Settings (Session 18) | ✅ Complete | /settings/feedback page (star rating + relevance + textarea → POST /api/evaluation/feedback quiz_type="general"); backend schema extended to accept "general"; admin feedback page shows "General" badge; admin main page label updated to "User Feedback" |
 | Notification Bell UX (Session 18) | ✅ Relocated + Clear-all | Bell moved from floating fixed overlay into AppSidebar: mobile header (opens left/downward), desktop expanded footer next to username (opens right/upward), desktop collapsed footer (opens right/upward); DELETE /api/notifications/ backend endpoint; "Clear all" button in panel header; panelSide + panelDirection props added to NotificationPopover |
+| Mobile Layout Fixes (Session 24) | ✅ Complete | Dashboard: StatsCards grid gap-2→sm:gap-4, reduced card padding/icon/font sizes on mobile (no overflow at 375px); h1 text-2xl on mobile; subtitle breaks correctly; tabs px tightened. Journey: outer container px-3 pt-4; ObstacleNode always flex-row on mobile (zigzag only on sm+); topic title line-clamp-2 instead of truncate; card min-w-0; progress card p-3 on mobile; deadline row flex-wrap + break-words; header min-w-0 + flex-1. Both pages verified zero horizontal overflow at 375px. |
 
 ## Missing / Broken
 - `frontend/app/(dashboard)/quiz/adaptive/results/page.tsx` — redirects back to `/quiz/adaptive` (inline results used instead). Deep-link works but no standalone results page.
@@ -56,6 +57,28 @@ _Update this file at the end of every session_
 
 ## ✅ Fixed Issues (Session 13)
 - **Course covers not appearing (2026-04-13):** Session 12 correctly fixed `image_service.py` (httpx REST API) and `course_service.py` (retroactive healing + `asyncio.create_task`), but the backend was **never restarted** after those changes were made. Uvicorn started at 08:19, files modified at 14:22–14:28 — old broken code was still running. Fix: killed old uvicorn PIDs (18316, 25012), started fresh process on port 8000. Also manually ran `_generate_and_save_cover()` for all 3 existing courses that had `cover_image_url = NULL`. All verified: Gemini REST API returns JPEG (~1.1 MB base64, ~17s), DB save works, `GET /api/courses/` returns cover correctly. **Important**: after any code change to the backend, the uvicorn process MUST be restarted manually (no `--reload` flag in prod mode).
+
+---
+
+## What Was Done This Session (2026-04-15 Session 24 — Dashboard + Journey mobile layout fixes)
+
+### Dashboard mobile layout
+
+Fixed horizontal overflow and content clipping at 375px viewport:
+
+- **StatsCards.tsx**: grid `gap-2 sm:gap-4`; outer wrapper `p-1.5 sm:p-2`; inner card `p-2.5 sm:p-5`; icon `p-1.5 sm:p-2`; all icons `h-3.5 w-3.5 sm:h-4 sm:w-4`; label `text-[9px] tracking-wide sm:tracking-widest leading-tight`; value `text-xl sm:text-3xl`; description `text-[10px] sm:text-xs leading-tight`; shorter description strings for Quizzes/Streak/XP cards; `min-w-0` on text container.
+- **dashboard/page.tsx**: h1 `text-2xl sm:text-3xl`; subtitle `text-sm sm:text-base break-words`; tabs div gets `w-full` and button px tightened to `px-2.5 sm:px-4`.
+
+### Journey mobile layout
+
+Fixed zigzag overflow and title clipping at 375px viewport:
+
+- **journey/page.tsx**: outer container `px-3 pt-4 pb-4 sm:p-6` (was `p-3`).
+- **ObstacleNode**: `containerClass` now always `flex-row` on mobile, zigzag (`sm:flex-row-reverse`) only on `sm+`; gap `gap-3 sm:gap-4`.
+- Card: `min-w-0 p-3 sm:p-4` (was `p-4`) to prevent flex-1 card from overflowing.
+- Topic title: `line-clamp-2 break-words` (was `truncate`) — full titles now wrap instead of being cut with ellipsis.
+- Progress card: `p-3 sm:p-4`; top row `gap-2 min-w-0` with `shrink-0` on percentage; deadline row `items-start flex-wrap break-words` so long date strings wrap.
+- Header: `gap-3`, inner div `min-w-0 flex-1`; h1 `text-xl sm:text-2xl`; goal `break-words`.
 
 ---
 

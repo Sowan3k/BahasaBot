@@ -311,7 +311,10 @@ function ObstacleNode({ elem, index, elements, onClickUnlocked }: ObstacleProps)
 
   const isLeft = index % 2 === 0;
 
-  const containerClass = `relative flex ${isLeft ? "flex-row" : "flex-row-reverse"} items-center gap-4 py-2`;
+  // On mobile: always single-column (circle left, card right). Zigzag only on sm+.
+  const containerClass = `relative flex ${
+    isLeft ? "flex-row sm:flex-row" : "flex-row sm:flex-row-reverse"
+  } items-center gap-3 sm:gap-4 py-2`;
 
   const nodeClass =
     state === "completed"
@@ -358,7 +361,7 @@ function ObstacleNode({ elem, index, elements, onClickUnlocked }: ObstacleProps)
 
       {/* Card */}
       <div
-        className={`flex-1 rounded-xl border bg-card p-4 shadow-sm transition-all ${labelClass} ${
+        className={`flex-1 min-w-0 rounded-xl border bg-card p-3 sm:p-4 shadow-sm transition-all ${labelClass} ${
           state === "current" ? "border-primary/40 bg-primary/5" : ""
         } ${state === "completed" ? "border-emerald-500/20 bg-emerald-500/5" : ""}`}
         onClick={state !== "locked" ? () => setExpanded((e) => !e) : undefined}
@@ -380,7 +383,7 @@ function ObstacleNode({ elem, index, elements, onClickUnlocked }: ObstacleProps)
                 </span>
               )}
             </div>
-            <p className="text-sm font-semibold text-foreground truncate">{elem.topic}</p>
+            <p className="text-sm font-semibold text-foreground line-clamp-2 break-words">{elem.topic}</p>
             {elem.estimated_weeks != null && (
               <p className="text-xs text-muted-foreground mt-0.5">
                 ~{elem.estimated_weeks} week{elem.estimated_weeks !== 1 ? "s" : ""}
@@ -831,19 +834,19 @@ export default function JourneyPage() {
   const progressPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   return (
-    <div className="w-full max-w-xl mx-auto p-3 sm:p-6 space-y-4 sm:space-y-5 overflow-x-hidden">
+    <div className="w-full max-w-xl mx-auto px-3 pt-4 pb-4 sm:p-6 space-y-4 sm:space-y-5 overflow-x-hidden">
 
       {/* ── Header ── */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 mb-1">
-            <Map className="h-5 w-5 text-primary" />
+            <Map className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
             <span className="text-xs font-semibold uppercase tracking-wider text-primary">
               My Journey
             </span>
           </div>
-          <h1 className="text-2xl font-bold text-foreground">Learning Roadmap</h1>
-          <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">{roadmap.goal}</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Learning Roadmap</h1>
+          <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2 break-words">{roadmap.goal}</p>
         </div>
         <button
           onClick={() => setShowDelete(true)}
@@ -878,13 +881,13 @@ export default function JourneyPage() {
       )}
 
       {/* ── Progress summary ── */}
-      <div className="rounded-xl border border-border bg-card p-4 space-y-3">
-        <div className="flex items-center justify-between text-sm">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Flag className="h-4 w-4" />
-            <span>{completedCount} of {totalCount} obstacles cleared</span>
+      <div className="rounded-xl border border-border bg-card p-3 sm:p-4 space-y-3">
+        <div className="flex items-center justify-between gap-2 text-sm">
+          <div className="flex items-center gap-2 text-muted-foreground min-w-0">
+            <Flag className="h-4 w-4 shrink-0" />
+            <span className="truncate">{completedCount} of {totalCount} obstacles cleared</span>
           </div>
-          <span className="font-bold text-foreground">{progressPct}%</span>
+          <span className="font-bold text-foreground shrink-0">{progressPct}%</span>
         </div>
         <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden">
           <div
@@ -892,9 +895,9 @@ export default function JourneyPage() {
             style={{ width: `${progressPct}%` }}
           />
         </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Calendar className="h-3.5 w-3.5" />
-          <span>
+        <div className="flex items-start gap-2 text-xs text-muted-foreground min-w-0">
+          <Calendar className="h-3.5 w-3.5 shrink-0 mt-px" />
+          <span className="break-words min-w-0">
             {roadmap.status === "overdue" ? (
               <span className="text-amber-500 font-medium">Deadline passed ({formatDate(roadmap.deadline)})</span>
             ) : (
