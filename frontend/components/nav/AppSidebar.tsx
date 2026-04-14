@@ -25,7 +25,6 @@ import {
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
-import { Button } from "@/components/ui/button";
 import { profileApi } from "@/lib/api";
 
 const BASE_NAV_ITEMS = [
@@ -184,23 +183,21 @@ export function AppSidebar() {
         on the right border at vertical center.
       */}
       <aside
-        className={`hidden md:flex flex-col h-full bg-sidebar border-r flex-shrink-0 transition-all duration-300 ease-in-out relative ${
+        className={`hidden md:flex flex-col h-full bg-sidebar border-r flex-shrink-0 transition-all duration-300 ease-in-out relative z-[1] ${
           collapsed ? "w-[60px]" : "w-60"
         }`}
       >
         {/* ── Collapse / Expand handle — sits on the right border, vertically centered ── */}
-        <Button
-          variant="outline"
-          size="icon"
+        <button
           onClick={() => handleCollapse(!collapsed)}
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-[60] w-6 h-6 rounded-full bg-card border border-border shadow-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-[60] w-6 h-6 rounded-full bg-card border border-border shadow-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors flex items-center justify-center cursor-pointer"
         >
           {collapsed
             ? <ChevronRight size={12} strokeWidth={2.5} />
             : <ChevronLeft size={12} strokeWidth={2.5} />
           }
-        </Button>
+        </button>
 
         {/* ── Logo area ── */}
         <div

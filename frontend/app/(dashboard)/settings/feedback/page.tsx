@@ -66,7 +66,7 @@ export default function FeedbackPage() {
     setError(null);
 
     try {
-      await feedbackApi.submit({
+      await feedbackApi.submitFeedback({
         quiz_type: "general",
         rating,
         weak_points_relevant: relevance,
