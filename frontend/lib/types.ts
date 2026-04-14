@@ -392,6 +392,8 @@ export interface UserProfile {
   onboarding_completed: boolean;
   has_seen_tour: boolean;
   provider: "email" | "google";
+  gender: string | null;
+  age_range: string | null;
 }
 
 /** PATCH /api/profile/ request body */
@@ -402,6 +404,8 @@ export interface ProfileUpdatePayload {
   profile_picture_url?: string | null;
   onboarding_completed?: boolean;
   has_seen_tour?: boolean;
+  gender?: string | null;
+  age_range?: string | null;
 }
 
 /** POST /api/profile/change-password request body */

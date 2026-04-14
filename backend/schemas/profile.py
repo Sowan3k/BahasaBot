@@ -27,6 +27,8 @@ class ProfileResponse(BaseModel):
     onboarding_completed: bool
     has_seen_tour: bool
     provider: Literal["email", "google"]
+    gender: str | None
+    age_range: str | None
 
     @field_validator("id", mode="before")
     @classmethod
@@ -47,6 +49,8 @@ class ProfileUpdateRequest(BaseModel):
     profile_picture_url: str | None = None
     onboarding_completed: bool | None = None
     has_seen_tour: bool | None = None
+    gender: str | None = None
+    age_range: str | None = None
 
     @field_validator("name")
     @classmethod

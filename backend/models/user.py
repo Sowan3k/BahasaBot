@@ -104,6 +104,11 @@ class User(Base):
         default=False,
         server_default="false",
     )
+    # Personalisation: collected during onboarding for banner image generation
+    # gender: "male" | "female" | "non-binary" | "prefer_not_to_say" | None
+    gender: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # age_range: "under_18" | "18-24" | "25-34" | "35-44" | "45+" | None
+    age_range: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
     def __repr__(self) -> str:
         return f"<User id={self.id} email={self.email} level={self.proficiency_level}>"

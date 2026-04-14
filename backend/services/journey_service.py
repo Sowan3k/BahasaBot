@@ -82,15 +82,22 @@ _BPS_ORDER = {"BPS-1": 1, "BPS-2": 2, "BPS-3": 3, "BPS-4": 4}
 
 
 async def _fetch_user_context(user_id: UUID, db: AsyncSession) -> dict:
-    """Fetch BPS level, native language, learning goal, and top weak points."""
+    """Fetch BPS level, native language, learning goal, gender, age_range, and top weak points."""
     result = await db.execute(
-        select(User.proficiency_level, User.native_language, User.learning_goal)
-        .where(User.id == user_id)
+        select(
+            User.proficiency_level,
+            User.native_language,
+            User.learning_goal,
+            User.gender,
+            User.age_range,
+        ).where(User.id == user_id)
     )
     row = result.one_or_none()
     bps_level      = row.proficiency_level if row else "BPS-1"
     native_lang    = row.native_language if row else None
     learning_goal  = row.learning_goal if row else None
+    gender         = row.gender if row else None
+    age_range      = row.age_range if row else None
 
     wp_result = await db.execute(
         select(WeakPoint.topic, WeakPoint.type, WeakPoint.strength_score)
@@ -106,6 +113,8 @@ async def _fetch_user_context(user_id: UUID, db: AsyncSession) -> dict:
         "bps_level": bps_level,
         "native_language": native_lang,
         "learning_goal": learning_goal,
+        "gender": gender,
+        "age_range": age_range,
         "weak_points": weak_points,
     }
 
@@ -358,6 +367,8 @@ async def generate_roadmap(
             user_id=user_id,
             intent=intent,
             timeline_months=timeline_months,
+            gender=ctx.get("gender"),
+            age_range=ctx.get("age_range"),
         )
     )
 
@@ -369,6 +380,8 @@ async def _generate_and_save_banner(
     user_id: UUID,
     intent: str,
     timeline_months: int,
+    gender: str | None = None,
+    age_range: str | None = None,
 ) -> None:
     """
     Background task: generate and persist the roadmap banner image.
@@ -383,7 +396,9 @@ async def _generate_and_save_banner(
 
     roadmap_id_str = str(roadmap_id)
     try:
-        image_url = await generate_journey_banner(intent, timeline_months)
+        image_url = await generate_journey_banner(
+            intent, timeline_months, gender=gender, age_range=age_range
+        )
         if not image_url:
             logger.warning("Banner generation returned None — skipping DB save", roadmap_id=roadmap_id_str)
             return

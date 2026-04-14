@@ -99,29 +99,67 @@ async def generate_image(prompt: str) -> str | None:
 # ── Specialised generators ─────────────────────────────────────────────────────
 
 
-async def generate_journey_banner(goal_type: str, deadline_months: int) -> str | None:
+async def generate_journey_banner(
+    goal_type: str,
+    deadline_months: int,
+    gender: str | None = None,
+    age_range: str | None = None,
+) -> str | None:
     """
     Generate a wide banner image for the user's learning roadmap hero area.
     Called once when a new roadmap is created; stored in user_roadmaps.banner_image_url.
+
+    gender   — "male" | "female" | "non-binary" | "prefer_not_to_say" | None
+    age_range — "under_18" | "18-24" | "25-34" | "35-44" | "45+" | None
+    Both are optional; when None the prompt falls back to a neutral figure.
     """
     goal_descriptions = {
-        "survival": "basic survival communication and everyday transactions",
+        "survival":      "basic survival communication and everyday transactions",
         "conversational": "everyday conversational fluency with locals",
-        "academic": "academic writing and formal professional proficiency",
+        "academic":      "academic writing and formal professional proficiency",
+        "casual":        "casual everyday language and cultural exploration",
+        "work":          "professional and workplace communication",
+        "travel":        "travel, tourism, and cultural immersion",
+        "other":         "general language learning and personal enrichment",
     }
     goal_text = goal_descriptions.get(goal_type, goal_type)
+
+    # ── Subject description ────────────────────────────────────────────────────
+    # Build a specific but respectful learner description so Gemini depicts
+    # the correct person rather than defaulting to a generic young woman.
+    gender_map = {
+        "male":             "a male student",
+        "female":           "a female student",
+        "non-binary":       "a person",
+        "prefer_not_to_say": "a student",
+    }
+    age_map = {
+        "under_18": "teenage",
+        "18-24":    "young adult",
+        "25-34":    "adult",
+        "35-44":    "adult",
+        "45+":      "mature adult",
+    }
+
+    subject_gender = gender_map.get(gender or "", "a student")
+    subject_age    = age_map.get(age_range or "", "")
+    subject        = f"{subject_age} {subject_gender}".strip() if subject_age else subject_gender
+
     prompt = (
         f"Create a vibrant, motivational wide landscape banner illustration for a Bahasa Melayu "
-        f"(Malaysian Malay) language learning journey. The student's goal is '{goal_text}' "
-        f"within {deadline_months} months. "
+        f"(Malaysian Malay) language learning journey. "
+        f"The central figure is {subject} studying Malay with enthusiasm. "
+        f"Their goal is '{goal_text}' within {deadline_months} months. "
         f"Style: warm tropical colours (deep oranges, forest greens, golden yellows), "
         f"Malaysian cultural motifs (batik patterns, hibiscus flowers, tropical foliage, "
         f"traditional architecture silhouettes), inspirational and energetic atmosphere. "
+        f"The figure should look {subject_age + ' ' if subject_age else ''}confident and motivated. "
         f"No text overlay. Wide landscape format (16:9). High-quality digital illustration."
     )
     logger.info(
         f"[IMAGE] generate_journey_banner called "
-        f"(goal_type={goal_type}, deadline_months={deadline_months})"
+        f"(goal_type={goal_type}, deadline_months={deadline_months}, "
+        f"gender={gender}, age_range={age_range})"
     )
     url = await generate_image(prompt)
     if url:

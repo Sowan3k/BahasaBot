@@ -75,7 +75,22 @@ const STUDY_TIME_OPTIONS = [
   { value: "2+ hours",   label: "2+ hrs / day",  desc: "Intensive study" },
 ];
 
-const TOTAL_STEPS = 7;
+const GENDER_OPTIONS = [
+  { value: "male",             label: "Male"              },
+  { value: "female",           label: "Female"            },
+  { value: "non-binary",       label: "Non-binary"        },
+  { value: "prefer_not_to_say", label: "Prefer not to say" },
+] as const;
+
+const AGE_OPTIONS = [
+  { value: "under_18", label: "Under 18" },
+  { value: "18-24",    label: "18 – 24"  },
+  { value: "25-34",    label: "25 – 34"  },
+  { value: "35-44",    label: "35 – 44"  },
+  { value: "45+",      label: "45 +"     },
+] as const;
+
+const TOTAL_STEPS = 8;
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
@@ -91,6 +106,8 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
 
   // Collected answers
   const [nativeLanguage, setNativeLanguage] = useState("");
+  const [gender, setGender] = useState("");
+  const [ageRange, setAgeRange] = useState("");
   const [goalOption, setGoalOption] = useState<(typeof GOAL_OPTIONS)[number] | null>(null);
   const [bpsLevel, setBpsLevel] = useState("");
   const [goalText, setGoalText] = useState("");
@@ -126,6 +143,8 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
       native_language: nativeLanguage || null,
       learning_goal: combinedGoal,
       onboarding_completed: true as const,
+      gender: gender || null,
+      age_range: ageRange || null,
     };
   }
 
@@ -250,11 +269,68 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
           </OnboardingStep>
         );
 
-      // ── Step 2: Native Language ────────────────────────────────────────────
+      // ── Step 2: About You (gender + age) ──────────────────────────────────
+      // Collected so the roadmap banner image reflects the user accurately.
       case 2:
         return (
           <OnboardingStep
             currentStep={2}
+            totalSteps={TOTAL_STEPS}
+            title="Tell us about yourself"
+            subtitle="This personalises your learning journey visuals and experience."
+            onNext={next}
+            onSkip={next}
+          >
+            <div className="space-y-4">
+              {/* Gender */}
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-foreground">How do you identify?</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {GENDER_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setGender(opt.value)}
+                      className={`px-3 py-2.5 rounded-lg border text-sm transition-colors ${
+                        gender === opt.value
+                          ? "border-primary bg-primary/10 text-primary font-medium"
+                          : "border-border text-foreground hover:bg-muted"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {/* Age range */}
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-foreground">What is your age range?</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {AGE_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setAgeRange(opt.value)}
+                      className={`px-3 py-2.5 rounded-lg border text-sm transition-colors ${
+                        ageRange === opt.value
+                          ? "border-primary bg-primary/10 text-primary font-medium"
+                          : "border-border text-foreground hover:bg-muted"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </OnboardingStep>
+        );
+
+      // ── Step 3: Native Language ────────────────────────────────────────────
+      case 3:
+        return (
+          <OnboardingStep
+            currentStep={3}
             totalSteps={TOTAL_STEPS}
             title="What is your native language?"
             subtitle="This helps BahasaBot explain Malay in a way that makes sense for you."
@@ -274,11 +350,11 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
           </OnboardingStep>
         );
 
-      // ── Step 3: Why Learning Malay ─────────────────────────────────────────
-      case 3:
+      // ── Step 4: Why Learning Malay ────────────────────────────────────────
+      case 4:
         return (
           <OnboardingStep
-            currentStep={3}
+            currentStep={4}
             totalSteps={TOTAL_STEPS}
             title="Why are you learning Malay?"
             subtitle="We will personalise your roadmap and courses around your goal."
@@ -304,11 +380,11 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
           </OnboardingStep>
         );
 
-      // ── Step 4: Current Malay Level ────────────────────────────────────────
-      case 4:
+      // ── Step 5: Current Malay Level ───────────────────────────────────────
+      case 5:
         return (
           <OnboardingStep
-            currentStep={4}
+            currentStep={5}
             totalSteps={TOTAL_STEPS}
             title="What is your current Malay level?"
             subtitle="Be honest — BahasaBot will calibrate your roadmap accordingly."
@@ -337,11 +413,11 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
           </OnboardingStep>
         );
 
-      // ── Step 5: Their Goal ─────────────────────────────────────────────────
-      case 5:
+      // ── Step 6: Their Goal ────────────────────────────────────────────────
+      case 6:
         return (
           <OnboardingStep
-            currentStep={5}
+            currentStep={6}
             totalSteps={TOTAL_STEPS}
             title="What do you want to achieve?"
             subtitle="Describe what you want to be able to do in Malay — in your own words."
@@ -362,11 +438,11 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
           </OnboardingStep>
         );
 
-      // ── Step 6: Timeline ───────────────────────────────────────────────────
-      case 6:
+      // ── Step 7: Timeline ──────────────────────────────────────────────────
+      case 7:
         return (
           <OnboardingStep
-            currentStep={6}
+            currentStep={7}
             totalSteps={TOTAL_STEPS}
             title="How long do you have?"
             subtitle="Choose a realistic timeline — you can always extend it later."
@@ -392,11 +468,11 @@ export function OnboardingModal({ onComplete }: OnboardingModalProps) {
           </OnboardingStep>
         );
 
-      // ── Step 7: Daily Study Time ───────────────────────────────────────────
-      case 7:
+      // ── Step 8: Daily Study Time ──────────────────────────────────────────
+      case 8:
         return (
           <OnboardingStep
-            currentStep={7}
+            currentStep={8}
             totalSteps={TOTAL_STEPS}
             title="How much time can you study each day?"
             subtitle="This helps BahasaBot set the right pace for your roadmap."

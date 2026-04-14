@@ -74,6 +74,14 @@ async def update_profile(
         current_user.has_seen_tour = body.has_seen_tour
         updated_any = True
 
+    if body.gender is not None:
+        current_user.gender = body.gender
+        updated_any = True
+
+    if body.age_range is not None:
+        current_user.age_range = body.age_range
+        updated_any = True
+
     if updated_any:
         try:
             db.add(current_user)
