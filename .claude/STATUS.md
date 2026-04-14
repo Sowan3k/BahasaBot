@@ -1151,3 +1151,25 @@ All three Gemini prompts in `course_service.py` said "Use Malaysian Bahasa Melay
 - Icon order: ThemeToggle first, NotificationBell second (consistent in desktop strip and mobile header)
 - ThemeToggle `icon` variant updated to match NotificationBell button exactly: `w-10 h-10 rounded-full bg-card/90 border border-border shadow-md hover:shadow-lg hover:scale-105` — visually consistent pair
 - Logo header enlarged: `width 140→176px`, `h-14→h-16`, full width now that ThemeToggle is removed from that area
+
+---
+
+## Session 20 — Collapse Button Fix + Polish (2026-04-14)
+
+### Collapse handle click reliability fixed
+- **`frontend/components/nav/AppSidebar.tsx`** — replaced shadcn `<Button size="icon">` with plain `<button>`; `size="icon"` was injecting `h-9 w-9` into the class list, conflicting with the intended `w-6 h-6` and making hit target unpredictable
+- Added `z-[1]` to `<aside>` to create a stacking context above the `<main>` flex sibling; previously the half of the button extending past the border (`translate-x-1/2`) was captured by `<main>`'s paint layer and swallowing click events
+- Removed unused `Button` import from shadcn
+
+### Collapsed sidebar scrollbar removed
+- `overflow-y-auto` → `overflow-hidden` on nav when `collapsed=true`; in collapsed mode icons never overflow so the scrollbar track was appearing between Settings icon and utility strip for no reason
+
+### Clear All backend verified working
+- Identified root cause: backend process was serving stale bytecode from before the `DELETE /api/notifications/` route was added — route showed as only `GET` in OpenAPI spec
+- Cleared all `.pyc` files (`find backend -name "*.pyc" -delete`), killed stale process (PID 21312 via PowerShell), restarted with venv python
+- End-to-end test confirmed: 4 notifications → `DELETE /api/notifications/` → `{"success":true}` → 0 notifications ✅
+- **`frontend/components/ui/notification-popover.tsx`** — `catch` block added so API errors don't surface as unhandled promise rejections ("1 error" toast)
+
+### Feedback page TS fix
+- **`frontend/app/(dashboard)/settings/feedback/page.tsx`** — `feedbackApi.submit` → `feedbackApi.submitFeedback` (wrong method name causing runtime error on form submit)
+- Zero TypeScript errors confirmed via `tsc --noEmit`
