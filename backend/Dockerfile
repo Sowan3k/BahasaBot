@@ -2,14 +2,15 @@
 #
 # Build context: backend/ directory (Render root directory = backend/)
 #
-# Structure inside container:
-#   /app/                   ← WORKDIR, PYTHONPATH root
-#   /app/backend/           ← all Python source (from backend/)
+# Container layout:
+#   /app/backend/           ← WORKDIR; all source copied here
 #   /app/backend/alembic.ini
 #   /app/backend/db/migrations/
+#   /app/backend/main.py, routers/, services/, ...
 #
-# PYTHONPATH=/app makes 'from backend.X import Y' resolve correctly
-# without requiring alembic.ini or the project root outside the build context.
+# PYTHONPATH=/app lets Python find 'from backend.X import Y' as /app/backend/X.py
+# WORKDIR /app/backend means alembic resolves script_location = db/migrations
+# relative to CWD, landing at /app/backend/db/migrations/ ✓
 #
 # Render: set Root Directory = backend/
 # Railway: set Root Directory = backend/ in the Railway dashboard
@@ -26,28 +27,31 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+# WORKDIR = /app/backend so that:
+#   - alembic upgrade head finds alembic.ini in CWD
+#   - script_location = db/migrations resolves to /app/backend/db/migrations/
+#   - uvicorn starts from the correct working directory
+WORKDIR /app/backend
 
-# ── Install Python dependencies (separate layer — cached unless requirements change) ──
-# requirements.txt is at the root of the build context (backend/)
+# ── Install Python dependencies (cached layer — only rebuilds when requirements change) ──
 COPY requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-# ── Copy backend source into /app/backend/ ─────────────────────────────────────
-# Copies the entire build context (backend/) into /app/backend/
-# This preserves 'from backend.X import Y' import paths throughout the codebase.
-COPY . ./backend/
+# ── Copy all backend source into WORKDIR ──────────────────────────────────────
+# Build context is backend/, so '.' copies everything into /app/backend/
+COPY . .
 
 # ── PYTHONPATH ─────────────────────────────────────────────────────────────────
-# Adds /app to Python's module search path so 'from backend.X import Y' resolves
-# to /app/backend/X.py. This is required because env.py's sys.path manipulation
-# was written for the local repo layout and goes one level too many in a container.
+# /app is the parent of /app/backend, so Python resolves:
+#   from backend.routers.auth import ...  →  /app/backend/routers/auth.py ✓
 ENV PYTHONPATH=/app
 
 # Expose default port (Render and Railway override via $PORT env var)
 EXPOSE 8000
 
 # ── Startup: run Alembic migrations then launch uvicorn ───────────────────────
-# alembic.ini lives at /app/backend/alembic.ini — pass it explicitly with -c
-# script_location = db/migrations (relative to alembic.ini) = /app/backend/db/migrations
-CMD sh -c "alembic -c backend/alembic.ini upgrade head && uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 2"
+# CWD = /app/backend, so:
+#   alembic upgrade head  →  reads /app/backend/alembic.ini
+#   script_location = db/migrations  →  /app/backend/db/migrations/ ✓
+#   uvicorn backend.main:app  →  imports /app/backend/main.py via PYTHONPATH ✓
+CMD sh -c "alembic upgrade head && uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 2"
