@@ -223,7 +223,7 @@ export function AppSidebar() {
         </div>
 
         {/* ── Nav items ── */}
-        <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
+        <nav className={`flex-1 px-2 py-3 space-y-0.5 ${collapsed ? "overflow-hidden" : "overflow-y-auto"}`}>
           {navItems.map(({ label, href, icon: Icon }) => {
             const active = isActive(href);
             return (
