@@ -390,6 +390,7 @@ export interface UserProfile {
   streak_count: number;
   xp_total: number;
   onboarding_completed: boolean;
+  has_seen_tour: boolean;
   provider: "email" | "google";
 }
 
@@ -400,6 +401,7 @@ export interface ProfileUpdatePayload {
   learning_goal?: string | null;
   profile_picture_url?: string | null;
   onboarding_completed?: boolean;
+  has_seen_tour?: boolean;
 }
 
 /** POST /api/profile/change-password request body */

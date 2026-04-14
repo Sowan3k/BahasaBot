@@ -964,3 +964,53 @@ _Status: 🔄 In progress_
 - [x] `frontend/lib/api.ts` — added `notificationsApi.clearAll()` calling DELETE /api/notifications/
 - [x] Bell placed in: mobile header (right of logo, `panelSide="left"`), desktop expanded footer (right of username, `panelSide="right" panelDirection="up"`), desktop collapsed footer (`panelSide="right" panelDirection="up"`)
 
+---
+
+## Phase 24 — Course Deduplication + Clone System
+_Status: ✅ Complete (2026-04-14)_
+
+**Goal:** Eliminate redundant Gemini calls when multiple users request the same or similar course topic. The first generation becomes a reusable template; all subsequent users get a deep clone in milliseconds.
+
+### Design
+
+**Template model:** The first Course generated for a given `topic_slug` (normalised topic + level) is marked `is_template = true`. All later requests for the same slug clone that course row-for-row without touching Gemini.
+
+**Slug normalisation:** lowercase → collapse whitespace → strip non-alphanum → replace spaces with hyphens → append level without hyphens. Example: `"Ordering food at a Restaurant!"` + `"BPS-1"` → `"ordering-food-at-a-restaurant:bps1"`.
+
+**Clone scope:** Copies Course + all Modules + all Classes (full lesson content, vocabulary_json, examples_json, cover_image_url). Does NOT copy UserProgress, ModuleQuizAttempt, VocabularyLearned, or any other user-specific data — clone starts completely fresh for the new user.
+
+**Race condition handling:** After generating a fresh course, a second `_find_template()` call is made before marking it as the template. If a concurrent request just created a template for the same slug, the new course is saved as a regular user copy instead (two templates never exist for the same slug; the race window is harmless).
+
+### Schema
+
+**Migration:** `20260414_1400_course_dedup_template.py` (revision `d1e2f3a4b5c6`, down_revision `c9d0e1f2a3b4`)
+
+- [x] `courses.topic_slug VARCHAR(600) NULLABLE` — normalised lookup key; NULL for pre-Phase 24 courses (they are not auto-backfilled; only new requests create templates)
+- [x] `courses.is_template BOOLEAN NOT NULL DEFAULT false`
+- [x] `courses.cloned_from UUID FK courses.id ON DELETE SET NULL NULLABLE`
+- [x] `ix_courses_topic_slug` index on `topic_slug`
+- [x] Migration applied: `alembic upgrade head` → all three columns confirmed in DB
+
+### Backend
+
+- [x] `backend/models/course.py` — added `topic_slug`, `is_template`, `cloned_from` mapped columns; `Boolean` added to SQLAlchemy imports
+- [x] `backend/services/course_service.py` — `import re` added
+- [x] `_make_topic_slug(topic, level) -> str` — pure function, deterministic, capped at 600 chars
+- [x] `_find_template(slug, db) -> Course | None` — SELECT with `selectinload(modules → classes)` + `LIMIT 1`
+- [x] `_clone_course(template, user_id, db) -> Course` — snapshots all ORM data into plain dicts first (prevents SQLAlchemy session-expiry mid-flush), then inserts Course → Module → Class rows in a single transaction; calls `cache_delete(f"journey:{user_id}")` on commit
+- [x] `generate_course()` — fast path check at the top; slow path marks freshly saved course as template; both paths return a `Course` ORM object; job_id progress messages updated for both paths
+- [x] Activity logged as `"course_clone"` (vs `"course_gen"`) in activity_logs for analytics distinction
+
+### Frontend / Router
+
+No changes required. `generate_course()` returns an identical `Course` object whether cloned or freshly generated. The background task, notification message, and API response shape are unchanged.
+
+### Job Progress (clone path)
+
+| % | Step text |
+|---|---|
+| 0 | "Queued…" (set by router before background task starts) |
+| 5 | "Checking existing courses…" |
+| 50 | "Found a matching course — personalising for you…" |
+| 100 | "Course ready!" |
+

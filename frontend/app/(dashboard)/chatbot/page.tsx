@@ -290,7 +290,7 @@ export default function ChatbotPage() {
       />
 
       {/* ── Message list ── */}
-      <main className="flex-1 overflow-y-auto min-h-0 px-4 py-4 relative z-10">
+      <main className="flex-1 overflow-y-auto min-h-0 px-4 py-4 relative">
         {messages.length === 0 ? (
           <EmptyState />
         ) : (
@@ -316,7 +316,7 @@ export default function ChatbotPage() {
       </main>
 
       {/* ── Input area ── */}
-      <footer className="bg-card border-t px-4 py-3 shrink-0 relative z-10">
+      <footer className="bg-card border-t px-4 py-3 shrink-0 relative">
         <div className="flex items-end gap-2 max-w-3xl mx-auto">
           <textarea
             ref={inputRef}

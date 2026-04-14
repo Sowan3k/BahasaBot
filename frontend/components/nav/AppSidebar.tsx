@@ -183,6 +183,7 @@ export function AppSidebar() {
         on the right border at vertical center.
       */}
       <aside
+        data-tour="sidebar"
         className={`hidden md:flex flex-col h-full bg-sidebar border-r flex-shrink-0 transition-all duration-300 ease-in-out relative z-[1] ${
           collapsed ? "w-[60px]" : "w-60"
         }`}
@@ -223,8 +224,9 @@ export function AppSidebar() {
         <nav className={`flex-1 px-2 py-3 space-y-0.5 ${collapsed ? "overflow-hidden" : "overflow-y-auto"}`}>
           {navItems.map(({ label, href, icon: Icon }) => {
             const active = isActive(href);
+            const tourId = `nav-${href.split("/")[1]}`;
             return (
-              <div key={href} className="relative group/item">
+              <div key={href} data-tour={tourId} className="relative group/item">
                 <Link
                   href={href}
                   className={`flex items-center rounded-lg transition-colors ${

@@ -25,6 +25,7 @@ class ProfileResponse(BaseModel):
     streak_count: int
     xp_total: int
     onboarding_completed: bool
+    has_seen_tour: bool
     provider: Literal["email", "google"]
 
     @field_validator("id", mode="before")
@@ -45,6 +46,7 @@ class ProfileUpdateRequest(BaseModel):
     learning_goal: str | None = None
     profile_picture_url: str | None = None
     onboarding_completed: bool | None = None
+    has_seen_tour: bool | None = None
 
     @field_validator("name")
     @classmethod

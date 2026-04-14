@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
+import { toast } from "sonner";
 
 // Routes to prefetch as soon as the layout mounts (runs once per session).
 // Next.js will download the JS chunk for each route in the background so
@@ -19,11 +20,12 @@ const PREFETCH_ROUTES = [
   "/games/spelling",
   "/settings",
 ];
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AppSidebar } from "@/components/nav/AppSidebar";
 import { CourseGenerationProvider } from "@/lib/course-generation-context";
 import { CourseGenerationProgress } from "@/components/courses/CourseGenerationProgress";
-import { OnboardingModal } from "@/components/onboarding/OnboardingModal";
+import { OnboardingModal, type OnboardingResult } from "@/components/onboarding/OnboardingModal";
+import { UITour } from "@/components/onboarding/UITour";
 import { PageTransition } from "@/components/layout/PageTransition";
 import { profileApi } from "@/lib/api";
 
@@ -79,12 +81,49 @@ function OnboardingChecker({ onShowModal }: { onShowModal: () => void }) {
   return null;
 }
 
+/**
+ * Checks has_seen_tour from the shared profile query.
+ * Triggers the tour only after onboarding is dismissed (blocked=true while onboarding is open).
+ */
+function UITourChecker({
+  onShowTour,
+  blocked,
+}: {
+  onShowTour: () => void;
+  blocked: boolean;
+}) {
+  const { status } = useSession();
+  const hasTriggered = useRef(false);
+
+  const { data } = useQuery({
+    queryKey: ["profile"],
+    queryFn: () => profileApi.getProfile().then((r) => r.data),
+    enabled: status === "authenticated",
+    staleTime: 60_000,
+  });
+
+  useEffect(() => {
+    // Don't trigger while onboarding is still open
+    if (blocked) return;
+    if (data && !hasTriggered.current && !data.has_seen_tour) {
+      hasTriggered.current = true;
+      // Brief delay so the main content finishes rendering before driver.js measures elements
+      setTimeout(onShowTour, 600);
+    }
+  }, [data, blocked, onShowTour]);
+
+  return null;
+}
+
 // ── Main layout ───────────────────────────────────────────────────────────────
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const queryClient = useQueryClient();
+
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showTour, setShowTour] = useState(false);
 
   // Prefetch all main sidebar routes on layout mount so their JS chunks
   // are already cached when the user clicks a nav link.
@@ -96,13 +135,48 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   // Stable reference so OnboardingChecker's useEffect does not re-fire
   // when MainLayout re-renders for unrelated reasons.
   const handleShowOnboarding = useCallback(() => setShowOnboarding(true), []);
-  const handleOnboardingComplete = useCallback(() => setShowOnboarding(false), []);
+
+  /**
+   * Called by OnboardingModal when it finishes or is skipped.
+   *   "roadmap_ready" — roadmap was generated; show a toast pointing user to My Journey.
+   *   "done"          — skipped or generation failed; just dismiss silently.
+   */
+  const handleOnboardingComplete = useCallback(
+    (result: OnboardingResult) => {
+      setShowOnboarding(false);
+      // Invalidate profile cache so UITourChecker sees the updated has_seen_tour value
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+
+      if (result === "roadmap_ready") {
+        toast.success("Your learning roadmap is ready!", {
+          description: "Head to My Journey in the sidebar to see your personalised plan.",
+          duration: 6000,
+        });
+      }
+    },
+    [queryClient],
+  );
+
+  const handleShowTour = useCallback(() => setShowTour(true), []);
+
+  /** Called when the driver.js tour ends (Done or Skip). Saves the flag to DB. */
+  const handleTourDone = useCallback(async () => {
+    setShowTour(false);
+    try {
+      await profileApi.updateProfile({ has_seen_tour: true });
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+    } catch {
+      // Non-critical — if the PATCH fails the tour will just show again next time.
+      // Acceptable trade-off; no user-visible error needed.
+    }
+  }, [queryClient]);
 
   return (
     <CourseGenerationProvider>
       <div className="flex h-screen overflow-hidden bg-background">
         <SessionWatcher />
         <OnboardingChecker onShowModal={handleShowOnboarding} />
+        <UITourChecker onShowTour={handleShowTour} blocked={showOnboarding} />
         {/* AppSidebar now includes the NotificationBell in the header */}
         <AppSidebar />
         {/* flex-col allows flex-1 children (chatbot) to fill height; overflow-y-auto scrolls regular pages */}
@@ -118,6 +192,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         {showOnboarding && (
           <OnboardingModal onComplete={handleOnboardingComplete} />
         )}
+        {/* UI spotlight tour — shown once after onboarding completes */}
+        <UITour active={showTour} onDone={handleTourDone} />
       </div>
     </CourseGenerationProvider>
   );

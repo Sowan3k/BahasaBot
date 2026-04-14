@@ -13,6 +13,7 @@ Orchestrates dynamic course generation:
 """
 
 import asyncio
+import re
 import uuid
 from uuid import UUID
 
@@ -66,6 +67,123 @@ _LEVEL_DESCRIPTIONS = {
     "B1": "intermediate learner who can handle routine topics",
     "B2": "upper-intermediate learner who can discuss familiar topics fluently",
 }
+
+
+# ── Deduplication helpers ──────────────────────────────────────────────────────
+
+
+def _make_topic_slug(topic: str, level: str) -> str:
+    """
+    Normalise a topic string and proficiency level into a stable lookup key.
+
+    Rules:
+      - Lowercase and strip surrounding whitespace
+      - Collapse internal whitespace to single spaces
+      - Remove every character that is not a-z, 0-9, or space
+      - Replace spaces with hyphens; collapse consecutive hyphens
+      - Append the level normalised to lowercase without hyphens
+      - Cap at 600 chars (column length)
+
+    Examples:
+      "Ordering food at a Restaurant!", "BPS-1"  →  "ordering-food-at-a-restaurant:bps1"
+      "  Market shopping  ", "BPS-2"             →  "market-shopping:bps2"
+    """
+    t = topic.lower().strip()
+    t = re.sub(r"\s+", " ", t)
+    t = re.sub(r"[^a-z0-9 ]", "", t)
+    t = t.replace(" ", "-")
+    t = re.sub(r"-+", "-", t).strip("-")
+    lv = level.lower().replace("-", "")  # "BPS-1" → "bps1"
+    return f"{t}:{lv}"[:600]
+
+
+async def _find_template(slug: str, db: AsyncSession) -> "Course | None":
+    """
+    Return the template Course for this slug, with all modules and classes
+    eagerly loaded (needed for cloning). Returns None if no template exists yet.
+    """
+    result = await db.execute(
+        select(Course)
+        .where(Course.topic_slug == slug, Course.is_template.is_(True))
+        .options(selectinload(Course.modules).selectinload(Module.classes))
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
+
+
+async def _clone_course(template: "Course", user_id: UUID, db: AsyncSession) -> "Course":
+    """
+    Deep-clone a template course for a new user.
+
+    Copies: course metadata, all modules, all classes (including full lesson
+    content, vocabulary_json, examples_json), and the cover_image_url.
+    Does NOT copy: user_progress, quiz attempts, vocabulary_learned, or any
+    other user-specific data — the clone starts completely fresh for the new user.
+
+    Strategy: snapshot all template data into plain dicts BEFORE any DB writes
+    so SQLAlchemy flush/expire cycles cannot invalidate the in-memory objects
+    mid-transaction.
+    """
+    # ── Snapshot template content into plain Python dicts ────────────────────
+    modules_snapshot: list[dict] = []
+    for module in template.modules:
+        classes_snapshot = [
+            {
+                "title": cls.title,
+                "content": cls.content,
+                "vocabulary_json": cls.vocabulary_json,
+                "examples_json": cls.examples_json,
+                "order_index": cls.order_index,
+            }
+            for cls in module.classes
+        ]
+        modules_snapshot.append({
+            "title": module.title,
+            "description": module.description,
+            "order_index": module.order_index,
+            "classes": classes_snapshot,
+        })
+
+    # ── Write cloned rows ─────────────────────────────────────────────────────
+    new_course = Course(
+        user_id=user_id,
+        title=template.title,
+        description=template.description,
+        topic=template.topic,
+        objectives=template.objectives,
+        cover_image_url=template.cover_image_url,
+        topic_slug=template.topic_slug,
+        is_template=False,
+        cloned_from=template.id,
+    )
+    db.add(new_course)
+    await db.flush()  # materialise new_course.id
+
+    for mod_data in modules_snapshot:
+        new_module = Module(
+            course_id=new_course.id,
+            title=mod_data["title"],
+            description=mod_data["description"],
+            order_index=mod_data["order_index"],
+        )
+        db.add(new_module)
+        await db.flush()  # materialise new_module.id
+
+        for cls_data in mod_data["classes"]:
+            db.add(Class(
+                module_id=new_module.id,
+                title=cls_data["title"],
+                content=cls_data["content"],
+                vocabulary_json=cls_data["vocabulary_json"],
+                examples_json=cls_data["examples_json"],
+                order_index=cls_data["order_index"],
+            ))
+
+    await db.commit()
+    await db.refresh(new_course)
+    # Invalidate journey cache so the new course shows up in roadmap element matching
+    await cache_delete(f"journey:{user_id}")
+    return new_course
 
 
 # ── Step 1: Course skeleton ────────────────────────────────────────────────────
@@ -487,6 +605,40 @@ async def generate_course(
     """
     logger.info("Course generation started", topic=topic, user_id=str(user_id), level=level)
 
+    # ── Fast path: clone an existing template ─────────────────────────────────
+    slug = _make_topic_slug(topic, level)
+
+    if job_id:
+        await _update_job(job_id, "running", 5, "Checking existing courses…")
+
+    template = await _find_template(slug, db)
+    if template is not None:
+        logger.info(
+            "Template found — cloning instead of regenerating",
+            slug=slug,
+            template_id=str(template.id),
+            user_id=str(user_id),
+        )
+        if job_id:
+            await _update_job(
+                job_id, "running", 50, "Found a matching course — personalising for you…"
+            )
+
+        course = await _clone_course(template, user_id, db)
+        logger.info("Course cloned from template", course_id=str(course.id))
+
+        if job_id:
+            await _update_job(job_id, "complete", 100, "Course ready!", course_id=str(course.id))
+
+        try:
+            from backend.utils.analytics import log_activity
+            await log_activity(db, user_id=user_id, feature="course_clone", duration_seconds=0)
+        except Exception:
+            pass
+
+        return course
+
+    # ── Slow path: generate fresh, then mark as template ─────────────────────
     if job_id:
         await _update_job(job_id, "running", 5, "Validating topic and designing course structure…")
 
@@ -548,6 +700,25 @@ async def generate_course(
     # Step 3 — persist
     course = await save_course(skeleton, class_contents, user_id, db)
     logger.info("Course saved", course_id=str(course.id), title=course.title)
+
+    # Mark as template so future requests for the same topic+level clone this course.
+    # Re-check under the same session in case a concurrent request just created one —
+    # if so, leave is_template=False on our copy (harmless; the existing template wins).
+    existing_template = await _find_template(slug, db)
+    if existing_template is None:
+        course.topic_slug = slug
+        course.is_template = True
+        logger.info("Course marked as template", slug=slug, course_id=str(course.id))
+    else:
+        course.topic_slug = slug
+        course.is_template = False
+        logger.info(
+            "Template already exists — course saved as user copy",
+            slug=slug,
+            template_id=str(existing_template.id),
+            course_id=str(course.id),
+        )
+    await db.commit()
 
     if job_id:
         await _update_job(job_id, "complete", 100, "Course ready!", course_id=str(course.id))

@@ -21,7 +21,9 @@ class DashboardStats(BaseModel):
     quizzes_taken: int
     vocabulary_count: int
     grammar_count: int
-    proficiency_level: str  # A1 | A2 | B1 | B2
+    proficiency_level: str  # BPS-1 | BPS-2 | BPS-3 | BPS-4
+    streak_count: int = 0
+    xp_total: int = 0
 
 
 # ── Vocabulary ─────────────────────────────────────────────────────────────────

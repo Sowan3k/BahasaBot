@@ -10,7 +10,7 @@ Tables:
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -37,6 +37,24 @@ class Course(Base):
     cover_image_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    # ── Deduplication / template columns ──────────────────────────────────────
+    # Normalised "topic:level" slug used to find an existing template quickly.
+    # Null for courses generated before Phase 23 (deduplication) was introduced.
+    topic_slug: Mapped[str | None] = mapped_column(
+        String(600), nullable=True, index=True
+    )
+    # True only for the first user who generates a given topic+level combination.
+    # All subsequent users get a clone of this course instead of a fresh generation.
+    is_template: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    # UUID of the template this course was cloned from (None for originals).
+    cloned_from: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("courses.id", ondelete="SET NULL"),
+        nullable=True,
     )
 
     # Relationships

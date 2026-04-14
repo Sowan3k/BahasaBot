@@ -97,6 +97,13 @@ class User(Base):
         default=0,
         server_default="0",
     )
+    # Tour: set True after the user dismisses the first-login UI spotlight tour
+    has_seen_tour: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+    )
 
     def __repr__(self) -> str:
         return f"<User id={self.id} email={self.email} level={self.proficiency_level}>"

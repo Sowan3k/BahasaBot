@@ -7,6 +7,7 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SessionProvider } from "next-auth/react";
 import { useState } from "react";
+import { Toaster } from "sonner";
 import { ThemeContext, useThemeState } from "@/lib/use-theme";
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
@@ -33,7 +34,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
         {/* refetchInterval: poll session every 60 s so expiry is detected proactively.
             refetchOnWindowFocus: re-check immediately when the tab regains focus. */}
         <SessionProvider refetchInterval={60} refetchOnWindowFocus={true}>
-          <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+          <QueryClientProvider client={queryClient}>
+            {children}
+            {/* Sonner toast container — theme-aware, positioned top-right */}
+            <Toaster position="top-right" richColors closeButton />
+          </QueryClientProvider>
         </SessionProvider>
       </GoogleOAuthProvider>
     </ThemeContext.Provider>

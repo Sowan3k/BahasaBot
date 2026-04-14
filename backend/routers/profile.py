@@ -70,6 +70,10 @@ async def update_profile(
         current_user.onboarding_completed = body.onboarding_completed
         updated_any = True
 
+    if body.has_seen_tour is not None:
+        current_user.has_seen_tour = body.has_seen_tour
+        updated_any = True
+
     if updated_any:
         try:
             db.add(current_user)
