@@ -94,8 +94,8 @@ export function AppSidebar() {
           <Image src="/Logo new (1).svg" width={113} height={36} alt="BahasaBot" className="object-contain" />
         </div>
         <div className="flex items-center gap-1">
-          <NotificationBell panelSide="left" />
           <ThemeToggle variant="icon" />
+          <NotificationBell panelSide="left" />
         </div>
       </header>
 
@@ -259,8 +259,8 @@ export function AppSidebar() {
 
         {/* ── Utility strip — Bell + ThemeToggle, centered below nav ── */}
         <div className={`flex items-center justify-center gap-3 py-3 ${collapsed ? "flex-col" : "flex-row"}`}>
-          <NotificationBell panelSide="right" panelDirection="up" />
           <ThemeToggle variant="icon" />
+          <NotificationBell panelSide="right" panelDirection="up" />
         </div>
 
         {/* ── Footer — single border-t divider ── */}

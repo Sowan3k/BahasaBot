@@ -1133,3 +1133,21 @@ All three Gemini prompts in `course_service.py` said "Use Malaysian Bahasa Melay
 
 ### Quiz
 - **`frontend/app/(dashboard)/quiz/adaptive/page.tsx`** — `QuizGeneratingLoader` component: 4-step animated progress screen with pulsing brain icon, step indicators, spinning arc border
+
+---
+
+## Session 19 — Sidebar UX + Notification Clear Fix (2026-04-14)
+
+### Notification "Clear All" error fixed
+- **`frontend/components/ui/notification-popover.tsx`** — added `catch` block to `handleClearAll`; previously `try/finally` with no `catch` caused API errors to bubble as unhandled rejections → "1 error" toast on screen
+- **`frontend/components/notifications/NotificationBell.tsx`** — `handleClearAll` now re-throws so popover's `catch` handles it cleanly; `setItems([])` only called on success
+
+### Sidebar collapse/expand handle
+- **`frontend/components/nav/AppSidebar.tsx`** — replaced in-footer collapse/expand text buttons (mis-click prone, too close to Sign Out) with a single circular arrow handle absolutely positioned on the right border at vertical center (`absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-[60]`); uses shadcn `Button` variant="outline" size="icon"; shows `←` / `→` chevron; `z-[60]` ensures it sits above main content flex sibling
+
+### Bell + ThemeToggle utility strip
+- Moved both icons out of the footer and the logo header into a dedicated utility strip between nav items and footer border
+- Both collapsed and expanded states: `justify-center gap-3`; collapsed = `flex-col`, expanded = `flex-row`
+- Icon order: ThemeToggle first, NotificationBell second (consistent in desktop strip and mobile header)
+- ThemeToggle `icon` variant updated to match NotificationBell button exactly: `w-10 h-10 rounded-full bg-card/90 border border-border shadow-md hover:shadow-lg hover:scale-105` — visually consistent pair
+- Logo header enlarged: `width 140→176px`, `h-14→h-16`, full width now that ThemeToggle is removed from that area
