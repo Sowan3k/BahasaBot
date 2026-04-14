@@ -133,27 +133,16 @@
     }
   }
 
-  /* Desktop/mouse devices — show a slim themed scrollbar */
+  /* Desktop/mouse devices — hide scrollbar chrome, content still scrollable */
   @media (pointer: fine) {
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-    ::-webkit-scrollbar-track {
-      background: var(--muted);
-      border-radius: var(--radius);
-    }
-    ::-webkit-scrollbar-thumb {
-      background: var(--border);
-      border-radius: var(--radius);
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: var(--muted-foreground);
-    }
-    /* Firefox */
     * {
-      scrollbar-width: thin;
-      scrollbar-color: var(--border) var(--muted);
+      scrollbar-width: none !important;
+      -ms-overflow-style: none !important;
+    }
+    *::-webkit-scrollbar {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
     }
   }
 }
