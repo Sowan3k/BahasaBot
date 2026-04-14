@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-15 (Session 28 — Onboarding / UITour race condition fix)
+## Last Updated: 2026-04-15 (Session 29 — Hide scrollbars site-wide)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -62,6 +62,16 @@ _Update this file at the end of every session_
 
 ## ✅ Fixed Issues (Session 13)
 - **Course covers not appearing (2026-04-13):** Session 12 correctly fixed `image_service.py` (httpx REST API) and `course_service.py` (retroactive healing + `asyncio.create_task`), but the backend was **never restarted** after those changes were made. Uvicorn started at 08:19, files modified at 14:22–14:28 — old broken code was still running. Fix: killed old uvicorn PIDs (18316, 25012), started fresh process on port 8000. Also manually ran `_generate_and_save_cover()` for all 3 existing courses that had `cover_image_url = NULL`. All verified: Gemini REST API returns JPEG (~1.1 MB base64, ~17s), DB save works, `GET /api/courses/` returns cover correctly. **Important**: after any code change to the backend, the uvicorn process MUST be restarted manually (no `--reload` flag in prod mode).
+
+---
+
+## What Was Done This Session (2026-04-15 Session 29 — Hide scrollbars site-wide)
+
+### Fix: scrollbar visible on all pages (desktop)
+
+The `@media (pointer: fine)` block in `globals.css` rendered a thin olive-themed scrollbar on every scrollable element for mouse users. Changed it to match the existing mobile rule — `scrollbar-width: none`, `-ms-overflow-style: none`, and `display: none` on the webkit pseudo-element. Content on every page remains fully scrollable; no visible scrollbar chrome on any device.
+
+**`frontend/app/globals.css`**: replaced the 4-rule desktop scrollbar block with the same universal-hide pattern already used for touch devices.
 
 ---
 
