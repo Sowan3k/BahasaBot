@@ -83,20 +83,6 @@ export function AuthCard({ children }: { children: React.ReactNode }) {
                    border-l border-white/[0.07] overflow-y-auto
                    lg:rounded-none sm:rounded-none"
       >
-        {/* Mobile-only compact brand bar */}
-        <div className="lg:hidden flex items-center gap-3 px-6 pt-8">
-          <div className="relative w-12 h-12 flex-shrink-0">
-            <Image
-              src="/Logo new only box (1).svg"
-              fill
-              sizes="48px"
-              alt="BahasaBot"
-              className="object-contain"
-            />
-          </div>
-          <span className="text-white font-bold text-base tracking-tight">BahasaBot</span>
-        </div>
-
         {/* Form — vertically centered in remaining space */}
         <div className="flex-1 flex flex-col justify-center px-6 sm:px-8 py-6 sm:py-10">
           <div className="w-full max-w-[340px] mx-auto">

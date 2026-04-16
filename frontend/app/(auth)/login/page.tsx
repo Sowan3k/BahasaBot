@@ -166,6 +166,13 @@ export default function LoginPage() {
     <AuthCard>
       {/* Header */}
       <div className="mb-8">
+        {/* Logo + wordmark — mobile only (desktop shows branding in the left panel) */}
+        <div className="lg:hidden flex items-center justify-center gap-3 mb-6">
+          <div className="relative w-12 h-12 flex-shrink-0">
+            <Image src="/Logo new only box (1).svg" alt="BahasaBot" fill sizes="48px" className="object-contain" />
+          </div>
+          <span className="text-white font-bold text-2xl tracking-tight">BahasaBot</span>
+        </div>
         <motion.h2
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}

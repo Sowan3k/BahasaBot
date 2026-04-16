@@ -1,12 +1,12 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-17 (Session 30 — UI Tour dark-theme styling)
+## Last Updated: 2026-04-17 (Session 32 — Auth debug: register page fixes)
 
 ## Feature Status
 | Feature | Status | Notes |
 |---|---|---|
-| Auth | ✅ Complete + Verified | Email + Google OAuth, JWT, token refresh, 30-min sessions |
+| Auth | ✅ Complete + Debugged | Email + Google OAuth, JWT, token refresh, 30-min sessions; register page: CSRF retry added, router.refresh() race removed, Google button 1×1px container fixed |
 | AI Chatbot Tutor | ✅ Complete + Verified + Optimised | SSE streaming, LangChain, RAG — Malaysian Malay + IPA in prompt; markdown rendering; session persistence; native_language injected into system prompt; RAG context Redis-cached (5 min) saving ~1.3s on repeat queries; ping SSE event for early frontend feedback; typing dots UX while waiting for first token |
 | Course Generator | ✅ Complete + English-medium fix | Lesson content in English; Malay words taught inline; Malaysian BM only |
 | Quiz | ✅ Complete + English-medium fix | Question text explicitly English; Malay vocabulary uses Malaysian BM; IPA in explanations |
@@ -62,6 +62,44 @@ _Update this file at the end of every session_
 
 ## ✅ Fixed Issues (Session 13)
 - **Course covers not appearing (2026-04-13):** Session 12 correctly fixed `image_service.py` (httpx REST API) and `course_service.py` (retroactive healing + `asyncio.create_task`), but the backend was **never restarted** after those changes were made. Uvicorn started at 08:19, files modified at 14:22–14:28 — old broken code was still running. Fix: killed old uvicorn PIDs (18316, 25012), started fresh process on port 8000. Also manually ran `_generate_and_save_cover()` for all 3 existing courses that had `cover_image_url = NULL`. All verified: Gemini REST API returns JPEG (~1.1 MB base64, ~17s), DB save works, `GET /api/courses/` returns cover correctly. **Important**: after any code change to the backend, the uvicorn process MUST be restarted manually (no `--reload` flag in prod mode).
+
+---
+
+## What Was Done This Session (2026-04-17 Session 32 — Auth debug: register page fixes)
+
+### Audit: sign-in, sign-out, forgot password, signup
+
+All auth flows were reviewed end-to-end. Backend endpoints verified live (`/api/auth/login`, `/api/auth/forgot-password`, etc. all respond correctly). Sign-out (`signOut({ callbackUrl: "/login" })`) and forgot-password (6-digit code flow) had no bugs. Three bugs were found and fixed in the register page.
+
+### Fix 1: Google sign-up button never worked on register page
+
+`frontend/app/(auth)/register/page.tsx` — The hidden `GoogleLogin` container was `1×1px` with `pointer-events-none`. Google's GIS iframe cannot render a usable button at 1×1px, so clicking the custom "Continue with Google" button had no effect. Fixed by matching the login page's approach: off-screen container at full size (`position: absolute; top: -9999px; left: -9999px; width: 340px; height: 44px; overflow: hidden`) so the GIS iframe renders correctly and the programmatic `.click()` lands on the button.
+
+### Fix 2: Missing CSRF retry in storeSession()
+
+`frontend/app/(auth)/register/page.tsx` — `storeSession()` called `signIn("jwt", ...)` once with no retry. On fresh page loads the NextAuth CSRF token may not be ready, causing intermittent "Account created but sign-in failed" errors. Added the same 600ms retry that already exists in the login page's `storeSession()`.
+
+### Fix 3: router.refresh() race condition after register
+
+`frontend/app/(auth)/register/page.tsx` — Both the email and Google sign-up handlers called `router.push("/dashboard")` then immediately `router.refresh()`. The refresh re-ran middleware before the session cookie was stable. Removed both `router.refresh()` calls (same fix applied to the login page in Session 8).
+
+---
+
+## What Was Done This Session (2026-04-17 Session 31 — Mobile auth logo fix)
+
+### Fix: login/register pages had no logo on mobile; wrong placement on auth pages
+
+**Problem 1:** `AuthCard` had a top-left mobile brand bar (logo + "BahasaBot" text as a row) sitting above the form area — visually disconnected from the page heading and too small/peripheral.
+
+**Problem 2:** After moving it, placing the logo in `auth-card.tsx` above `{children}` caused a double-logo on `forgot-password` and `reset-password` pages which already had their own logos inside the form.
+
+**Fix:**
+- `frontend/components/ui/auth-card.tsx` — removed the mobile brand bar entirely; form panel is now clean with no logo of its own
+- `frontend/app/(auth)/login/page.tsx` — added `lg:hidden` logo + "BahasaBot" wordmark (`text-2xl font-bold`) centered directly above the "Welcome back" heading, with `mb-6` spacing
+- `frontend/app/(auth)/register/page.tsx` — same block added above "Create account" heading
+- `forgot-password` and `reset-password` pages — untouched, their existing logos remain
+
+Result: on mobile, login and register show a centered logo + "BahasaBot" text above the form heading. On desktop, the left branding panel handles the logo — no change.
 
 ---
 
