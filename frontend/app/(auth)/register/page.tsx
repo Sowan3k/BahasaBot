@@ -37,7 +37,7 @@ type RegisterForm = z.infer<typeof registerSchema>;
 // ── Shared helper ───────────────────────────────────────────────────────────
 
 async function storeSession(data: TokenResponse): Promise<boolean> {
-  const result = await signIn("jwt", {
+  const credentials = {
     accessToken: data.access_token,
     refreshToken: data.refresh_token,
     userId: data.user.id,
@@ -46,8 +46,13 @@ async function storeSession(data: TokenResponse): Promise<boolean> {
     proficiencyLevel: data.user.proficiency_level,
     provider: data.user.provider,
     createdAt: String(data.user.created_at),
-    redirect: false,
-  });
+  };
+  // Retry once — first attempt can fail if CSRF token is still loading
+  let result = await signIn("jwt", { ...credentials, redirect: false as false });
+  if (result?.error) {
+    await new Promise((r) => setTimeout(r, 600));
+    result = await signIn("jwt", { ...credentials, redirect: false as false });
+  }
   return !result?.error;
 }
 
@@ -81,7 +86,6 @@ export default function RegisterPage() {
       sessionStorage.removeItem("chatbot_messages");
       sessionStorage.removeItem("chatbot_session_id");
       router.push("/dashboard");
-      router.refresh();
     } catch (err: unknown) {
       if (axios.isAxiosError(err) && err.response?.status === 409) {
         setServerError("An account with this email already exists.");
@@ -110,7 +114,6 @@ export default function RegisterPage() {
       sessionStorage.removeItem("chatbot_messages");
       sessionStorage.removeItem("chatbot_session_id");
       router.push("/dashboard");
-      router.refresh();
     } catch {
       setServerError("Google sign-up failed. Please try again.");
     } finally {
@@ -289,12 +292,21 @@ export default function RegisterPage() {
           <div className="flex-1 border-t border-white/[0.08]" />
         </div>
 
-        {/* Google sign-up — hidden real button + custom themed overlay */}
+        {/* Google sign-up — hidden real button + custom themed overlay.
+            Same pattern as login page: GoogleLogin rendered off-screen at full size
+            (340×44px) so the GIS iframe loads correctly. Custom button triggers
+            a programmatic click on the iframe. */}
         <div className="relative">
           <div
             ref={googleBtnRef}
-            className="absolute opacity-0 pointer-events-none"
-            style={{ width: 1, height: 1, overflow: "hidden" }}
+            style={{
+              position: "absolute",
+              top: "-9999px",
+              left: "-9999px",
+              width: "340px",
+              height: "44px",
+              overflow: "hidden",
+            }}
           >
             <GoogleLogin
               onSuccess={handleGoogleSuccess}

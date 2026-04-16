@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-15 (Session 29 — Hide scrollbars site-wide)
+## Last Updated: 2026-04-17 (Session 30 — UI Tour dark-theme styling)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -23,7 +23,7 @@ _Update this file at the end of every session_
 | Forgot Password (Phase 12) | ✅ Rebuilt — 6-digit code flow | 3-endpoint backend (forgot/verify/reset); 4-step frontend (email→code→password→success); OTP boxes + resend cooldown; old link page deprecated; full E2E verified |
 | User Profile + Settings (Phase 13) | ✅ Complete | GET + PATCH /api/profile/, change-password endpoint; /settings hub + /profile + /password + /about pages; Settings in sidebar |
 | Onboarding Flow (Phase 14) | ✅ Complete + Enhanced (Session 26) | 8-step questionnaire (Welcome → Gender/Age → NativeLang → WhyLearning → CurrentLevel → Goal → Timeline → DailyStudy); gender + age_range collected for personalised roadmap banner; roadmap auto-generated on finish; loading screen during generation; sonner toast on roadmap_ready; skip at any step saves partial data |
-| First-Login UI Tour | ✅ Complete + Race-fix (Session 28) | driver.js spotlight tour; 8 steps covering sidebar + all nav sections; triggers once after onboarding; has_seen_tour flag on users table; PATCH saves flag on tour done/skip. Race condition fixed: `active={showTour && !showOnboarding}` prevents tour from starting while onboarding modal is visible |
+| First-Login UI Tour | ✅ Complete + Race-fix + Dark theme (Session 30) | driver.js spotlight tour; 8 steps covering sidebar + all nav sections; triggers once after onboarding; has_seen_tour flag on users table; PATCH saves flag on tour done/skip. Race condition fixed: `active={showTour && !showOnboarding}`. Popover fully re-themed: dark card #2e2b22, warm text, olive-green Next button, ghost Back button, matching arrow — replaces default white popover |
 | Admin Control Panel (Phase 15) | ✅ Complete + Verified | /api/admin/* fully tested; stats, users (search + detail + delete + reset + analytics), feedback; password guards verified; recharts LineChart + BarChart confirmed working; analytics bug fixed (NullType → timedelta) |
 | Pronunciation Audio (Phase 16) | ✅ Complete + Debugged | usePronunciation hook (ms-MY → ms → default fallback); SpeakerButton component; wired into VocabPills (chatbot), course class vocab cards, quiz results breakdown, dashboard vocabulary table; 3 post-implementation bugs fixed |
 | Notification System (Phase 17) | ✅ Complete | GET /api/notifications/ (last 20 + unread_count), POST mark-read, POST read-all; NotificationBell (60s polling, unread badge) + NotificationPanel; floating global icon in layout.tsx |
@@ -62,6 +62,32 @@ _Update this file at the end of every session_
 
 ## ✅ Fixed Issues (Session 13)
 - **Course covers not appearing (2026-04-13):** Session 12 correctly fixed `image_service.py` (httpx REST API) and `course_service.py` (retroactive healing + `asyncio.create_task`), but the backend was **never restarted** after those changes were made. Uvicorn started at 08:19, files modified at 14:22–14:28 — old broken code was still running. Fix: killed old uvicorn PIDs (18316, 25012), started fresh process on port 8000. Also manually ran `_generate_and_save_cover()` for all 3 existing courses that had `cover_image_url = NULL`. All verified: Gemini REST API returns JPEG (~1.1 MB base64, ~17s), DB save works, `GET /api/courses/` returns cover correctly. **Important**: after any code change to the backend, the uvicorn process MUST be restarted manually (no `--reload` flag in prod mode).
+
+---
+
+## What Was Done This Session (2026-04-17 Session 30 — UI Tour dark-theme styling)
+
+### Fix: driver.js tour popover uses default white theme (doesn't match dark UI)
+
+The UI tour popover rendered with driver.js default styles — white background, dark text, grey borders, white arrow — clashing with the BahasaBot dark botanical palette.
+
+**`frontend/app/globals.css`**: Added a `/* Driver.js tour */` CSS override block at the end of the file that re-themes every part of the driver.js popover to match the dark UI:
+
+| Element | Change |
+|---|---|
+| Popover background | White `#fff` → dark card `#2e2b22` |
+| Popover border | None → `1px solid #4a4636` + layered box-shadow with olive glow |
+| Popover border-radius | `5px` → `12px` |
+| Title text | Near-black `#2d2d2d` → warm cream `#ede4d4` |
+| Description text | Dark grey → muted warm grey `#a8a096` |
+| Progress text ("3 of 8") | Mid grey `#727272` → dimmed `#6b6456` |
+| Back / Done buttons | White box → ghost (transparent bg, `#4a4636` border, `#c8bfa8` text) |
+| Next button | White box → olive green `#8a9f7b` bg (matches `--primary`), dark text |
+| Close (×) button | Dark grey → dimmed `#6b6456`, brightens to `#ede4d4` on hover |
+| Arrow | White `#fff` → `#2e2b22` (matches popover bg so arrow blends seamlessly) |
+| Overlay opacity | 55% → 72% |
+
+All overrides use `!important` to beat driver.js's own `all: unset` button resets. Arrow is overridden via `.driver-popover-arrow { border-color: #2e2b22 !important }` — the side-specific classes that make 3 of 4 border sides transparent still apply on top, leaving the correct directional arrow visible.
 
 ---
 
