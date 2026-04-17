@@ -47,7 +47,7 @@ COPY . .
 ENV PYTHONPATH=/app
 
 # Expose default port (Render and Railway override via $PORT env var)
-EXPOSE 8000
+EXPOSE 8080
 
 # ── Startup: run Alembic migrations then launch uvicorn ───────────────────────
 # CWD = /app/backend, so:
