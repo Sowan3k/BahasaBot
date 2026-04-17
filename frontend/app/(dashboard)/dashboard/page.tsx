@@ -5,6 +5,9 @@ import { useSession } from "next-auth/react";
 import { useQuery } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 
+import Link from "next/link";
+import { BookOpen, Zap, MessageCircle } from "lucide-react";
+
 import { dashboardApi } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import type {
@@ -264,82 +267,106 @@ export default function DashboardPage() {
 
       {/* ── Overview tab ───────────────────────────────────────────────────── */}
       {activeTab === "overview" && (
-        <div className="space-y-6">
+        <div className="space-y-3">
           {summaryLoading ? (
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <Skeleton key={i} className="h-24 rounded-lg" />
+            <div className="space-y-3">
+              <Skeleton className="h-8 w-full rounded-lg" />
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <Skeleton key={i} className="h-16 rounded-lg" />
                 ))}
               </div>
-              <Skeleton className="h-24 w-full rounded-xl" />
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Skeleton className="h-64 rounded-xl" />
-                <Skeleton className="h-64 rounded-xl" />
+              <Skeleton className="h-8 w-full rounded-lg" />
+              <Skeleton className="h-36 w-full rounded-xl" />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <Skeleton className="h-44 rounded-xl" />
+                <Skeleton className="h-44 rounded-xl" />
               </div>
             </div>
           ) : summary ? (
             <>
-              {/* Stats cards */}
+              {/* BPS bar — slim, moved above stats */}
+              <div className="rounded-lg border bg-background px-3 py-2">
+                <BPSProgressBar level={summary.stats.proficiency_level} />
+              </div>
+
+              {/* Stats cards — compact 4×2 */}
               <StatsCards stats={summary.stats} />
 
-              {/* CEFR progress */}
-              <div className="relative rounded-[1.25rem] border-[0.75px] border-border p-2">
-                <GlowingEffect spread={40} glow={true} disabled={false} proximity={64} inactiveZone={0.01} borderWidth={3} />
-                <div className="relative overflow-hidden rounded-xl border-[0.75px] border-border bg-background p-5 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)]">
-                  <BPSProgressBar level={summary.stats.proficiency_level} />
-                </div>
+              {/* Quick Actions */}
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  href="/courses"
+                  className="inline-flex items-center gap-1.5 rounded-md border bg-background px-3 py-1.5 text-sm font-medium hover:bg-muted transition-colors"
+                >
+                  <BookOpen className="w-3.5 h-3.5 flex-shrink-0" />
+                  Continue Learning
+                </Link>
+                <Link
+                  href="/quiz/adaptive"
+                  className="inline-flex items-center gap-1.5 rounded-md border bg-background px-3 py-1.5 text-sm font-medium hover:bg-muted transition-colors"
+                >
+                  <Zap className="w-3.5 h-3.5 flex-shrink-0" />
+                  Take Quiz
+                </Link>
+                <Link
+                  href="/chatbot"
+                  className="inline-flex items-center gap-1.5 rounded-md border bg-background px-3 py-1.5 text-sm font-medium hover:bg-muted transition-colors"
+                >
+                  <MessageCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                  Chat with AI Tutor
+                </Link>
               </div>
 
-              {/* Weak points + recent quiz history side by side on wider screens */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-                <div className="relative rounded-[1.25rem] border-[0.75px] border-border p-2 h-full">
-                  <GlowingEffect spread={40} glow={true} disabled={false} proximity={64} inactiveZone={0.01} borderWidth={3} />
-                  <div className="relative overflow-hidden rounded-xl border-[0.75px] border-border bg-background p-5 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)] space-y-3">
-                    <h3 className="font-semibold text-base tracking-tight">Weak Points</h3>
-                    {summary.top_weak_points.length > 0 ? (
-                      <WeakPointsChart weakPoints={summary.top_weak_points} />
-                    ) : (
-                      <p className="text-sm text-muted-foreground">
-                        No weak points yet — complete some quizzes to see results here.
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="relative rounded-[1.25rem] border-[0.75px] border-border p-2 h-full">
-                  <GlowingEffect spread={40} glow={true} disabled={false} proximity={64} inactiveZone={0.01} borderWidth={3} />
-                  <div className="relative overflow-hidden rounded-xl border-[0.75px] border-border bg-background p-5 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)] space-y-3">
-                    <h3 className="font-semibold text-base tracking-tight">Recent Quiz Attempts</h3>
-                    <QuizHistoryTable
-                      items={summary.recent_quiz_history}
-                      total={summary.stats.quizzes_taken}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Recent vocabulary preview */}
+              {/* Recent vocabulary — moved up, 5 rows max */}
               {summary.recent_vocabulary.length > 0 && (
-                <div className="relative rounded-[1.25rem] border-[0.75px] border-border p-2">
+                <div className="relative rounded-[1.25rem] border-[0.75px] border-border p-1.5">
                   <GlowingEffect spread={40} glow={true} disabled={false} proximity={64} inactiveZone={0.01} borderWidth={3} />
-                  <div className="relative overflow-hidden rounded-xl border-[0.75px] border-border bg-background p-5 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)] space-y-3">
+                  <div className="relative overflow-hidden rounded-xl border-[0.75px] border-border bg-background px-3 py-2.5 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)] space-y-2">
                     <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-base tracking-tight">Recently Learned Vocabulary</h3>
+                      <h3 className="font-semibold text-sm tracking-tight">Recently Learned Vocabulary</h3>
                       <button
                         onClick={() => setActiveTab("vocabulary")}
-                        className="text-sm text-primary hover:underline"
+                        className="text-xs text-primary hover:underline"
                       >
                         View all {summary.stats.vocabulary_count} →
                       </button>
                     </div>
                     <VocabularyTable
-                      items={summary.recent_vocabulary}
+                      items={summary.recent_vocabulary.slice(0, 5)}
                       total={summary.recent_vocabulary.length}
                     />
                   </div>
                 </div>
               )}
+
+              {/* Weak points + recent quiz history side by side */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-start">
+                <div className="relative rounded-[1.25rem] border-[0.75px] border-border p-1.5 h-full">
+                  <GlowingEffect spread={40} glow={true} disabled={false} proximity={64} inactiveZone={0.01} borderWidth={3} />
+                  <div className="relative overflow-hidden rounded-xl border-[0.75px] border-border bg-background px-3 py-2.5 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)] space-y-2">
+                    <h3 className="font-semibold text-sm tracking-tight">Weak Points</h3>
+                    {summary.top_weak_points.length > 0 ? (
+                      <WeakPointsChart weakPoints={summary.top_weak_points.slice(0, 4)} />
+                    ) : (
+                      <p className="text-sm text-muted-foreground py-1">
+                        No weak points yet — complete a quiz to see results.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="relative rounded-[1.25rem] border-[0.75px] border-border p-1.5 h-full">
+                  <GlowingEffect spread={40} glow={true} disabled={false} proximity={64} inactiveZone={0.01} borderWidth={3} />
+                  <div className="relative overflow-hidden rounded-xl border-[0.75px] border-border bg-background px-3 py-2.5 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)] space-y-2">
+                    <h3 className="font-semibold text-sm tracking-tight">Recent Quiz Attempts</h3>
+                    <QuizHistoryTable
+                      items={summary.recent_quiz_history.slice(0, 4)}
+                      total={summary.stats.quizzes_taken}
+                    />
+                  </div>
+                </div>
+              </div>
             </>
           ) : null}
         </div>

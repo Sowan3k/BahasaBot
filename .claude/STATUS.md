@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-17 (Session 40 — Chatbot app-wide feature awareness)
+## Last Updated: 2026-04-18 (Session 41 — Dashboard density redesign)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -10,7 +10,7 @@ _Update this file at the end of every session_
 | AI Chatbot Tutor | ✅ Complete + App-awareness (Session 40) | SSE streaming, LangChain, RAG — Malaysian Malay + IPA in prompt; markdown rendering; session persistence; native_language injected into system prompt; RAG context Redis-cached (5 min) saving ~1.3s on repeat queries; ping SSE event for early frontend feedback; typing dots UX while waiting for first token; user profile Redis-cached (5 min TTL, invalidated on PATCH /profile); history cache updated in-place after each message (no more DB re-read on next turn); gamification XP awarded as asyncio.create_task with own session (no longer blocks SSE startup); GET /api/chatbot/prewarm warms profile cache on page load; ChatMessage wrapped in React.memo (previous messages never re-render during streaming); token batching via requestAnimationFrame (cuts setState calls from ~100/s to ≤60/s during streaming) |
 | Course Generator | ✅ Complete + English-medium fix | Lesson content in English; Malay words taught inline; Malaysian BM only |
 | Quiz | ✅ Complete + English-medium fix | Question text explicitly English; Malay vocabulary uses Malaysian BM; IPA in explanations |
-| Dashboard | ✅ Complete + Vocab Delete + useQuery cache | All 6 endpoints verified; streak + XP included; summary now useQuery(["dashboard","summary"]) — cached 5 min, no manual focus/visibility listeners |
+| Dashboard | ✅ Complete + Density Redesign (Session 41) | All 6 endpoints verified; streak + XP included; summary now useQuery(["dashboard","summary"]) — cached 5 min; Overview tab redesigned for 1080p no-scroll: BPS bar moved above stats as slim inline bar, stat cards compacted to 4×2 grid (no icons/GlowingEffect), Quick Actions row added, vocabulary moved above weak points, all card padding reduced p-5→p-3 |
 | Production Hardening | ✅ Complete + Rate Limiter Fix | Rate limiter falls back to in-memory on Redis timeout (no more 500s) |
 | IPA Pronunciation | ✅ Full stack verified | Courses: IPA in all vocab items. Chatbot: /ko.soŋ/, /tə.ri.ma ka.sɪh/. Quiz: IPA in explanations |
 | Chatbot UI | ✅ Complete + Logo fix | react-markdown rendering, VocabPill extraction, Malaysia flag avatar; welcome screen now shows BahasaBot logo (was broken 🇲🇾 emoji showing as "MY" on Windows) |
@@ -64,6 +64,45 @@ _Update this file at the end of every session_
 
 ## ✅ Fixed Issues (Session 13)
 - **Course covers not appearing (2026-04-13):** Session 12 correctly fixed `image_service.py` (httpx REST API) and `course_service.py` (retroactive healing + `asyncio.create_task`), but the backend was **never restarted** after those changes were made. Uvicorn started at 08:19, files modified at 14:22–14:28 — old broken code was still running. Fix: killed old uvicorn PIDs (18316, 25012), started fresh process on port 8000. Also manually ran `_generate_and_save_cover()` for all 3 existing courses that had `cover_image_url = NULL`. All verified: Gemini REST API returns JPEG (~1.1 MB base64, ~17s), DB save works, `GET /api/courses/` returns cover correctly. **Important**: after any code change to the backend, the uvicorn process MUST be restarted manually (no `--reload` flag in prod mode).
+
+---
+
+## What Was Done This Session (2026-04-18 Session 41 — Dashboard density redesign)
+
+### Goal
+Dr. Tan (FYP supervisor) requested more information density with less scrolling on the Dashboard Overview tab. Target: entire Overview visible without scrolling on a 1080p screen.
+
+### Files Changed (frontend only — no backend/API changes)
+
+**`frontend/components/dashboard/StatsCards.tsx`** — complete rewrite
+- Removed all icons and GlowingEffect wrappers
+- Changed grid from `grid-cols-2 sm:grid-cols-3 lg:grid-cols-4` with large padding to `grid-cols-2 sm:grid-cols-4 gap-1.5`
+- Each card reduced to: 10px label + 24px bold number + 10px description with `px-3 py-2` padding
+- Card height reduced from ~120px to ~70px
+
+**`frontend/components/dashboard/BPSProgressBar.tsx`** — complete rewrite
+- Replaced tall card layout (heading + bar + description = ~90px) with slim single-line bar (~36px)
+- Format: `BPS Level: BPS-X — Label [████░░░░] Next: BPS-Y — Label. Take adaptive quiz to advance.`
+- Fully responsive: wraps on mobile with `flex-wrap sm:flex-nowrap`
+
+**`frontend/components/dashboard/WeakPointsChart.tsx`** — targeted edits
+- Empty state: replaced large icon+text block with single `<p>` line (py-2)
+- Rows: reduced `py-2.5` → `py-1.5`
+- Item limit: `slice(0, 6)` → `slice(0, 4)` (overview shows 4 max)
+
+**`frontend/components/dashboard/QuizHistoryTable.tsx`** — targeted edits
+- Empty state: `py-6` → `py-2`
+- Rows: `py-2` → `py-1.5`
+- Score ring: `w-10 h-10` → `w-8 h-8`
+
+**`frontend/app/(dashboard)/dashboard/page.tsx`** — Overview tab restructure
+- Reduced `space-y-6` → `space-y-3` throughout Overview
+- **New order:** BPS bar → Stats → Quick Actions → Vocabulary → Weak Points + Quiz side-by-side
+- BPS section: removed GlowingEffect wrapper, now `rounded-lg border bg-background px-3 py-2`
+- Quick Actions: 3 inline `Link` buttons (Continue Learning → /courses, Take Quiz → /quiz/adaptive, Chat with AI Tutor → /chatbot)
+- Vocabulary moved above Weak Points, sliced to 5 rows, container padding `p-5` → `px-3 py-2.5`
+- Weak Points + Quiz History: gap-6 → gap-3, padding p-5 → px-3 py-2.5, items sliced to 4
+- Loading skeleton updated to match new layout (8 compact stat skeletons, slim BPS, etc.)
 
 ---
 

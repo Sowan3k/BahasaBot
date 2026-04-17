@@ -32,15 +32,9 @@ function scoreStatus(score: number): { label: string; color: string; bar: string
 export default function WeakPointsChart({ weakPoints }: Props) {
   if (weakPoints.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-8 text-center gap-2">
-        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-          <BookOpen className="w-5 h-5 text-muted-foreground" />
-        </div>
-        <p className="text-sm font-medium">No weak points yet</p>
-        <p className="text-xs text-muted-foreground">
-          Complete quizzes to see which areas need practice.
-        </p>
-      </div>
+      <p className="text-sm text-muted-foreground py-2">
+        No weak points yet — complete a quiz to see results.
+      </p>
     );
   }
 
@@ -70,13 +64,13 @@ export default function WeakPointsChart({ weakPoints }: Props) {
 
       {/* ── Weak point rows ── */}
       <div className="space-y-0.5">
-        {weakPoints.slice(0, 6).map((wp) => {
+        {weakPoints.slice(0, 4).map((wp) => {
           const pct = Math.round(wp.strength_score * 100);
           const s   = scoreStatus(wp.strength_score);
           return (
             <div
               key={wp.id}
-              className="group flex items-center gap-3 rounded-lg px-2 py-2.5 hover:bg-muted/50 transition-colors"
+              className="group flex items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-muted/50 transition-colors"
             >
               {/* Type badge */}
               <span className={`flex-shrink-0 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-md ${
