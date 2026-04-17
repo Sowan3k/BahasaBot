@@ -15,7 +15,8 @@
  *   />
  */
 
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Bell, BookOpen, Check, CheckCheck, Flame, Map, Star, Trash2, Trophy, TrendingUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -164,11 +165,49 @@ export const NotificationPopover = ({
   const [isOpen, setIsOpen] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>(initialNotifications);
+  const [panelStyle, setPanelStyle] = useState<React.CSSProperties>({});
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [mounted, setMounted] = useState(false);
+
+  // Ensure portal target exists (SSR guard)
+  useEffect(() => { setMounted(true); }, []);
 
   // Sync when parent passes a new array (e.g. after polling)
   React.useEffect(() => {
     setNotifications(initialNotifications);
   }, [initialNotifications]);
+
+  // Compute fixed position from the trigger button's bounding rect.
+  // Re-runs whenever the panel opens or window resizes.
+  const computePosition = useCallback(() => {
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    const MARGIN = 12;
+    const style: React.CSSProperties = {};
+
+    if (panelDirection === "up") {
+      style.bottom = window.innerHeight - rect.top + MARGIN;
+    } else {
+      style.top = rect.bottom + MARGIN;
+    }
+
+    if (panelSide === "right") {
+      // Align panel's left edge with trigger's left edge (extends right)
+      style.left = rect.left;
+    } else {
+      // Align panel's right edge with trigger's right edge (extends left)
+      style.right = window.innerWidth - rect.right;
+    }
+
+    setPanelStyle(style);
+  }, [panelDirection, panelSide]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    computePosition();
+    window.addEventListener("resize", computePosition);
+    return () => window.removeEventListener("resize", computePosition);
+  }, [isOpen, computePosition]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -198,14 +237,117 @@ export const NotificationPopover = ({
     onNotificationsChange?.(updated);
   };
 
+  // Panel content — rendered via portal so it escapes sidebar's stacking context
+  const panelPortal = mounted && isOpen ? createPortal(
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* Invisible full-screen backdrop — closes panel on outside click */}
+          <motion.div
+            className="fixed inset-0 z-[79]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsOpen(false)}
+          />
+
+          {/* Panel — fixed so it escapes any parent stacking context */}
+          <motion.div
+            style={panelStyle}
+            initial={{ opacity: 0, y: panelDirection === "up" ? 10 : -10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: panelDirection === "up" ? 8 : -8, scale: 0.95 }}
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            className={cn(
+              "fixed w-80 z-[80]",
+              "bg-card/95 backdrop-blur-md",
+              "border border-border",
+              "rounded-2xl",
+              "shadow-xl shadow-black/15",
+              "overflow-hidden",
+              popoverClassName
+            )}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border/60">
+              <div className="flex items-center gap-2">
+                <Bell size={13} className="text-primary" />
+                <h3 className="text-sm font-semibold tracking-tight">Notifications</h3>
+                {unreadCount > 0 && (
+                  <span className="px-1.5 py-0.5 rounded-full bg-primary/15 text-primary text-[10px] font-bold leading-none">
+                    {unreadCount}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-1">
+                {unreadCount > 0 && (
+                  <Button
+                    onClick={markAllAsRead}
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto py-1 px-2 text-[11px] text-muted-foreground hover:text-primary gap-1"
+                  >
+                    <CheckCheck size={11} />
+                    Mark all read
+                  </Button>
+                )}
+                {notifications.length > 0 && onClearAll && (
+                  <Button
+                    onClick={handleClearAll}
+                    disabled={clearing}
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto py-1 px-2 text-[11px] text-muted-foreground hover:text-destructive gap-1"
+                    title="Clear all notifications"
+                  >
+                    <Trash2 size={11} />
+                    {clearing ? "…" : "Clear all"}
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* List or empty state */}
+            <div className="max-h-[360px] overflow-y-auto">
+              {notifications.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 gap-3 text-muted-foreground">
+                  <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center">
+                    <Bell size={22} strokeWidth={1.5} />
+                  </div>
+                  <p className="text-sm font-medium">All caught up!</p>
+                  <p className="text-xs opacity-60">No notifications yet</p>
+                </div>
+              ) : (
+                <NotificationList
+                  notifications={notifications}
+                  onMarkAsRead={markAsRead}
+                />
+              )}
+            </div>
+
+            {/* Footer */}
+            {notifications.length > 0 && (
+              <div className="px-4 py-2 border-t border-border/40 text-center">
+                <p className="text-[10px] text-muted-foreground/50">
+                  Showing last {notifications.length} notification{notifications.length !== 1 ? "s" : ""}
+                </p>
+              </div>
+            )}
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>,
+    document.body
+  ) : null;
+
   return (
-    <div className="relative">
+    <>
       {/* ── Bell trigger button ── */}
       <Button
+        ref={triggerRef}
         onClick={() => setIsOpen((v) => !v)}
         size="icon"
         className={cn(
-          // Floating pill style — backdrop blur, BahasaBot card colours
           "relative w-10 h-10 rounded-full",
           "bg-card/90 hover:bg-card dark:bg-card/95",
           "backdrop-blur-sm",
@@ -214,13 +356,11 @@ export const NotificationPopover = ({
           "text-foreground/70 hover:text-primary",
           "transition-all duration-200 ease-out",
           "hover:scale-105 active:scale-90 active:shadow-sm",
-          // Glow ring when unread
           unreadCount > 0 ? "animate-bell-glow" : "",
           buttonClassName
         )}
         aria-label={`Notifications${unreadCount > 0 ? ` — ${unreadCount} unread` : ""}`}
       >
-        {/* Icon — re-key triggers bell-ring animation on new notifications */}
         <Bell
           size={17}
           strokeWidth={2}
@@ -228,7 +368,6 @@ export const NotificationPopover = ({
           style={{ transformOrigin: "top center" }}
         />
 
-        {/* Badge */}
         {unreadCount > 0 && (
           <span className="absolute -top-1 -right-1 flex items-center justify-center animate-badge-pop">
             <span className="absolute w-full h-full rounded-full bg-primary opacity-60 animate-ping" />
@@ -239,106 +378,7 @@ export const NotificationPopover = ({
         )}
       </Button>
 
-      {/* ── Popover panel ── */}
-      <AnimatePresence>
-        {isOpen && (
-          <>
-            {/* Click-outside backdrop (invisible, z below panel) */}
-            <motion.div
-              className="fixed inset-0 z-[79]"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsOpen(false)}
-            />
-
-            {/* Panel */}
-            <motion.div
-              initial={{ opacity: 0, y: 10, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 8, scale: 0.95 }}
-              transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-              className={cn(
-                "absolute w-80 z-[80]",
-                panelDirection === "up" ? "bottom-full mb-3" : "top-full mt-3",
-                panelSide === "right" ? "left-0" : "right-0",
-                "bg-card/95 backdrop-blur-md",
-                "border border-border",
-                "rounded-2xl",
-                "shadow-xl shadow-black/15",
-                "overflow-hidden",
-                popoverClassName
-              )}
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between px-4 py-3 border-b border-border/60">
-                <div className="flex items-center gap-2">
-                  <Bell size={13} className="text-primary" />
-                  <h3 className="text-sm font-semibold tracking-tight">Notifications</h3>
-                  {unreadCount > 0 && (
-                    <span className="px-1.5 py-0.5 rounded-full bg-primary/15 text-primary text-[10px] font-bold leading-none">
-                      {unreadCount}
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-1">
-                  {unreadCount > 0 && (
-                    <Button
-                      onClick={markAllAsRead}
-                      variant="ghost"
-                      size="sm"
-                      className="h-auto py-1 px-2 text-[11px] text-muted-foreground hover:text-primary gap-1"
-                    >
-                      <CheckCheck size={11} />
-                      Mark all read
-                    </Button>
-                  )}
-                  {notifications.length > 0 && onClearAll && (
-                    <Button
-                      onClick={handleClearAll}
-                      disabled={clearing}
-                      variant="ghost"
-                      size="sm"
-                      className="h-auto py-1 px-2 text-[11px] text-muted-foreground hover:text-destructive gap-1"
-                      title="Clear all notifications"
-                    >
-                      <Trash2 size={11} />
-                      {clearing ? "…" : "Clear all"}
-                    </Button>
-                  )}
-                </div>
-              </div>
-
-              {/* List or empty state */}
-              <div className="max-h-[360px] overflow-y-auto">
-                {notifications.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 gap-3 text-muted-foreground">
-                    <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center">
-                      <Bell size={22} strokeWidth={1.5} />
-                    </div>
-                    <p className="text-sm font-medium">All caught up!</p>
-                    <p className="text-xs opacity-60">No notifications yet</p>
-                  </div>
-                ) : (
-                  <NotificationList
-                    notifications={notifications}
-                    onMarkAsRead={markAsRead}
-                  />
-                )}
-              </div>
-
-              {/* Footer */}
-              {notifications.length > 0 && (
-                <div className="px-4 py-2 border-t border-border/40 text-center">
-                  <p className="text-[10px] text-muted-foreground/50">
-                    Showing last {notifications.length} notification{notifications.length !== 1 ? "s" : ""}
-                  </p>
-                </div>
-              )}
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-    </div>
+      {panelPortal}
+    </>
   );
 };

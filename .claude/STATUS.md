@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-17 (Session 38 — Verification pass)
+## Last Updated: 2026-04-17 (Session 39 — Notification panel z-index fix + About page animation)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -64,6 +64,41 @@ _Update this file at the end of every session_
 
 ## ✅ Fixed Issues (Session 13)
 - **Course covers not appearing (2026-04-13):** Session 12 correctly fixed `image_service.py` (httpx REST API) and `course_service.py` (retroactive healing + `asyncio.create_task`), but the backend was **never restarted** after those changes were made. Uvicorn started at 08:19, files modified at 14:22–14:28 — old broken code was still running. Fix: killed old uvicorn PIDs (18316, 25012), started fresh process on port 8000. Also manually ran `_generate_and_save_cover()` for all 3 existing courses that had `cover_image_url = NULL`. All verified: Gemini REST API returns JPEG (~1.1 MB base64, ~17s), DB save works, `GET /api/courses/` returns cover correctly. **Important**: after any code change to the backend, the uvicorn process MUST be restarted manually (no `--reload` flag in prod mode).
+
+---
+
+## What Was Done This Session (2026-04-17 Session 39 — Notification panel z-index fix + About page animation)
+
+### Problem 1 — Notification panel overlapping course cards (z-index bug)
+The sidebar has `z-[1]` creating a CSS stacking context. The notification panel inside the sidebar had `z-[80]`, but that z-80 only applied within the sidebar's own stacking context — so the panel was effectively z-1 globally. The courses page content wrapper had `relative z-10`, giving it a higher global z-index than the sidebar. This caused course cards to paint on top of the notification panel.
+
+### Fix
+**`frontend/components/ui/notification-popover.tsx`:**
+- Added `createPortal` from `react-dom` — panel now renders directly into `document.body`, completely escaping the sidebar's stacking context
+- Added `triggerRef` (useRef on bell button) and `panelStyle` state to compute `fixed` pixel coordinates from `getBoundingClientRect()`
+- `computePosition()` runs on panel open and on `window resize` (cleanup on close)
+- Panel uses `position: fixed` with computed `top`/`bottom`/`left`/`right` values instead of `absolute` with CSS utility classes
+- Added `mounted` SSR guard so `createPortal` is only called client-side
+- `panelDirection="up"` → `bottom = window.innerHeight - rect.top + 12px`
+- `panelSide="right"` → `left = rect.left` (panel extends right from button's left edge)
+- `panelSide="left"` → `right = window.innerWidth - rect.right` (panel extends left from button's right edge)
+- Backdrop remains `fixed inset-0 z-[79]`; panel is `fixed z-[80]` — both rendered via portal at body level, guaranteed above all page content
+
+**`frontend/app/(dashboard)/courses/page.tsx`:**
+- Removed `z-10` from the page content wrapper div — it was creating an unnecessary stacking context. The portal-based notification panel no longer needs this to be absent, but removing it avoids future stacking surprises on other pages.
+
+### Problem 2 — About page has no visual flair
+### Fix
+**`frontend/components/ui/background-paths.tsx`** (new file):
+- Animated SVG floating path component adapted from the BackgroundPaths pattern
+- 36 curved SVG paths animating `pathLength`, `opacity`, and `pathOffset` in a loop
+- Uses `text-primary/20 dark:text-primary/15` — matches BahasaBot's olive-green palette in both modes
+- Stripped to just the animation layer (no title/button overlay)
+
+**`frontend/app/(dashboard)/settings/about/page.tsx`:**
+- Wrapped in `relative min-h-full` container with `<BackgroundPaths />` as absolute background
+- All three `GlowCard`s get `backdrop-blur-sm` + `bg-card/80` so they stay readable over the animated paths
+- Content div is `relative z-10`
 
 ---
 

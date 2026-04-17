@@ -246,7 +246,7 @@ export default function CoursesPage() {
       </div>
 
       {/* ── Page content ── */}
-      <div className="relative z-10 max-w-5xl mx-auto px-4 py-8 space-y-6">
+      <div className="relative max-w-5xl mx-auto px-4 py-8 space-y-6">
 
         {/* Header */}
         <div className="flex items-start justify-between gap-3">
