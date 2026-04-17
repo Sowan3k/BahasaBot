@@ -12,12 +12,11 @@
 # WORKDIR /app/backend means alembic resolves script_location = db/migrations
 # relative to CWD, landing at /app/backend/db/migrations/ ✓
 #
-# Render: set Root Directory = backend/
-# Railway: set Root Directory = backend/ in the Railway dashboard
+# Render: set Root Directory = backend/ in the Render dashboard
 #
 # Local test (from backend/ directory):
 #   docker build -t bahasabot-backend .
-#   docker run -p 8000:8000 --env-file .env bahasabot-backend
+#   docker run -p 10000:10000 --env-file .env bahasabot-backend
 
 FROM python:3.11-slim
 
@@ -46,12 +45,12 @@ COPY . .
 #   from backend.routers.auth import ...  →  /app/backend/routers/auth.py ✓
 ENV PYTHONPATH=/app
 
-# Expose default port (Render and Railway override via $PORT env var)
-EXPOSE 8080
+# Render injects $PORT at runtime; default 10000 matches Render's standard port
+EXPOSE 10000
 
 # ── Startup: run Alembic migrations then launch uvicorn ───────────────────────
 # CWD = /app/backend, so:
 #   alembic upgrade head  →  reads /app/backend/alembic.ini
 #   script_location = db/migrations  →  /app/backend/db/migrations/ ✓
-#   uvicorn backend.main:app  →  imports /app/backend/main.py via PYTHONPATH ✓
-CMD sh -c "alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080} --workers 1"
+#   uvicorn main:app      →  imports /app/backend/main.py directly ✓
+CMD sh -c "alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port ${PORT:-10000} --workers 1"
