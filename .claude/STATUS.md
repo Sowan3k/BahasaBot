@@ -1,13 +1,13 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-17 (Session 39 — Notification panel z-index fix + About page animation)
+## Last Updated: 2026-04-17 (Session 40 — Chatbot app-wide feature awareness)
 
 ## Feature Status
 | Feature | Status | Notes |
 |---|---|---|
 | Auth | ✅ Complete + Google password setup | Email + Google OAuth, JWT, token refresh, 30-min sessions; mandatory SetPasswordModal for Google users with NULL password_hash; POST /api/auth/set-password; has_password in profile API; settings/password page now routes to SetPassword vs ChangePassword form based on has_password |
-| AI Chatbot Tutor | ✅ Complete + Verified + Optimised (Session 34) | SSE streaming, LangChain, RAG — Malaysian Malay + IPA in prompt; markdown rendering; session persistence; native_language injected into system prompt; RAG context Redis-cached (5 min) saving ~1.3s on repeat queries; ping SSE event for early frontend feedback; typing dots UX while waiting for first token; user profile Redis-cached (5 min TTL, invalidated on PATCH /profile); history cache updated in-place after each message (no more DB re-read on next turn); gamification XP awarded as asyncio.create_task with own session (no longer blocks SSE startup); GET /api/chatbot/prewarm warms profile cache on page load; ChatMessage wrapped in React.memo (previous messages never re-render during streaming); token batching via requestAnimationFrame (cuts setState calls from ~100/s to ≤60/s during streaming) |
+| AI Chatbot Tutor | ✅ Complete + App-awareness (Session 40) | SSE streaming, LangChain, RAG — Malaysian Malay + IPA in prompt; markdown rendering; session persistence; native_language injected into system prompt; RAG context Redis-cached (5 min) saving ~1.3s on repeat queries; ping SSE event for early frontend feedback; typing dots UX while waiting for first token; user profile Redis-cached (5 min TTL, invalidated on PATCH /profile); history cache updated in-place after each message (no more DB re-read on next turn); gamification XP awarded as asyncio.create_task with own session (no longer blocks SSE startup); GET /api/chatbot/prewarm warms profile cache on page load; ChatMessage wrapped in React.memo (previous messages never re-render during streaming); token batching via requestAnimationFrame (cuts setState calls from ~100/s to ≤60/s during streaming) |
 | Course Generator | ✅ Complete + English-medium fix | Lesson content in English; Malay words taught inline; Malaysian BM only |
 | Quiz | ✅ Complete + English-medium fix | Question text explicitly English; Malay vocabulary uses Malaysian BM; IPA in explanations |
 | Dashboard | ✅ Complete + Vocab Delete + useQuery cache | All 6 endpoints verified; streak + XP included; summary now useQuery(["dashboard","summary"]) — cached 5 min, no manual focus/visibility listeners |
@@ -64,6 +64,46 @@ _Update this file at the end of every session_
 
 ## ✅ Fixed Issues (Session 13)
 - **Course covers not appearing (2026-04-13):** Session 12 correctly fixed `image_service.py` (httpx REST API) and `course_service.py` (retroactive healing + `asyncio.create_task`), but the backend was **never restarted** after those changes were made. Uvicorn started at 08:19, files modified at 14:22–14:28 — old broken code was still running. Fix: killed old uvicorn PIDs (18316, 25012), started fresh process on port 8000. Also manually ran `_generate_and_save_cover()` for all 3 existing courses that had `cover_image_url = NULL`. All verified: Gemini REST API returns JPEG (~1.1 MB base64, ~17s), DB save works, `GET /api/courses/` returns cover correctly. **Important**: after any code change to the backend, the uvicorn process MUST be restarted manually (no `--reload` flag in prod mode).
+
+---
+
+## What Was Done This Session (2026-04-17 Session 40 — Chatbot app-wide feature awareness)
+
+### Problem
+The chatbot had no knowledge that it exists inside a larger platform. When users asked the chatbot to "generate a course", "give me a quiz", or "show my progress", it responded confusingly — either trying to handle the request itself (broken) or ignoring it.
+
+### Solution
+Updated `CHATBOT_SYSTEM_PROMPT` in `backend/services/langchain_service.py` with a new `BAHASABOT APP CONTEXT` section and a `REDIRECT RULE` block.
+
+**What was added to the prompt (no other code changed):**
+
+1. **App identity clarification** — The chatbot now knows it is the "AI Tutor" feature within BahasaBot, not the whole app.
+
+2. **Full feature directory** — 7 features listed with their purpose and exact sidebar navigation path:
+   - Courses → sidebar → Courses → + New Course → type topic
+   - Quiz → sidebar → Quiz (adaptive, targets weak points)
+   - Dashboard → sidebar → Dashboard (progress, vocab, grammar, BPS level)
+   - My Journey → sidebar → My Journey (personalised roadmap)
+   - Games → sidebar → Games (spelling practice)
+   - Chat History → AI Tutor page → history icon
+   - Settings → sidebar → Settings
+
+3. **Role boundary** — Explicit instruction that the chatbot handles ONLY conversational Malay learning and must never simulate other features.
+
+4. **REDIRECT RULE** — 4-step rule: (1) acknowledge warmly, (2) name the dedicated feature, (3) give exact navigation, (4) offer something related it CAN do in chat. Followed by 6 concrete redirect pattern examples covering all common misdirected requests.
+
+**Verified:**
+- `python -m py_compile backend/services/langchain_service.py` → OK
+- CLAUDE.md Section 5.2 updated with app-awareness note
+- Prompt format strings (`{context}`, `{native_language_context}`, `{learning_goal_context}`, `{proficiency_context}`) unchanged — no impact on surrounding code
+
+**Manual test scenarios (restart backend first to pick up new prompt):**
+- "Generate a course for me" → should redirect to Courses
+- "Give me a quiz" → should redirect to Quiz
+- "Show my progress" → should redirect to Dashboard
+- "What should I learn next?" → should redirect to My Journey
+- "I want to play a game" → should redirect to Games
+- "Teach me how to greet someone" → should respond normally as tutor (regression check)
 
 ---
 

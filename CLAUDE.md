@@ -194,6 +194,7 @@ bahasabot/
 - Automatically tracks and saves vocabulary and grammar encountered in chat
 - Responses are always educational, patient, and tutor-like in tone
 - Must handle slow AI responses gracefully on frontend (streaming preferred)
+- **App-wide feature awareness:** The chatbot system prompt includes full knowledge of all BahasaBot features (Courses, Quiz, Dashboard, My Journey, Games, Settings). When a user asks the chatbot to do something that belongs to another feature, it: (1) acknowledges the request warmly, (2) explains BahasaBot has a dedicated feature for it, (3) gives exact sidebar navigation instructions, (4) offers to help with something related it CAN do in chat. The chatbot never attempts to simulate or substitute for another feature. Implemented in `CHATBOT_SYSTEM_PROMPT` inside `backend/services/langchain_service.py`.
 
 ### 5.3 Dynamic Course Generator
 
