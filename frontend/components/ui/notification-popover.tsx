@@ -179,10 +179,13 @@ export const NotificationPopover = ({
 
   // Compute fixed position from the trigger button's bounding rect.
   // Re-runs whenever the panel opens or window resizes.
+  // Clamps to viewport edges so the panel never partially exits the screen.
   const computePosition = useCallback(() => {
     if (!triggerRef.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
-    const MARGIN = 12;
+    const MARGIN = 10;
+    const PANEL_W = 320; // w-80
+    const EDGE_PAD = 8;  // minimum gap from viewport edge
     const style: React.CSSProperties = {};
 
     if (panelDirection === "up") {
@@ -192,11 +195,13 @@ export const NotificationPopover = ({
     }
 
     if (panelSide === "right") {
-      // Align panel's left edge with trigger's left edge (extends right)
-      style.left = rect.left;
+      // Left-align with trigger; clamp so right edge stays inside viewport
+      const raw = rect.left;
+      style.left = Math.min(raw, window.innerWidth - PANEL_W - EDGE_PAD);
     } else {
-      // Align panel's right edge with trigger's right edge (extends left)
-      style.right = window.innerWidth - rect.right;
+      // Right-align with trigger; clamp so left edge stays inside viewport
+      const raw = window.innerWidth - rect.right;
+      style.right = Math.min(raw, window.innerWidth - PANEL_W - EDGE_PAD);
     }
 
     setPanelStyle(style);
@@ -251,18 +256,26 @@ export const NotificationPopover = ({
             onClick={() => setIsOpen(false)}
           />
 
-          {/* Panel — fixed so it escapes any parent stacking context */}
+          {/* Panel — fixed so it escapes any parent stacking context.
+               transform-gpu forces GPU compositing which prevents the
+               broken-corner artifact caused by backdrop-blur + border-radius
+               + overflow-hidden on Chromium (Windows). */}
           <motion.div
             style={panelStyle}
-            initial={{ opacity: 0, y: panelDirection === "up" ? 10 : -10, scale: 0.95 }}
+            initial={{ opacity: 0, y: panelDirection === "up" ? 8 : -8, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: panelDirection === "up" ? 8 : -8, scale: 0.95 }}
-            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            exit={{ opacity: 0, y: panelDirection === "up" ? 6 : -6, scale: 0.97 }}
+            transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
             className={cn(
               "fixed w-80 z-[80]",
+              "transform-gpu",
               "bg-card/95 backdrop-blur-md",
               "border border-border",
-              "rounded-2xl",
+              // Direction-aware radius: flatten corners closest to the trigger
+              // so the panel looks anchored and avoids the compositing glitch
+              panelDirection === "up"
+                ? "rounded-t-2xl rounded-b-xl"
+                : "rounded-b-2xl rounded-t-xl",
               "shadow-xl shadow-black/15",
               "overflow-hidden",
               popoverClassName
@@ -279,7 +292,7 @@ export const NotificationPopover = ({
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-0.5">
                 {unreadCount > 0 && (
                   <Button
                     onClick={markAllAsRead}
@@ -292,16 +305,17 @@ export const NotificationPopover = ({
                   </Button>
                 )}
                 {notifications.length > 0 && onClearAll && (
+                  /* Icon-only to save header width — label in title tooltip */
                   <Button
                     onClick={handleClearAll}
                     disabled={clearing}
                     variant="ghost"
-                    size="sm"
-                    className="h-auto py-1 px-2 text-[11px] text-muted-foreground hover:text-destructive gap-1"
+                    size="icon-sm"
+                    className="text-muted-foreground hover:text-destructive"
                     title="Clear all notifications"
+                    aria-label="Clear all notifications"
                   >
-                    <Trash2 size={11} />
-                    {clearing ? "…" : "Clear all"}
+                    <Trash2 size={13} />
                   </Button>
                 )}
               </div>
