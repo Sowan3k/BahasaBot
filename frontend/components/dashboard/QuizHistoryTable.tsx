@@ -64,8 +64,8 @@ export default function QuizHistoryTable({
 
   if (items.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground py-2 text-center">
-        No quiz attempts yet — take a quiz to see history.
+      <p className="text-sm text-muted-foreground py-6 text-center">
+        No quiz attempts yet. Take a quiz to see your history here.
       </p>
     );
   }
@@ -104,10 +104,10 @@ export default function QuizHistoryTable({
           return (
             <div
               key={attempt.id}
-              className="flex items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-muted/50 transition-colors"
+              className="flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-muted/50 transition-colors"
             >
               {/* Score ring */}
-              <div className={`flex-shrink-0 w-8 h-8 rounded-full border-2 ${s.ring} flex items-center justify-center bg-background`}>
+              <div className={`flex-shrink-0 w-10 h-10 rounded-full border-2 ${s.ring} flex items-center justify-center bg-background`}>
                 <span className={`text-[11px] font-bold tabular-nums ${s.text}`}>{pct}%</span>
               </div>
 
