@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-18 (Session 41 — Dashboard density redesign)
+## Last Updated: 2026-04-18 (Session 42 — Dashboard progress-ring redesign)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -10,7 +10,7 @@ _Update this file at the end of every session_
 | AI Chatbot Tutor | ✅ Complete + App-awareness (Session 40) | SSE streaming, LangChain, RAG — Malaysian Malay + IPA in prompt; markdown rendering; session persistence; native_language injected into system prompt; RAG context Redis-cached (5 min) saving ~1.3s on repeat queries; ping SSE event for early frontend feedback; typing dots UX while waiting for first token; user profile Redis-cached (5 min TTL, invalidated on PATCH /profile); history cache updated in-place after each message (no more DB re-read on next turn); gamification XP awarded as asyncio.create_task with own session (no longer blocks SSE startup); GET /api/chatbot/prewarm warms profile cache on page load; ChatMessage wrapped in React.memo (previous messages never re-render during streaming); token batching via requestAnimationFrame (cuts setState calls from ~100/s to ≤60/s during streaming) |
 | Course Generator | ✅ Complete + English-medium fix | Lesson content in English; Malay words taught inline; Malaysian BM only |
 | Quiz | ✅ Complete + English-medium fix | Question text explicitly English; Malay vocabulary uses Malaysian BM; IPA in explanations |
-| Dashboard | ✅ Complete + Density Redesign (Session 41) | All 6 endpoints verified; streak + XP included; summary now useQuery(["dashboard","summary"]) — cached 5 min; Overview tab redesigned for 1080p no-scroll: BPS bar moved above stats as slim inline bar, stat cards compacted to 4×2 grid (no icons/GlowingEffect), Quick Actions row added, vocabulary moved above weak points, all card padding reduced p-5→p-3 |
+| Dashboard | ✅ Complete + Progress Ring Redesign (Session 42) | All 6 endpoints verified; Overview tab completely redesigned: 3 SVG progress rings (Learning/Vocabulary/Quiz) with GlowCard hover, BPS slim strip, inline stats row (emoji), glowing pill Quick Actions, compact VocabPreview (no search bar, 5 rows, SpeakerButton), Weak Points + Quiz History in GlowCards; mobile-responsive (rings stay 3-col, wrap gracefully); StatsCards removed from overview |
 | Production Hardening | ✅ Complete + Rate Limiter Fix | Rate limiter falls back to in-memory on Redis timeout (no more 500s) |
 | IPA Pronunciation | ✅ Full stack verified | Courses: IPA in all vocab items. Chatbot: /ko.soŋ/, /tə.ri.ma ka.sɪh/. Quiz: IPA in explanations |
 | Chatbot UI | ✅ Complete + Logo fix | react-markdown rendering, VocabPill extraction, Malaysia flag avatar; welcome screen now shows BahasaBot logo (was broken 🇲🇾 emoji showing as "MY" on Windows) |
@@ -64,6 +64,39 @@ _Update this file at the end of every session_
 
 ## ✅ Fixed Issues (Session 13)
 - **Course covers not appearing (2026-04-13):** Session 12 correctly fixed `image_service.py` (httpx REST API) and `course_service.py` (retroactive healing + `asyncio.create_task`), but the backend was **never restarted** after those changes were made. Uvicorn started at 08:19, files modified at 14:22–14:28 — old broken code was still running. Fix: killed old uvicorn PIDs (18316, 25012), started fresh process on port 8000. Also manually ran `_generate_and_save_cover()` for all 3 existing courses that had `cover_image_url = NULL`. All verified: Gemini REST API returns JPEG (~1.1 MB base64, ~17s), DB save works, `GET /api/courses/` returns cover correctly. **Important**: after any code change to the backend, the uvicorn process MUST be restarted manually (no `--reload` flag in prod mode).
+
+---
+
+## What Was Done This Session (2026-04-18 Session 42 — Dashboard progress-ring redesign)
+
+### Goal
+Complete visual overhaul of Dashboard Overview tab replacing 8-card stat grid with a modern progress-ring-focused layout. Frontend only — no backend/API changes.
+
+### Files Changed
+
+**`frontend/app/(dashboard)/dashboard/page.tsx`** — complete Overview tab rewrite
+- Removed `StatsCards` dynamic import (no longer used in overview)
+- Added `GlowCard` and `SpeakerButton` imports
+- New inline components (all defined in the same file):
+  - `ProgressRing` — SVG circular ring with track + progress arc + center value/sub-label; responsive sizing `72px→90px→108px` across mobile/sm/lg breakpoints; 1.2s cubic-bezier stroke animation
+  - `VocabPreview` — compact vocab table without search bar; SpeakerButton on each word; source column hidden on mobile
+  - `OverviewContent` — all overview logic extracted into a separate function to reduce nesting; accepts `summary` + `onViewAllVocab` props
+  - `OverviewSkeleton` — loading skeleton matching new layout shapes
+- **Overview layout (top to bottom):**
+  1. BPS bar — `bg-muted/40 rounded-lg` strip (no border card)
+  2. Three rings in `grid-cols-3` — GlowCard each; purple #6C5CE7 / green #22c55e / orange #F58623; Learning (classes/target×10), Vocabulary (/100 target), Quiz (avg from recent_quiz_history)
+  3. Stats row — centered, 13px, `flex-wrap gap-x-4`; emoji + actual stats data
+  4. Quick Actions — GlowingEffect on pill-shaped `rounded-full` divs wrapping Links; Continue Learning/Take Quiz/Chat with AI Tutor
+  5. VocabPreview in GlowCard (conditional — only shown when vocab exists)
+  6. Weak Points + Recent Quiz Attempts in GlowCards, `grid-cols-1 lg:grid-cols-2`
+- Other tabs (Vocabulary, Grammar, Quiz History) unchanged
+
+### Mobile handling
+- Rings: `grid-cols-3` always (3-col at all widths); ring SVG scales down to 72px on mobile
+- BPS bar: `flex-wrap sm:flex-nowrap` already in BPSProgressBar component
+- Quick actions: `flex-wrap gap-2` — buttons wrap on narrow screens
+- Vocab source column: `hidden sm:table-cell`
+- Weak+Quiz: stacks on mobile, side-by-side on `lg+`
 
 ---
 

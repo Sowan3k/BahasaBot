@@ -4,12 +4,12 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useQuery } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
-
 import Link from "next/link";
 import { BookOpen, Zap, MessageCircle } from "lucide-react";
 
 import { dashboardApi } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SpeakerButton } from "@/components/ui/SpeakerButton";
 import type {
   DashboardSummary,
   GrammarEntry,
@@ -24,15 +24,144 @@ import type {
 // Heavy components loaded asynchronously — keeps initial bundle small
 const BPSProgressBar = dynamic(() => import("@/components/dashboard/BPSProgressBar"), { ssr: false });
 const QuizHistoryTable = dynamic(() => import("@/components/dashboard/QuizHistoryTable"), { ssr: false });
-const StatsCards = dynamic(() => import("@/components/dashboard/StatsCards"), { ssr: false });
 const VocabularyTable = dynamic(() => import("@/components/dashboard/VocabularyTable"), { ssr: false });
 const WeakPointsChart = dynamic(() => import("@/components/dashboard/WeakPointsChart"), { ssr: false });
+const GlowCard = dynamic(
+  () => import("@/components/ui/glow-card").then((m) => ({ default: m.GlowCard })),
+  { ssr: false, loading: () => null }
+);
 const GlowingEffect = dynamic(
   () => import("@/components/ui/glowing-effect").then((m) => ({ default: m.GlowingEffect })),
   { ssr: false, loading: () => null }
 );
 
-// ── Simple inline grammar table ───────────────────────────────────────────────
+// ── SVG Progress Ring ─────────────────────────────────────────────────────────
+
+function ProgressRing({
+  pct,
+  color,
+  trackColor = "rgba(128,128,128,0.15)",
+  centerValue,
+  centerSub,
+  label,
+}: {
+  pct: number;
+  color: string;
+  trackColor?: string;
+  centerValue: string;
+  centerSub?: string;
+  label: string;
+}) {
+  const r = 44;
+  const cx = 60;
+  const cy = 60;
+  const circumference = 2 * Math.PI * r; // ≈ 276.46
+  const clamped = Math.min(100, Math.max(0, pct));
+  const offset = circumference - (clamped / 100) * circumference;
+
+  return (
+    <div className="flex flex-col items-center gap-1.5">
+      <div className="relative w-[72px] h-[72px] sm:w-[90px] sm:h-[90px] lg:w-[108px] lg:h-[108px]">
+        <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
+          {/* Track */}
+          <circle
+            cx={cx}
+            cy={cy}
+            r={r}
+            fill="none"
+            stroke={trackColor}
+            strokeWidth="9"
+          />
+          {/* Progress arc */}
+          <circle
+            cx={cx}
+            cy={cy}
+            r={r}
+            fill="none"
+            stroke={color}
+            strokeWidth="9"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
+            style={{ transition: "stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1)" }}
+          />
+        </svg>
+        {/* Center content */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5">
+          <span className="text-base sm:text-lg lg:text-xl font-bold tabular-nums leading-none">
+            {centerValue}
+          </span>
+          {centerSub && (
+            <span className="text-[8px] sm:text-[9px] text-muted-foreground leading-tight text-center px-1">
+              {centerSub}
+            </span>
+          )}
+        </div>
+      </div>
+      <p className="text-[10px] sm:text-xs font-medium text-center text-muted-foreground leading-tight">
+        {label}
+      </p>
+    </div>
+  );
+}
+
+// ── Compact vocabulary preview (no search bar) ────────────────────────────────
+
+function VocabPreview({
+  items,
+  totalCount,
+  onViewAll,
+}: {
+  items: VocabularyEntry[];
+  totalCount: number;
+  onViewAll: () => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold tracking-tight">Recently Learned Vocabulary</h3>
+        <button onClick={onViewAll} className="text-xs text-primary hover:underline">
+          View all {totalCount} →
+        </button>
+      </div>
+      <div className="overflow-x-auto rounded-md border">
+        <table className="min-w-full divide-y divide-border text-xs">
+          <thead className="bg-muted/40">
+            <tr>
+              <th className="px-3 py-1.5 text-left font-medium">Word</th>
+              <th className="px-3 py-1.5 text-left font-medium">Meaning</th>
+              <th className="px-3 py-1.5 text-left font-medium hidden sm:table-cell">Source</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {items.map((v) => (
+              <tr key={v.id} className="hover:bg-muted/30 transition-colors">
+                <td className="px-3 py-1.5 font-medium">
+                  <span className="inline-flex items-center gap-1">
+                    {v.word}
+                    <SpeakerButton word={v.word} size="xs" />
+                  </span>
+                </td>
+                <td className="px-3 py-1.5 text-muted-foreground">{v.meaning}</td>
+                <td className="px-3 py-1.5 hidden sm:table-cell">
+                  <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+                    v.source_type === "chatbot"
+                      ? "bg-secondary text-secondary-foreground"
+                      : "bg-accent text-accent-foreground"
+                  }`}>
+                    {v.source_name}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ── Grammar table ─────────────────────────────────────────────────────────────
 
 function GrammarTable({
   items,
@@ -182,7 +311,6 @@ export default function DashboardPage() {
 
   async function handleVocabDelete(ids: string[]) {
     await dashboardApi.deleteVocabulary(ids);
-    // Refresh the current page; if it's now empty go back one page
     const remaining = (vocabData?.total ?? 0) - ids.length;
     const newPage = Math.min(vocabPage, Math.max(1, Math.ceil(remaining / 20)));
     if (newPage !== vocabPage) {
@@ -222,7 +350,7 @@ export default function DashboardPage() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="max-w-5xl mx-auto px-3 sm:px-4 py-4 sm:py-8 space-y-4 sm:space-y-6 overflow-x-hidden">
+    <div className="max-w-5xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-5 overflow-x-hidden">
       {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
@@ -269,105 +397,12 @@ export default function DashboardPage() {
       {activeTab === "overview" && (
         <div className="space-y-3">
           {summaryLoading ? (
-            <div className="space-y-3">
-              <Skeleton className="h-8 w-full rounded-lg" />
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-                {Array.from({ length: 8 }).map((_, i) => (
-                  <Skeleton key={i} className="h-16 rounded-lg" />
-                ))}
-              </div>
-              <Skeleton className="h-8 w-full rounded-lg" />
-              <Skeleton className="h-36 w-full rounded-xl" />
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                <Skeleton className="h-44 rounded-xl" />
-                <Skeleton className="h-44 rounded-xl" />
-              </div>
-            </div>
+            <OverviewSkeleton />
           ) : summary ? (
-            <>
-              {/* BPS bar — slim, moved above stats */}
-              <div className="rounded-lg border bg-background px-3 py-2">
-                <BPSProgressBar level={summary.stats.proficiency_level} />
-              </div>
-
-              {/* Stats cards — compact 4×2 */}
-              <StatsCards stats={summary.stats} />
-
-              {/* Quick Actions */}
-              <div className="flex flex-wrap gap-2">
-                <Link
-                  href="/courses"
-                  className="inline-flex items-center gap-1.5 rounded-md border bg-background px-3 py-1.5 text-sm font-medium hover:bg-muted transition-colors"
-                >
-                  <BookOpen className="w-3.5 h-3.5 flex-shrink-0" />
-                  Continue Learning
-                </Link>
-                <Link
-                  href="/quiz/adaptive"
-                  className="inline-flex items-center gap-1.5 rounded-md border bg-background px-3 py-1.5 text-sm font-medium hover:bg-muted transition-colors"
-                >
-                  <Zap className="w-3.5 h-3.5 flex-shrink-0" />
-                  Take Quiz
-                </Link>
-                <Link
-                  href="/chatbot"
-                  className="inline-flex items-center gap-1.5 rounded-md border bg-background px-3 py-1.5 text-sm font-medium hover:bg-muted transition-colors"
-                >
-                  <MessageCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                  Chat with AI Tutor
-                </Link>
-              </div>
-
-              {/* Recent vocabulary — moved up, 5 rows max */}
-              {summary.recent_vocabulary.length > 0 && (
-                <div className="relative rounded-[1.25rem] border-[0.75px] border-border p-1.5">
-                  <GlowingEffect spread={40} glow={true} disabled={false} proximity={64} inactiveZone={0.01} borderWidth={3} />
-                  <div className="relative overflow-hidden rounded-xl border-[0.75px] border-border bg-background px-3 py-2.5 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)] space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-sm tracking-tight">Recently Learned Vocabulary</h3>
-                      <button
-                        onClick={() => setActiveTab("vocabulary")}
-                        className="text-xs text-primary hover:underline"
-                      >
-                        View all {summary.stats.vocabulary_count} →
-                      </button>
-                    </div>
-                    <VocabularyTable
-                      items={summary.recent_vocabulary.slice(0, 5)}
-                      total={summary.recent_vocabulary.length}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Weak points + recent quiz history side by side */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-start">
-                <div className="relative rounded-[1.25rem] border-[0.75px] border-border p-1.5 h-full">
-                  <GlowingEffect spread={40} glow={true} disabled={false} proximity={64} inactiveZone={0.01} borderWidth={3} />
-                  <div className="relative overflow-hidden rounded-xl border-[0.75px] border-border bg-background px-3 py-2.5 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)] space-y-2">
-                    <h3 className="font-semibold text-sm tracking-tight">Weak Points</h3>
-                    {summary.top_weak_points.length > 0 ? (
-                      <WeakPointsChart weakPoints={summary.top_weak_points.slice(0, 4)} />
-                    ) : (
-                      <p className="text-sm text-muted-foreground py-1">
-                        No weak points yet — complete a quiz to see results.
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="relative rounded-[1.25rem] border-[0.75px] border-border p-1.5 h-full">
-                  <GlowingEffect spread={40} glow={true} disabled={false} proximity={64} inactiveZone={0.01} borderWidth={3} />
-                  <div className="relative overflow-hidden rounded-xl border-[0.75px] border-border bg-background px-3 py-2.5 shadow-sm dark:shadow-[0px_0px_27px_0px_rgba(45,45,45,0.3)] space-y-2">
-                    <h3 className="font-semibold text-sm tracking-tight">Recent Quiz Attempts</h3>
-                    <QuizHistoryTable
-                      items={summary.recent_quiz_history.slice(0, 4)}
-                      total={summary.stats.quizzes_taken}
-                    />
-                  </div>
-                </div>
-              </div>
-            </>
+            <OverviewContent
+              summary={summary}
+              onViewAllVocab={() => setActiveTab("vocabulary")}
+            />
           ) : null}
         </div>
       )}
@@ -418,5 +453,179 @@ export default function DashboardPage() {
         </div>
       )}
     </div>
+  );
+}
+
+// ── Loading skeleton ──────────────────────────────────────────────────────────
+
+function OverviewSkeleton() {
+  return (
+    <div className="space-y-3">
+      <Skeleton className="h-9 w-full rounded-lg" />
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <Skeleton className="h-[148px] sm:h-[168px] rounded-[1.25rem]" />
+        <Skeleton className="h-[148px] sm:h-[168px] rounded-[1.25rem]" />
+        <Skeleton className="h-[148px] sm:h-[168px] rounded-[1.25rem]" />
+      </div>
+      <Skeleton className="h-6 w-3/4 mx-auto rounded-md" />
+      <div className="flex gap-2 flex-wrap">
+        <Skeleton className="h-9 w-40 rounded-full" />
+        <Skeleton className="h-9 w-28 rounded-full" />
+        <Skeleton className="h-9 w-40 rounded-full" />
+      </div>
+      <Skeleton className="h-[180px] w-full rounded-[1.25rem]" />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <Skeleton className="h-[152px] rounded-[1.25rem]" />
+        <Skeleton className="h-[152px] rounded-[1.25rem]" />
+      </div>
+    </div>
+  );
+}
+
+// ── Overview content (extracted to reduce nesting) ────────────────────────────
+
+function OverviewContent({
+  summary,
+  onViewAllVocab,
+}: {
+  summary: DashboardSummary;
+  onViewAllVocab: () => void;
+}) {
+  const { stats, recent_vocabulary, recent_quiz_history, top_weak_points } = summary;
+
+  // ── Ring 1: Learning Progress ─────────────────────────────────────────────
+  const target = Math.max(stats.courses_created * 10, 10);
+  const learningPct =
+    stats.courses_created === 0
+      ? 0
+      : Math.min(100, Math.round((stats.classes_completed / target) * 100));
+
+  // ── Ring 2: Vocabulary ────────────────────────────────────────────────────
+  const vocabTarget = 100;
+  const vocabPct = Math.min(100, Math.round((stats.vocabulary_count / vocabTarget) * 100));
+
+  // ── Ring 3: Quiz Performance ──────────────────────────────────────────────
+  const avgScore =
+    recent_quiz_history.length > 0
+      ? Math.round(
+          recent_quiz_history.reduce((s, a) => s + a.score_percent, 0) /
+            recent_quiz_history.length
+        )
+      : null;
+
+  const RING_COLORS = {
+    learning: "#6C5CE7",
+    vocab: "#22c55e",
+    quiz: "#F58623",
+  };
+
+  return (
+    <>
+      {/* 1. BPS bar — subtle background strip */}
+      <div className="rounded-lg bg-muted/40 px-3 py-2 flex items-center">
+        <BPSProgressBar level={stats.proficiency_level} />
+      </div>
+
+      {/* 2. Three progress rings */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        {/* Ring 1: Learning Progress */}
+        <GlowCard className="py-3 px-2 sm:py-4 sm:px-3 flex flex-col items-center justify-center gap-1">
+          <ProgressRing
+            pct={learningPct}
+            color={RING_COLORS.learning}
+            centerValue={`${learningPct}%`}
+            centerSub={stats.classes_completed > 0 ? `${stats.classes_completed} done` : "start now"}
+            label="Learning Progress"
+          />
+        </GlowCard>
+
+        {/* Ring 2: Vocabulary */}
+        <GlowCard className="py-3 px-2 sm:py-4 sm:px-3 flex flex-col items-center justify-center gap-1">
+          <ProgressRing
+            pct={vocabPct}
+            color={RING_COLORS.vocab}
+            centerValue={String(stats.vocabulary_count)}
+            centerSub="words"
+            label={`Vocabulary / ${vocabTarget}`}
+          />
+        </GlowCard>
+
+        {/* Ring 3: Quiz Performance */}
+        <GlowCard className="py-3 px-2 sm:py-4 sm:px-3 flex flex-col items-center justify-center gap-1">
+          <ProgressRing
+            pct={avgScore ?? 0}
+            color={RING_COLORS.quiz}
+            centerValue={avgScore !== null ? `${avgScore}%` : "—"}
+            centerSub={avgScore !== null ? "avg score" : "no quizzes"}
+            label="Quiz Performance"
+          />
+        </GlowCard>
+      </div>
+
+      {/* 3. Inline stats row */}
+      <div className="flex items-center justify-center flex-wrap gap-x-4 gap-y-1 text-[13px] text-muted-foreground py-0.5">
+        <span>🔥 {stats.streak_count} streak</span>
+        <span>⭐ {stats.xp_total} XP</span>
+        <span>📚 {stats.courses_created} course{stats.courses_created !== 1 ? "s" : ""}</span>
+        <span>📝 {stats.quizzes_taken} quiz{stats.quizzes_taken !== 1 ? "zes" : ""}</span>
+        <span>✏️ {stats.grammar_count} grammar rule{stats.grammar_count !== 1 ? "s" : ""}</span>
+      </div>
+
+      {/* 4. Quick Actions */}
+      <div className="flex flex-wrap gap-2">
+        {[
+          { href: "/courses",       icon: <BookOpen className="w-3.5 h-3.5" />, label: "Continue Learning"  },
+          { href: "/quiz/adaptive", icon: <Zap className="w-3.5 h-3.5" />,     label: "Take Quiz"           },
+          { href: "/chatbot",       icon: <MessageCircle className="w-3.5 h-3.5" />, label: "Chat with AI Tutor" },
+        ].map(({ href, icon, label }) => (
+          <div
+            key={href}
+            className="relative rounded-full border-[0.75px] border-border p-[3px]"
+          >
+            <GlowingEffect spread={30} glow={true} disabled={false} proximity={48} inactiveZone={0.01} borderWidth={2} />
+            <Link
+              href={href}
+              className="relative flex items-center gap-1.5 rounded-full border-[0.75px] border-border bg-background px-4 py-2 text-sm font-medium hover:bg-muted transition-colors"
+            >
+              {icon}
+              {label}
+            </Link>
+          </div>
+        ))}
+      </div>
+
+      {/* 5. Recently Learned Vocabulary */}
+      {recent_vocabulary.length > 0 && (
+        <GlowCard className="px-3 py-3">
+          <VocabPreview
+            items={recent_vocabulary.slice(0, 5)}
+            totalCount={stats.vocabulary_count}
+            onViewAll={onViewAllVocab}
+          />
+        </GlowCard>
+      )}
+
+      {/* 6. Weak Points + Recent Quizzes */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-start">
+        <GlowCard outerClassName="h-full" className="px-3 py-2.5 space-y-2">
+          <h3 className="font-semibold text-sm tracking-tight">Weak Points</h3>
+          {top_weak_points.length > 0 ? (
+            <WeakPointsChart weakPoints={top_weak_points.slice(0, 4)} />
+          ) : (
+            <p className="text-sm text-muted-foreground py-1">
+              No data yet — complete a quiz to see results.
+            </p>
+          )}
+        </GlowCard>
+
+        <GlowCard outerClassName="h-full" className="px-3 py-2.5 space-y-2">
+          <h3 className="font-semibold text-sm tracking-tight">Recent Quiz Attempts</h3>
+          <QuizHistoryTable
+            items={recent_quiz_history.slice(0, 4)}
+            total={stats.quizzes_taken}
+          />
+        </GlowCard>
+      </div>
+    </>
   );
 }
