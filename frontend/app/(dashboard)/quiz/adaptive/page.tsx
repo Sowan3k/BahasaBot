@@ -4,35 +4,18 @@
 // 15 questions: 6 MCQ + 6 fill-in-blank + 3 translation, personalised to user's weak points.
 // Scores server-side; recalculates BPS proficiency level after submission.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Brain, ChartBar, Sparkles, CheckCircle2, BookOpen, Target, BarChart2, ArrowRight } from "lucide-react";
 import { standaloneQuizApi } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SpeakerButton } from "@/components/ui/SpeakerButton";
-import { FeedbackModal } from "@/components/quiz/FeedbackModal";
 import type {
   StandaloneQuizQuestion,
-  StandaloneQuizResult,
   QuizAnswer,
 } from "@/lib/types";
-
-// BPS level display helpers
-const BPS_LABEL: Record<string, string> = {
-  "BPS-1": "BPS-1 — Beginner",
-  "BPS-2": "BPS-2 — Elementary",
-  "BPS-3": "BPS-3 — Intermediate",
-  "BPS-4": "BPS-4 — Upper Intermediate",
-};
-
-const BPS_COLOR: Record<string, string> = {
-  "BPS-1": "text-muted-foreground",
-  "BPS-2": "text-ring",
-  "BPS-3": "text-primary",
-  "BPS-4": "text-foreground",
-};
 
 // ── Quiz generating animation ─────────────────────────────────────────────────
 // Shown while Gemini generates the quiz (may take 5–15 s if not Redis-cached).
@@ -199,21 +182,15 @@ function QuizLobby({ onStart }: { onStart: () => void }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function AdaptiveQuizPage() {
+  const router = useRouter();
   const queryClient = useQueryClient();
 
   // "lobby" = confirmation screen (no API call yet)
   // "generating" = user confirmed, quiz is being fetched
-  // "quiz" / "result" = active quiz or results
   const [phase, setPhase] = useState<"lobby" | "generating">("lobby");
 
   // Track user's selected/typed answers keyed by question_id
   const [answers, setAnswers] = useState<Record<string, string>>({});
-  // Holds scored results after submission
-  const [result, setResult] = useState<StandaloneQuizResult | null>(null);
-
-  // Feedback modal — shown 3 s after results appear, once per attempt
-  const [showFeedback, setShowFeedback] = useState(false);
-  const feedbackShown = useRef(false);
 
   // ── Fetch quiz questions — only fires after user confirms ────────────────────
 
@@ -238,9 +215,10 @@ export default function AdaptiveQuizPage() {
     mutationFn: (submittedAnswers: QuizAnswer[]) =>
       standaloneQuizApi.submit(submittedAnswers).then((r) => r.data),
     onSuccess: (data) => {
-      setResult(data);
-      // Invalidate dashboard so BPS level + weak points refresh
+      sessionStorage.setItem("adaptiveQuizResult", JSON.stringify(data));
+      // Invalidate dashboard so BPS level + weak points refresh after redirect
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      router.push("/quiz/adaptive/results");
     },
   });
 
@@ -253,31 +231,13 @@ export default function AdaptiveQuizPage() {
     submitMutation.mutate(submittedAnswers);
   };
 
-  const handleRetry = () => {
-    setAnswers({});
-    setResult(null);
-    setPhase("lobby");
-    feedbackShown.current = false;
-    // Invalidate so the next start triggers a fresh Gemini call
-    queryClient.invalidateQueries({ queryKey: ["standalone-quiz"] });
-  };
-
-  // Show feedback modal 3 s after results appear — once per attempt
-  useEffect(() => {
-    if (result && !feedbackShown.current) {
-      feedbackShown.current = true;
-      const timer = setTimeout(() => setShowFeedback(true), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [result]);
-
   const answeredCount = quiz
     ? quiz.questions.filter((q) => (answers[q.id] ?? "").trim() !== "").length
     : 0;
 
   // ── Lobby — shown before user confirms ───────────────────────────────────────
 
-  if (phase === "lobby" && !result) {
+  if (phase === "lobby") {
     return (
       <div className="flex flex-1 items-center justify-center px-4 py-8">
         <QuizLobby onStart={() => setPhase("generating")} />
@@ -309,123 +269,6 @@ export default function AdaptiveQuizPage() {
         <Button variant="ghost" asChild>
           <Link href="/dashboard">Back to Dashboard</Link>
         </Button>
-      </div>
-    );
-  }
-
-  // ── Results screen ───────────────────────────────────────────────────────────
-
-  if (result) {
-    return (
-      <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
-        <FeedbackModal
-          isOpen={showFeedback}
-          onClose={() => setShowFeedback(false)}
-          quizType="standalone"
-        />
-        {/* Score card */}
-        <div className="rounded-xl border p-6 text-center space-y-3 bg-card">
-          <div className="text-5xl font-bold tabular-nums font-heading">{result.score_percent}%</div>
-          <p className="text-muted-foreground text-sm leading-relaxed">
-            {result.correct_count} / {result.total_questions} correct
-          </p>
-
-          {/* BPS level update banner */}
-          {result.level_changed ? (
-            <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-4 py-3 space-y-0.5">
-              <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
-                Level Updated!
-              </p>
-              <p className="text-sm text-muted-foreground">
-                <span className={`font-medium ${BPS_COLOR[result.previous_proficiency_level]}`}>
-                  {BPS_LABEL[result.previous_proficiency_level] ?? result.previous_proficiency_level}
-                </span>
-                {" → "}
-                <span className={`font-medium ${BPS_COLOR[result.new_proficiency_level]}`}>
-                  {BPS_LABEL[result.new_proficiency_level] ?? result.new_proficiency_level}
-                </span>
-              </p>
-            </div>
-          ) : (
-            <div className="rounded-lg bg-muted/60 px-4 py-2.5">
-              <p className="text-sm text-muted-foreground">
-                Current level:{" "}
-                <span className={`font-semibold ${BPS_COLOR[result.new_proficiency_level]}`}>
-                  {BPS_LABEL[result.new_proficiency_level] ?? result.new_proficiency_level}
-                </span>
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Actions */}
-        <div className="flex gap-3 justify-center flex-wrap">
-          <Button onClick={handleRetry}>Take Another Quiz</Button>
-          <Button variant="outline" asChild>
-            <Link href="/dashboard">Back to Dashboard</Link>
-          </Button>
-        </div>
-
-        {/* Per-question breakdown */}
-        <div className="space-y-3">
-          <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-            Question Breakdown
-          </h2>
-          {result.question_results.map((qr, idx) => (
-            <div
-              key={qr.question_id}
-              className={`rounded-lg border p-4 space-y-2 ${
-                qr.is_correct
-                  ? "border-green-500/30 bg-green-500/5"
-                  : "border-destructive/30 bg-destructive/5"
-              }`}
-            >
-              <div className="flex items-start gap-2">
-                <span
-                  className={`mt-0.5 w-5 h-5 flex-shrink-0 rounded-full text-xs font-bold flex items-center justify-center ${
-                    qr.is_correct
-                      ? "bg-green-500 text-white"
-                      : "bg-destructive text-white"
-                  }`}
-                >
-                  {qr.is_correct ? "✓" : "✗"}
-                </span>
-                <p className="text-sm font-medium leading-relaxed">
-                  Q{idx + 1}. {qr.question}
-                </p>
-              </div>
-
-              <div className="pl-7 space-y-1 text-sm">
-                <p>
-                  <span className="text-muted-foreground">Your answer: </span>
-                  <span
-                    className={
-                      qr.is_correct
-                        ? "text-green-600 font-medium"
-                        : "text-destructive font-medium"
-                    }
-                  >
-                    {qr.your_answer || (
-                      <em className="text-muted-foreground">no answer</em>
-                    )}
-                  </span>
-                </p>
-                {!qr.is_correct && (
-                  <p className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-muted-foreground">Correct answer: </span>
-                    <span className="text-green-600 font-medium">{qr.correct_answer}</span>
-                    <SpeakerButton word={qr.correct_answer} size="xs" />
-                  </p>
-                )}
-                {qr.explanation && (
-                  <p className="text-muted-foreground italic text-xs mt-1">
-                    {qr.explanation}
-                  </p>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
     );
   }
