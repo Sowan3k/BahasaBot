@@ -54,4 +54,4 @@ EXPOSE 8000
 #   alembic upgrade head  →  reads /app/backend/alembic.ini
 #   script_location = db/migrations  →  /app/backend/db/migrations/ ✓
 #   uvicorn backend.main:app  →  imports /app/backend/main.py via PYTHONPATH ✓
-CMD alembic upgrade head && uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 2
+CMD sh -c "alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080}"
