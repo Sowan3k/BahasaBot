@@ -219,3 +219,33 @@ async def generate_milestone_card(bps_level: str, user_name: str) -> str | None:
     else:
         logger.warning(f"[IMAGE] Milestone card generation returned None (bps_level={bps_level})")
     return url
+
+
+async def generate_streak_milestone_card(streak_days: int, user_name: str) -> str | None:
+    """
+    Generate a celebratory achievement card for hitting a streak milestone (3/7/14/30 days).
+    Called when a user reaches a streak milestone in gamification_service.py.
+    Stored as image_url in the streak_milestone notification.
+    """
+    prompt = (
+        f"Create a vibrant celebratory achievement card for a language learner who has just "
+        f"maintained a {streak_days}-day learning streak in Bahasa Melayu. "
+        f"Style: festive Malaysian design with flame or fire streak elements, confetti, "
+        f"hibiscus flowers, golden accents, a streak tracker or calendar motif, "
+        f"joyful and congratulatory mood. "
+        f"Warm tropical colours. No text. Square format. "
+        f"High-quality illustration, suitable as a badge or achievement card."
+    )
+    logger.info(
+        f"[IMAGE] generate_streak_milestone_card called (streak_days={streak_days}, user={user_name})"
+    )
+    url = await generate_image(prompt)
+    if url:
+        logger.info(
+            f"[IMAGE] Streak milestone card generated successfully (streak_days={streak_days})"
+        )
+    else:
+        logger.warning(
+            f"[IMAGE] Streak milestone card generation returned None (streak_days={streak_days})"
+        )
+    return url

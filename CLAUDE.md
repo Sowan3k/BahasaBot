@@ -357,7 +357,9 @@ The dashboard must display:
 - Model: gemini-3.1-flash-image-preview via Gemini API
 - Used in three places only:
   1. Journey roadmap banner — generated once when user creates their roadmap
-  2. Milestone cards — generated when user reaches a new BPS level or streak milestone
+  2. Milestone cards — generated when user reaches a new BPS level OR a streak milestone (3/7/14/30 days); both are fully implemented
+     - BPS level-up: quiz_service._generate_and_save_milestone_card() → generate_milestone_card()
+     - Streak milestone: gamification_service._generate_and_save_streak_milestone_card() → generate_streak_milestone_card()
   3. Course cover images — generated once when a course is first created, stored as URL
 - Images stored as URLs in DB (not binary) — generate once, cache forever
 - backend/services/image_service.py handles all generation calls

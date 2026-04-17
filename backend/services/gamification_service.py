@@ -17,6 +17,7 @@ Milestone triggers:
   - XP:     every 100 XP boundary crossed → xp_milestone notification
 """
 
+import asyncio
 import uuid
 from datetime import date, datetime, timedelta, timezone
 
@@ -172,13 +173,14 @@ async def record_learning_activity(
             # consistent with what the sidebar shows via /api/profile/.
             await cache_delete(f"dashboard:summary:{user_id}")
 
-        # ── Milestone notifications (fire-and-forget) ──────────────────────
+        # ── Milestone notifications ────────────────────────────────────────
         if not streak_already_updated_today and new_streak in _STREAK_MILESTONES and new_streak > old_streak:
-            await create_notification_fire_and_forget(
-                db=db,
-                user_id=user_id,
-                notification_type="streak_milestone",
-                message=f"You're on a {new_streak}-day streak! Keep learning every day.",
+            asyncio.create_task(
+                _generate_and_save_streak_milestone_card(
+                    user_id=user_id,
+                    streak_days=new_streak,
+                    user_name=user.name or "Learner" if user else "Learner",
+                )
             )
 
         if xp_amount > 0 and old_xp // _XP_MILESTONE_INTERVAL < new_xp // _XP_MILESTONE_INTERVAL:
@@ -203,5 +205,49 @@ async def record_learning_activity(
             "record_learning_activity failed",
             user_id=str(user_id),
             xp_amount=xp_amount,
+            error=str(exc),
+        )
+
+
+async def _generate_and_save_streak_milestone_card(
+    user_id: uuid.UUID,
+    streak_days: int,
+    user_name: str,
+) -> None:
+    """
+    Background task: generate a streak milestone card image and save it as a
+    'streak_milestone' notification with image_url populated.
+    Opens its own DB session — safe to run after the request session has closed.
+    Mirrors the pattern used by quiz_service._generate_and_save_milestone_card().
+    """
+    from backend.db.database import AsyncSessionLocal
+    from backend.models.notification import Notification
+    from backend.services.image_service import generate_streak_milestone_card
+
+    try:
+        image_url = await generate_streak_milestone_card(streak_days, user_name)
+        message = f"You're on a {streak_days}-day streak! Keep learning every day."
+
+        async with AsyncSessionLocal() as db:
+            notification = Notification(
+                user_id=user_id,
+                type="streak_milestone",
+                message=message,
+                image_url=image_url,  # None if generation failed — that's fine
+                read=False,
+            )
+            db.add(notification)
+            await db.commit()
+            logger.info(
+                "Streak milestone notification created",
+                user_id=str(user_id),
+                streak_days=streak_days,
+                has_image=bool(image_url),
+            )
+    except Exception as exc:
+        logger.error(
+            "Streak milestone card background task failed",
+            user_id=str(user_id),
+            streak_days=streak_days,
             error=str(exc),
         )

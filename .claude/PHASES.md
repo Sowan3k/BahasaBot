@@ -103,8 +103,8 @@ _Status: ✅ Complete_
 - [x] Redis cache (30min TTL per user)
 - [x] Score history tracked (standalone_quiz_attempts table)
 - [x] Frontend: adaptive quiz page (quiz/adaptive/page.tsx)
-- [x] Frontend: results page — ⚠️ completeness unknown (quiz/adaptive/results/page.tsx)
-- [x] Frontend: module quiz results page — ⚠️ completeness unknown (quiz/module/[moduleId]/results/page.tsx)
+- [x] Frontend: results page (quiz/adaptive/results/page.tsx) — dedicated page with score ring, BPS update, per-question breakdown, FeedbackModal
+- [x] Frontend: module quiz results page (quiz/module/[moduleId]/results/page.tsx)
 
 ---
 
@@ -882,18 +882,20 @@ _Status: ✅ Complete_
 ---
 
 ## Phase 22 — Image Generation (Nano Banana 2)
-_Status: ✅ Complete + Bug fixed (2026-04-13)_
+_Status: ✅ Complete + Bug fixed (2026-04-13) + Streak milestone cards (2026-04-17)_
 
-**Goal:** Generate personalized visual assets for Journey banners, BPS milestone cards, and course covers.
+**Goal:** Generate personalized visual assets for Journey banners, BPS milestone cards, streak milestone cards, and course covers.
 
-- [x] backend/services/image_service.py — generate_image() core + generate_journey_banner(), generate_course_cover(), generate_milestone_card()
+- [x] backend/services/image_service.py — generate_image() core + generate_journey_banner(), generate_course_cover(), generate_milestone_card(), generate_streak_milestone_card()
 - [x] Model: gemini-3.1-flash-image-preview — called via Gemini REST API (httpx), NOT via google-generativeai SDK
   - **Bug fixed 2026-04-13:** SDK v0.7.2 raised `TypeError` on `response_modalities` → silently returned None → zero API calls made. Rewrote generate_image() to call `v1beta/models/{model}:generateContent` directly via httpx. Verified: HTTP 200, ~800 KB JPEG returned.
 - [x] Images stored as base64 data URLs in TEXT columns (VARCHAR(1000) → TEXT migration applied)
 - [x] generate_journey_banner() — asyncio.create_task() after roadmap save in journey_service.py
 - [x] generate_course_cover() — asyncio.create_task() after course save in course_service.py
 - [x] generate_milestone_card() — asyncio.create_task() when BPS level advances in quiz_service.py
+- [x] generate_streak_milestone_card() — asyncio.create_task() via _generate_and_save_streak_milestone_card() in gamification_service.py when 3/7/14/30-day streak reached
 - [x] Milestone card stored as image_url on bps_milestone notification (new notifications.image_url TEXT column)
+- [x] Streak milestone card stored as image_url on streak_milestone notification (same image_url column)
 - [x] GEMINI_IMAGE_MODEL=gemini-3.1-flash-image-preview already in .env.example
 - [x] Alembic migration: 20260408_1200_phase22_image_columns.py
 - [x] ORM models updated: Course.cover_image_url TEXT, LearningRoadmap.banner_image_url TEXT, Notification.image_url TEXT
@@ -920,10 +922,10 @@ _Status: 🔄 In progress_
 - [x] Login page — redirect loading overlay (logo + spinner + "Signing you in…") shown immediately after sign-in succeeds while dashboard loads
 
 ### Loading Skeletons
-- [ ] frontend/components/dashboard/ — add skeleton states to all dashboard components (StatsCards, VocabularyTable, WeakPointsChart)
-- [ ] frontend/app/(dashboard)/journey/page.tsx — skeleton while roadmap loads
+- [x] frontend/app/(dashboard)/dashboard/page.tsx — summaryLoading branch: 6 card skeletons + BPS bar skeleton + 2 chart skeletons (verified 2026-04-17)
+- [x] frontend/app/(dashboard)/journey/page.tsx — roadmapLoading branch: title/subtitle/banner skeletons + 5 obstacle row skeletons (verified 2026-04-17)
 - [x] frontend/app/(dashboard)/courses/page.tsx — skeleton for course library grid (shadcn Skeleton used)
-- [ ] frontend/app/(dashboard)/admin/ — skeleton for stats and tables
+- [ ] frontend/app/(dashboard)/admin/ — skeleton for stats and tables (not yet implemented)
 - [x] frontend/components/ui/skeleton.tsx — shadcn/ui Skeleton component added
 
 ### Demo Seed Script
