@@ -1,12 +1,12 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-17 (Session 32 — Auth debug: register page fixes)
+## Last Updated: 2026-04-17 (Session 33 — Mandatory password setup for Google sign-in)
 
 ## Feature Status
 | Feature | Status | Notes |
 |---|---|---|
-| Auth | ✅ Complete + Debugged | Email + Google OAuth, JWT, token refresh, 30-min sessions; register page: CSRF retry added, router.refresh() race removed, Google button 1×1px container fixed |
+| Auth | ✅ Complete + Google password setup | Email + Google OAuth, JWT, token refresh, 30-min sessions; mandatory SetPasswordModal for Google users with NULL password_hash; POST /api/auth/set-password; has_password in profile API; settings/password page now routes to SetPassword vs ChangePassword form based on has_password |
 | AI Chatbot Tutor | ✅ Complete + Verified + Optimised | SSE streaming, LangChain, RAG — Malaysian Malay + IPA in prompt; markdown rendering; session persistence; native_language injected into system prompt; RAG context Redis-cached (5 min) saving ~1.3s on repeat queries; ping SSE event for early frontend feedback; typing dots UX while waiting for first token |
 | Course Generator | ✅ Complete + English-medium fix | Lesson content in English; Malay words taught inline; Malaysian BM only |
 | Quiz | ✅ Complete + English-medium fix | Question text explicitly English; Malay vocabulary uses Malaysian BM; IPA in explanations |
@@ -44,6 +44,7 @@ _Update this file at the end of every session_
 | User Feedback — Settings (Session 18) | ✅ Complete | /settings/feedback page (star rating + relevance + textarea → POST /api/evaluation/feedback quiz_type="general"); backend schema extended to accept "general"; admin feedback page shows "General" badge; admin main page label updated to "User Feedback" |
 | Notification Bell UX (Session 18) | ✅ Relocated + Clear-all | Bell moved from floating fixed overlay into AppSidebar: mobile header (opens left/downward), desktop expanded footer next to username (opens right/upward), desktop collapsed footer (opens right/upward); DELETE /api/notifications/ backend endpoint; "Clear all" button in panel header; panelSide + panelDirection props added to NotificationPopover |
 | Mobile Layout Fixes (Session 24) | ✅ Complete | Dashboard: StatsCards grid gap-2→sm:gap-4, reduced card padding/icon/font sizes on mobile (no overflow at 375px); h1 text-2xl on mobile; subtitle breaks correctly; tabs px tightened. Journey: outer container px-3 pt-4; ObstacleNode always flex-row on mobile (zigzag only on sm+); topic title line-clamp-2 instead of truncate; card min-w-0; progress card p-3 on mobile; deadline row flex-wrap + break-words; header min-w-0 + flex-1. Both pages verified zero horizontal overflow at 375px. |
+| Mandatory Google password setup (Session 33) | ✅ Complete | POST /api/auth/set-password; SetPasswordRequest + SetPasswordResponse schemas; requires_password_setup in TokenResponse; has_password property on User model + ProfileResponse; SetPasswordModal (non-dismissible, z-[90]); login + register pages show modal when flag true; settings/password page routes to SetPasswordForm vs ChangePasswordForm based on has_password; change-password guard updated to check password_hash IS NULL only |
 
 ## Missing / Broken
 - `frontend/app/(dashboard)/quiz/adaptive/results/page.tsx` — redirects back to `/quiz/adaptive` (inline results used instead). Deep-link works but no standalone results page.
@@ -62,6 +63,71 @@ _Update this file at the end of every session_
 
 ## ✅ Fixed Issues (Session 13)
 - **Course covers not appearing (2026-04-13):** Session 12 correctly fixed `image_service.py` (httpx REST API) and `course_service.py` (retroactive healing + `asyncio.create_task`), but the backend was **never restarted** after those changes were made. Uvicorn started at 08:19, files modified at 14:22–14:28 — old broken code was still running. Fix: killed old uvicorn PIDs (18316, 25012), started fresh process on port 8000. Also manually ran `_generate_and_save_cover()` for all 3 existing courses that had `cover_image_url = NULL`. All verified: Gemini REST API returns JPEG (~1.1 MB base64, ~17s), DB save works, `GET /api/courses/` returns cover correctly. **Important**: after any code change to the backend, the uvicorn process MUST be restarted manually (no `--reload` flag in prod mode).
+
+---
+
+## What Was Done This Session (2026-04-17 Session 33 — Mandatory password setup for Google sign-in)
+
+### Feature: Mandatory password setup for Google OAuth accounts
+
+All Google-authenticated users with `password_hash = NULL` are now required to set a password immediately after sign-in via a non-dismissible `SetPasswordModal` before reaching the dashboard.
+
+**Backend — 5 files changed:**
+
+`backend/schemas/auth.py`:
+- Added `requires_password_setup: bool = False` field to `TokenResponse`
+- Added `SetPasswordRequest` (new_password, min 8 chars validator) + `SetPasswordResponse` schemas
+
+`backend/routers/auth.py`:
+- `POST /api/auth/google` — now returns `requires_password_setup=True` when `user.password_hash is None`
+- Added `POST /api/auth/set-password` — authenticated endpoint; only works when `password_hash IS NULL` (returns 400 if password already exists); bcrypt-hashes and saves the new password
+- `POST /api/auth/login` — changed `google_signin_required` error code to `no_password_set` (HTTP 400 instead of 401) with descriptive message
+
+`backend/models/user.py`:
+- Added `has_password: bool` Python property (computed from `password_hash is not None`)
+- Pydantic's `from_attributes=True` in `ProfileResponse` picks this up automatically — no schema change needed beyond adding the field
+
+`backend/schemas/profile.py`:
+- Added `has_password: bool` to `ProfileResponse` — derived server-side, never exposes the actual hash
+
+`backend/routers/profile.py`:
+- `POST /api/profile/change-password` guard updated: removed `provider == "google"` condition, now only blocks when `password_hash IS NULL`. Google users who have set a password can now change it.
+
+**Frontend — 6 files changed:**
+
+`frontend/lib/types.ts`:
+- Added `requires_password_setup: boolean` to `TokenResponse`
+- Added `has_password: boolean` to `UserProfile`
+
+`frontend/lib/api.ts`:
+- Added `authApi` namespace with `setPassword(new_password)` → `POST /api/auth/set-password`
+
+`frontend/components/auth/SetPasswordModal.tsx` (new):
+- Full-screen, non-dismissible modal (`z-[90]`, above sidebar + onboarding)
+- ShieldCheck icon + heading "One last step — set your password" + explanatory subtext
+- New password + confirm fields with show/hide toggles
+- Client-side validation: min 8 chars + must match
+- On submit: `authApi.setPassword()` then `router.push("/dashboard")`
+- Edge case: if password already set (race condition), silently continues to dashboard
+- Loading spinner on submit button; inline error display
+
+`frontend/app/(auth)/login/page.tsx`:
+- Added `showSetPassword` state; after Google sign-in success, checks `data.requires_password_setup`
+- If true: renders `<SetPasswordModal />` instead of redirecting
+- Updated `no_password_set` error handling in email login form
+
+`frontend/app/(auth)/register/page.tsx`:
+- Same `showSetPassword` state + `SetPasswordModal` integration for Google sign-up path
+
+`frontend/app/(dashboard)/settings/password/page.tsx`:
+- Replaced `useSession()` provider check with `useQuery(['profile'])` → `profile.has_password`
+- `has_password === false`: shows `SetPasswordForm` (no current password field, calls `authApi.setPassword`)
+- `has_password === true`: shows `ChangePasswordForm` (existing 3-field form, calls `profileApi.changePassword`)
+- Informational banner in `SetPasswordForm` explaining the Google Sign-In context
+
+**CLAUDE.md updated:** Section 5.1 (auth rules), Section 7 (new endpoint), Section 13 (file map), Section 14 (Google OAuth note corrected)
+
+**Verified:** `tsc --noEmit` → 0 errors; `python -m py_compile` on all 5 backend files → OK
 
 ---
 

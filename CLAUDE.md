@@ -181,6 +181,9 @@ bahasabot/
 - JWT-based sessions with refresh tokens
 - Protected routes (frontend + backend)
 - User profile stored in PostgreSQL
+- Google OAuth users are required to set a password immediately after their first Google sign-in via a non-dismissible SetPasswordModal before reaching the dashboard
+- Once a password is set, users can sign in via either Google OAuth or email + password regardless of how they registered
+- Email/password login is blocked only if password_hash is NULL (user signed up with Google and has not set a password yet)
 
 ### 5.2 AI Chatbot (Personal Tutor)
 
@@ -446,6 +449,7 @@ POST   /api/auth/login
 GET    /api/auth/me
 POST   /api/auth/forgot-password
 POST   /api/auth/reset-password
+POST   /api/auth/set-password        # Set password for Google users who have never set one (no current password required)
 
 POST   /api/chatbot/message          # Send message, get AI response
 GET    /api/chatbot/history          # Get chat history for user
@@ -644,6 +648,7 @@ ADMIN_EMAIL=                  # Email address that gets admin role on first regi
 - frontend/app/api/auth/[...nextauth]/route.ts
 - backend/routers/auth.py, backend/models/user.py
 - backend/middleware/auth_middleware.py
+- frontend/components/auth/SetPasswordModal.tsx
 
 ### AI Chatbot
 - frontend/app/(dashboard)/chatbot/page.tsx, layout.tsx
@@ -770,7 +775,7 @@ The raw Neon connection string must be converted before use:
 The project installs both `google-auth==2.29.0` (for Google ID token verification) and `google-generativeai` (for Gemini). Pin `google-auth` to `2.29.0` to avoid version conflicts.
 
 ### Google OAuth — Users Table Schema
-`password_hash` is nullable to support Google-only accounts. The `provider` column (`'email'` | `'google'`) tracks account creation method. If an existing email/password account signs in via Google, its `provider` is updated to `'google'` and password login is disabled for that account.
+`password_hash` is nullable to support Google-only accounts. The `provider` column (`'email'` | `'google'`) tracks original sign-up method but does NOT restrict login method. All users can use both Google OAuth and email/password once a password is set. Google-created accounts with NULL `password_hash` are prompted to set a password immediately after first Google sign-in via the mandatory `SetPasswordModal`.
 
 ---
 

@@ -21,6 +21,8 @@ export interface TokenResponse {
   refresh_token: string;
   token_type: string;
   user: User;
+  /** True when the Google-authenticated user has no password set yet. */
+  requires_password_setup: boolean;
 }
 
 export interface AccessTokenResponse {
@@ -394,6 +396,8 @@ export interface UserProfile {
   provider: "email" | "google";
   gender: string | null;
   age_range: string | null;
+  /** False for Google-only accounts that have never set a password. */
+  has_password: boolean;
 }
 
 /** PATCH /api/profile/ request body */

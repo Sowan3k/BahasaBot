@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { User, Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 
 import { AuthCard } from "@/components/ui/auth-card";
+import { SetPasswordModal } from "@/components/auth/SetPasswordModal";
 import type { TokenResponse } from "@/lib/types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -65,6 +66,7 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
+  const [showSetPassword, setShowSetPassword] = useState(false);
 
   const {
     register,
@@ -113,7 +115,12 @@ export default function RegisterPage() {
       if (!ok) { setServerError("Google sign-up failed. Please try again."); return; }
       sessionStorage.removeItem("chatbot_messages");
       sessionStorage.removeItem("chatbot_session_id");
-      router.push("/dashboard");
+      if (data.requires_password_setup) {
+        // New Google account — show mandatory set-password modal before dashboard
+        setShowSetPassword(true);
+      } else {
+        router.push("/dashboard");
+      }
     } catch {
       setServerError("Google sign-up failed. Please try again.");
     } finally {
@@ -125,6 +132,11 @@ export default function RegisterPage() {
   const isLoading = isSubmitting || googleLoading;
 
   // ── Render ───────────────────────────────────────────────────────────────
+
+  // Mandatory set-password step for new Google sign-ups with no password
+  if (showSetPassword) {
+    return <SetPasswordModal />;
+  }
 
   return (
     <AuthCard>

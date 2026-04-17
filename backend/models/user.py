@@ -110,5 +110,10 @@ class User(Base):
     # age_range: "under_18" | "18-24" | "25-34" | "35-44" | "45+" | None
     age_range: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
+    @property
+    def has_password(self) -> bool:
+        """True when the account has a bcrypt password hash set."""
+        return self.password_hash is not None
+
     def __repr__(self) -> str:
         return f"<User id={self.id} email={self.email} level={self.proficiency_level}>"

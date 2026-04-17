@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 
 import { AuthCard } from "@/components/ui/auth-card";
+import { SetPasswordModal } from "@/components/auth/SetPasswordModal";
 import { useTheme } from "@/lib/use-theme";
 import type { TokenResponse } from "@/lib/types";
 
@@ -67,6 +68,7 @@ export default function LoginPage() {
   const [redirecting, setRedirecting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
+  const [showSetPassword, setShowSetPassword] = useState(false);
 
   const {
     register,
@@ -95,8 +97,8 @@ export default function LoginPage() {
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         const detail: string = err.response?.data?.detail ?? "";
-        if (detail === "google_signin_required") {
-          setAuthError("This account was created with Google. Please use Sign in with Google below.");
+        if (detail === "no_password_set") {
+          setAuthError("This account has no password set. Sign in with Google first, then set a password in Settings.");
         } else if (err.response?.status === 401) {
           setAuthError("Invalid email or password. Please try again.");
         } else {
@@ -129,8 +131,13 @@ export default function LoginPage() {
       sessionStorage.removeItem("chatbot_session_id");
       // Force light mode on every sign-in — updates React context + localStorage + DOM in one call
       setTheme("light");
-      setRedirecting(true);
-      router.push("/dashboard");
+      if (data.requires_password_setup) {
+        // Account has no password yet — show mandatory set-password modal before dashboard
+        setShowSetPassword(true);
+      } else {
+        setRedirecting(true);
+        router.push("/dashboard");
+      }
     } catch {
       setAuthError("Google sign-in failed. Please try again.");
     } finally {
@@ -143,6 +150,11 @@ export default function LoginPage() {
   const isLoading = isSubmitting || googleLoading;
 
   // ── Render ───────────────────────────────────────────────────────────────
+
+  // Mandatory set-password step for new Google sign-ins with no password
+  if (showSetPassword) {
+    return <SetPasswordModal />;
+  }
 
   // Full-screen loading overlay shown while navigating to dashboard after sign-in
   if (redirecting) {

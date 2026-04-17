@@ -127,11 +127,11 @@ async def change_password(
     - Google-only accounts cannot use this endpoint.
     - Verifies current password before updating.
     """
-    # Google-only accounts have no password
-    if current_user.provider == "google" or current_user.password_hash is None:
+    # Account has no password — must use set-password endpoint first
+    if current_user.password_hash is None:
         raise HTTPException(
             status_code=400,
-            detail="google_account_no_password",
+            detail="no_password_set",
         )
 
     # Verify current password

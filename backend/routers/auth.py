@@ -39,6 +39,8 @@ from backend.schemas.auth import (
     RegisterRequest,
     ResetPasswordRequest,
     ResetPasswordResponse,
+    SetPasswordRequest,
+    SetPasswordResponse,
     TokenResponse,
     UserResponse,
     VerifyResetCodeRequest,
@@ -147,11 +149,11 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)) -> Token
             detail="Invalid email or password",
         )
 
-    # Google-only account — has no password
+    # Account has no password — was created (or linked) via Google
     if user.password_hash is None:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="google_signin_required",
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="no_password_set",
         )
 
     if not _verify_password(body.password, user.password_hash):
@@ -244,7 +246,42 @@ async def google_auth(body: GoogleAuthRequest, db: AsyncSession = Depends(get_db
         access_token=_create_access_token(str(user.id)),
         refresh_token=_create_refresh_token(str(user.id)),
         user=UserResponse.model_validate(user),
+        requires_password_setup=user.password_hash is None,
     )
+
+
+@router.post("/set-password", status_code=status.HTTP_200_OK, response_model=SetPasswordResponse)
+async def set_password(
+    body: SetPasswordRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> SetPasswordResponse:
+    """
+    Set an initial password for a Google-authenticated account that has none.
+
+    Only works when the account has no password yet (password_hash IS NULL).
+    Once a password exists, use POST /api/profile/change-password instead.
+    """
+    if current_user.password_hash is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This account already has a password. Use the change-password endpoint instead.",
+        )
+
+    current_user.password_hash = bcrypt.hashpw(
+        body.new_password.encode(), bcrypt.gensalt()
+    ).decode()
+
+    try:
+        db.add(current_user)
+        await db.commit()
+        logger.info("Initial password set for Google account", user_id=str(current_user.id))
+    except Exception as exc:
+        await db.rollback()
+        logger.error("Failed to set password", user_id=str(current_user.id), error=str(exc))
+        raise HTTPException(status_code=500, detail="Failed to save password")
+
+    return SetPasswordResponse(success=True)
 
 
 @router.post("/refresh", status_code=status.HTTP_200_OK, response_model=AccessTokenResponse)

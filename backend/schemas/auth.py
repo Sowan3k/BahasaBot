@@ -66,6 +66,9 @@ class TokenResponse(BaseModel):
     refresh_token: str
     token_type: str = "bearer"
     user: UserResponse
+    # True only for Google sign-in when the user has no password set yet.
+    # Frontend shows the mandatory SetPasswordModal before redirecting to dashboard.
+    requires_password_setup: bool = False
 
 
 class TokenData(BaseModel):
@@ -140,3 +143,22 @@ class ResetPasswordResponse(BaseModel):
     """Response after a successful password reset."""
 
     message: str
+
+
+class SetPasswordRequest(BaseModel):
+    """Payload for POST /api/auth/set-password."""
+
+    new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def password_min_length(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters")
+        return v
+
+
+class SetPasswordResponse(BaseModel):
+    """Response after successfully setting an initial password."""
+
+    success: bool = True

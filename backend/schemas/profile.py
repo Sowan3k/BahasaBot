@@ -29,6 +29,9 @@ class ProfileResponse(BaseModel):
     provider: Literal["email", "google"]
     gender: str | None
     age_range: str | None
+    # Derived from password_hash IS NOT NULL — never exposes the hash itself.
+    # False for Google-only accounts that have not yet set a password.
+    has_password: bool
 
     @field_validator("id", mode="before")
     @classmethod

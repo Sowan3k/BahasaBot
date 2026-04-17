@@ -111,6 +111,18 @@ apiClient.interceptors.response.use(
 
 export default apiClient;
 
+// ── Auth API ──────────────────────────────────────────────────────────────────
+
+export const authApi = {
+  /**
+   * Set an initial password for a Google account that has none yet.
+   * Only callable when the user has no password_hash in the DB.
+   * Use POST /api/profile/change-password for subsequent changes.
+   */
+  setPassword: (new_password: string) =>
+    apiClient.post<{ success: boolean }>("/api/auth/set-password", { new_password }),
+};
+
 // ── Course API ────────────────────────────────────────────────────────────────
 
 export const coursesApi = {
