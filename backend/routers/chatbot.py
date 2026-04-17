@@ -8,7 +8,9 @@ Endpoints:
   DELETE /api/chatbot/sessions/{session_id} — delete a session + its messages
 """
 
+import asyncio
 import json
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
 from sqlalchemy import func, select
@@ -34,6 +36,30 @@ from backend.utils.logger import get_logger
 logger = get_logger(__name__)
 
 router = APIRouter()
+
+
+# ── Helpers ────────────────────────────────────────────────────────────────────
+
+
+async def _award_chatbot_xp(session_id: str, user_id: UUID) -> None:
+    """
+    Fire-and-forget: award 5 XP for the first message of a chatbot session.
+    Opens its own DB session so it never blocks the SSE stream.
+    """
+    from backend.db.database import AsyncSessionLocal
+    from backend.services.gamification_service import record_learning_activity
+    from backend.utils.cache import cache_get, cache_set
+
+    async with AsyncSessionLocal() as db:
+        try:
+            xp_key = f"gamif:chatbot_xp:{session_id}"
+            already = await cache_get(xp_key)
+            xp = 0 if already else 5
+            if xp:
+                await cache_set(xp_key, "1", ttl=172800)
+            await record_learning_activity(user_id=user_id, db=db, xp_amount=xp)
+        except Exception:
+            pass
 
 
 # ── POST /api/chatbot/message ──────────────────────────────────────────────────
@@ -74,9 +100,11 @@ async def send_message(
 
     async def event_generator():
         """Yield SSE events as the model streams its response."""
-        # Emit a ping immediately so the client knows the connection is live
-        # and can display a "thinking" indicator while RAG + LLM warm up.
+        # Emit ping immediately — client shows typing dots while we warm up RAG + LLM.
         yield {"data": json.dumps({"type": "ping"})}
+
+        # Award XP in a background task so it never delays first-token delivery.
+        asyncio.create_task(_award_chatbot_xp(session_id, current_user.id))
 
         try:
             async for chunk in langchain_service.stream_chat_response(
@@ -117,24 +145,27 @@ async def send_message(
         message_preview=body.message[:60],
     )
 
-    # Award 5 XP for the first message of a new chatbot session; update streak
-    # on every message.  Redis key prevents double-awarding XP within a session.
-    # Fire-and-forget: any failure must never disrupt the SSE stream.
-    try:
-        from backend.services.gamification_service import record_learning_activity
-        from backend.utils.cache import cache_get, cache_set
+    return EventSourceResponse(event_generator())
 
-        chatbot_xp_key = f"gamif:chatbot_xp:{session_id}"
-        xp_already_awarded = await cache_get(chatbot_xp_key)
-        xp = 0 if xp_already_awarded else 5
-        if xp:
-            # Mark this session as XP-awarded for 48 h
-            await cache_set(chatbot_xp_key, "1", ttl=172800)
-        await record_learning_activity(user_id=current_user.id, db=db, xp_amount=xp)
+
+# ── GET /api/chatbot/prewarm ───────────────────────────────────────────────────
+
+
+@router.get("/prewarm")
+async def prewarm_chatbot(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """
+    Pre-warm per-user caches for faster first-message TTFT.
+    Frontend calls this when the chatbot page mounts.
+    Warms the profile cache (eliminates DB round-trip on first message).
+    """
+    try:
+        await langchain_service.get_cached_profile(current_user.id, db)
     except Exception:
         pass
-
-    return EventSourceResponse(event_generator())
+    return {"status": "ok"}
 
 
 # ── GET /api/chatbot/sessions ──────────────────────────────────────────────────

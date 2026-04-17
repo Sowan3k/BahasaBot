@@ -11,7 +11,7 @@
  *     replaced with interactive VocabPill components (hover to see translation).
  */
 
-import { Fragment, useMemo } from "react";
+import { Fragment, memo, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import type { Components } from "react-markdown";
 import { VocabPill } from "./VocabularyHighlight";
@@ -138,7 +138,7 @@ const mdComponents: Components = {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function ChatMessage({
+const ChatMessage = memo(function ChatMessage({
   role,
   content,
   isStreaming = false,
@@ -201,4 +201,6 @@ export default function ChatMessage({
       {/* No "You" avatar — right-aligned blue bubble is sufficient identification */}
     </div>
   );
-}
+});
+
+export default ChatMessage;

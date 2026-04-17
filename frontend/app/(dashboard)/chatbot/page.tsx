@@ -57,6 +57,7 @@ export default function ChatbotPage() {
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const prewarmCalledRef = useRef(false);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -64,6 +65,18 @@ export default function ChatbotPage() {
       router.push("/login");
     }
   }, [status, router]);
+
+  // Pre-warm per-user caches on page load for faster first-message TTFT
+  useEffect(() => {
+    if (status !== "authenticated" || prewarmCalledRef.current) return;
+    const token = (session as any)?.accessToken;
+    if (!token) return;
+    prewarmCalledRef.current = true;
+    fetch(`${API_URL}/api/chatbot/prewarm`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, session]);
 
   // Restore previous chat from sessionStorage when navigating back to this page
   useEffect(() => {
@@ -122,6 +135,21 @@ export default function ChatbotPage() {
 
   /** Core SSE call — shared by button submit and starter buttons */
   async function submitMessage(text: string, assistantMsgId: string) {
+    // Token batching: accumulate chunks between animation frames to cut re-renders
+    let tokenBuffer = "";
+    let rafId: number | null = null;
+
+    function flushBuffer() {
+      const chunk = tokenBuffer;
+      tokenBuffer = "";
+      if (!chunk) return;
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === assistantMsgId ? { ...m, content: m.content + chunk } : m
+        )
+      );
+    }
+
     try {
       const token = (session as any)?.accessToken;
 
@@ -167,13 +195,14 @@ export default function ChatbotPage() {
             if (event.type === "ping") continue;
 
             if (event.type === "token" && event.content) {
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === assistantMsgId
-                    ? { ...m, content: m.content + event.content }
-                    : m
-                )
-              );
+              // Accumulate tokens; flush once per animation frame (~60 fps)
+              tokenBuffer += event.content;
+              if (rafId === null) {
+                rafId = requestAnimationFrame(() => {
+                  rafId = null;
+                  flushBuffer();
+                });
+              }
             } else if (event.type === "done" && event.session_id) {
               setSessionId(event.session_id);
             } else if (event.type === "error") {
@@ -202,6 +231,12 @@ export default function ChatbotPage() {
         )
       );
     } finally {
+      // Flush any tokens still waiting in the rAF queue
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+      flushBuffer();
       setIsStreaming(false);
       inputRef.current?.focus();
     }

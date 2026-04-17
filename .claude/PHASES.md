@@ -1021,3 +1021,25 @@ No changes required. `generate_course()` returns an identical `Course` object wh
 | 50 | "Found a matching course — personalising for you…" |
 | 100 | "Course ready!" |
 
+---
+
+## Session 34 — Chatbot Latency Optimizations (2026-04-17)
+
+**Goal:** Reduce cold TTFT (~4.5s) and warm TTFT (~3.2s) by eliminating every avoidable sequential operation before first token delivery.
+
+### Backend
+
+- [x] `backend/services/langchain_service.py` — `_BPS_DESCRIPTIONS` moved from inside `stream_chat_response()` to module-level constant (was recreated on every message)
+- [x] `backend/services/langchain_service.py` — `get_cached_profile()` + `invalidate_profile_cache()`: user profile (native_language, learning_goal, proficiency_level) now Redis-cached with 5 min TTL; eliminates one DB round-trip per chatbot message on warm path
+- [x] `backend/services/langchain_service.py` — `_update_history_cache()`: replaces `_invalidate_history_cache()` — appends the current exchange to the cached history in-place instead of busting it; eliminates the DB re-read for history on every subsequent turn in the same session
+- [x] `backend/routers/chatbot.py` — gamification XP award (`_award_chatbot_xp`) extracted to standalone async helper that opens its own `AsyncSessionLocal`; fired as `asyncio.create_task` inside `event_generator` (after ping, before LLM call) so it never blocks SSE stream startup
+- [x] `backend/routers/chatbot.py` — removed blocking gamification block that ran before `return EventSourceResponse()`; that block was adding ~20–50 ms of DB/Redis latency before the client received even the ping event
+- [x] `backend/routers/chatbot.py` — `GET /api/chatbot/prewarm`: lightweight endpoint that warms the profile cache; frontend calls it on chatbot page mount so first message benefits from a cache hit
+- [x] `backend/routers/profile.py` — `PATCH /api/profile/` now calls `invalidate_profile_cache()` after a successful commit so chatbot picks up changed native_language / learning_goal / proficiency_level immediately
+
+### Frontend
+
+- [x] `frontend/components/chatbot/ChatMessage.tsx` — wrapped with `React.memo`; previous messages no longer re-render during streaming (each token only triggers a re-render of the actively streaming message)
+- [x] `frontend/app/(dashboard)/chatbot/page.tsx` — token batching via `requestAnimationFrame`: tokens accumulate in a local buffer and are flushed in a single `setMessages` call per animation frame (≤60/s) instead of one setState per token (~50–100+/s); eliminates UI jank on fast Gemini responses
+- [x] `frontend/app/(dashboard)/chatbot/page.tsx` — prewarm call on mount: `GET /api/chatbot/prewarm` fires once when the user loads the chatbot page (before typing), so the profile cache is warm by the time the first message is sent
+

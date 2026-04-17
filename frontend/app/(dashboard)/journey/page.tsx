@@ -16,6 +16,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
@@ -666,34 +667,62 @@ export default function JourneyPage() {
   const [isExtending, setIsExtending]   = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
 
-  // Load roadmap + user profile + history on mount
+  const queryClient = useQueryClient();
+
+  // Fetch roadmap, profile, and history — cached for 5 min via global staleTime
+  const {
+    data: roadmapQueryData,
+    isLoading: roadmapLoading,
+    error: roadmapQueryError,
+  } = useQuery({
+    queryKey: ["journey", "roadmap"],
+    queryFn: async () => {
+      try {
+        const res = await journeyApi.getRoadmap();
+        return res.data as UserRoadmap;
+      } catch (err: unknown) {
+        const httpStatus = (err as { response?: { status?: number } })?.response?.status;
+        if (httpStatus === 404) return null;
+        throw err;
+      }
+    },
+  });
+
+  const { data: profileQueryData } = useQuery({
+    queryKey: ["profile"],
+    queryFn: () => profileApi.getProfile().then((r) => r.data),
+  });
+
+  const { data: historyQueryData } = useQuery({
+    queryKey: ["journey", "history"],
+    queryFn: () => journeyApi.getHistory().then((r) => r.data),
+  });
+
+  // Sync query results to local state
   useEffect(() => {
-    Promise.allSettled([
-      journeyApi.getRoadmap(),
-      profileApi.getProfile(),
-      journeyApi.getHistory(),
-    ]).then(([roadmapResult, profileResult, historyResult]) => {
-      if (roadmapResult.status === "fulfilled") {
-        setRoadmap(roadmapResult.value.data);
-      } else if ((roadmapResult.reason as { response?: { status?: number } })?.response?.status === 404) {
-        setRoadmap(null);
-      } else {
-        setFetchError("Could not load your journey. Please refresh the page.");
-        setRoadmap(null);
-      }
+    if (!roadmapLoading && roadmapQueryData !== undefined) {
+      setRoadmap(roadmapQueryData ?? null);
+    }
+  }, [roadmapQueryData, roadmapLoading]);
 
-      if (profileResult.status === "fulfilled") {
-        const p = profileResult.value.data;
-        setUserName(p.name || "Learner");
-        setUserEmail(p.email || "");
-        setProvider(p.provider ?? "email");
-      }
+  useEffect(() => {
+    if (roadmapQueryError) {
+      setFetchError("Could not load your journey. Please refresh the page.");
+      setRoadmap(null);
+    }
+  }, [roadmapQueryError]);
 
-      if (historyResult.status === "fulfilled") {
-        setHistory(historyResult.value.data);
-      }
-    });
-  }, []);
+  useEffect(() => {
+    if (profileQueryData) {
+      setUserName(profileQueryData.name || "Learner");
+      setUserEmail(profileQueryData.email || "");
+      setProvider(profileQueryData.provider ?? "email");
+    }
+  }, [profileQueryData]);
+
+  useEffect(() => {
+    if (historyQueryData) setHistory(historyQueryData);
+  }, [historyQueryData]);
 
   // ── Delete handler ──────────────────────────────────────────────────────
 
@@ -706,6 +735,7 @@ export default function JourneyPage() {
         oauth_confirmed: provider === "google",
       });
       setRoadmap(null);
+      queryClient.setQueryData(["journey", "roadmap"], null);
       setShowDelete(false);
     } catch (err: unknown) {
       const msg =
@@ -723,6 +753,7 @@ export default function JourneyPage() {
     try {
       const res = await journeyApi.extendDeadline(months);
       setRoadmap(res.data);
+      queryClient.setQueryData(["journey", "roadmap"], res.data);
       setShowExtend(false);
     } catch (err: unknown) {
       const msg =
@@ -741,6 +772,7 @@ export default function JourneyPage() {
     try {
       const res = await journeyApi.regenerate();
       setRoadmap(res.data);
+      queryClient.setQueryData(["journey", "roadmap"], res.data);
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
@@ -754,6 +786,9 @@ export default function JourneyPage() {
   async function handleDismissUpgrade() {
     await journeyApi.dismissUpgrade();
     setRoadmap((prev) => prev ? { ...prev, bps_upgraded: false } : prev);
+    queryClient.setQueryData<UserRoadmap | null>(["journey", "roadmap"], (prev) =>
+      prev ? { ...prev, bps_upgraded: false } : prev
+    );
   }
 
   // ── Obstacle click handler ──────────────────────────────────────────────
@@ -779,7 +814,7 @@ export default function JourneyPage() {
 
   // ── Loading ─────────────────────────────────────────────────────────────
 
-  if (roadmap === undefined) {
+  if (roadmapLoading || roadmap === undefined) {
     return (
       <div className="w-full p-4 sm:p-6 space-y-4 max-w-xl mx-auto">
         <Skeleton className="h-8 w-48 rounded" />
@@ -831,7 +866,10 @@ export default function JourneyPage() {
         </div>
         {showSetupModal && (
           <SetupModal
-            onGenerated={(rm) => setRoadmap(rm)}
+            onGenerated={(rm) => {
+              setRoadmap(rm);
+              queryClient.setQueryData(["journey", "roadmap"], rm);
+            }}
             onDismiss={() => setShowSetupModal(false)}
           />
         )}
@@ -848,7 +886,10 @@ export default function JourneyPage() {
         userName={userName}
         provider={provider}
         userEmail={userEmail}
-        onStartNew={() => setRoadmap(null)}
+        onStartNew={() => {
+          setRoadmap(null);
+          queryClient.setQueryData(["journey", "roadmap"], null);
+        }}
       />
     );
   }

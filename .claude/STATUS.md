@@ -1,16 +1,16 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-17 (Session 33 — Mandatory password setup for Google sign-in)
+## Last Updated: 2026-04-17 (Session 36 — Course cover image fix)
 
 ## Feature Status
 | Feature | Status | Notes |
 |---|---|---|
 | Auth | ✅ Complete + Google password setup | Email + Google OAuth, JWT, token refresh, 30-min sessions; mandatory SetPasswordModal for Google users with NULL password_hash; POST /api/auth/set-password; has_password in profile API; settings/password page now routes to SetPassword vs ChangePassword form based on has_password |
-| AI Chatbot Tutor | ✅ Complete + Verified + Optimised | SSE streaming, LangChain, RAG — Malaysian Malay + IPA in prompt; markdown rendering; session persistence; native_language injected into system prompt; RAG context Redis-cached (5 min) saving ~1.3s on repeat queries; ping SSE event for early frontend feedback; typing dots UX while waiting for first token |
+| AI Chatbot Tutor | ✅ Complete + Verified + Optimised (Session 34) | SSE streaming, LangChain, RAG — Malaysian Malay + IPA in prompt; markdown rendering; session persistence; native_language injected into system prompt; RAG context Redis-cached (5 min) saving ~1.3s on repeat queries; ping SSE event for early frontend feedback; typing dots UX while waiting for first token; user profile Redis-cached (5 min TTL, invalidated on PATCH /profile); history cache updated in-place after each message (no more DB re-read on next turn); gamification XP awarded as asyncio.create_task with own session (no longer blocks SSE startup); GET /api/chatbot/prewarm warms profile cache on page load; ChatMessage wrapped in React.memo (previous messages never re-render during streaming); token batching via requestAnimationFrame (cuts setState calls from ~100/s to ≤60/s during streaming) |
 | Course Generator | ✅ Complete + English-medium fix | Lesson content in English; Malay words taught inline; Malaysian BM only |
 | Quiz | ✅ Complete + English-medium fix | Question text explicitly English; Malay vocabulary uses Malaysian BM; IPA in explanations |
-| Dashboard | ✅ Complete + Vocab Delete | All 6 endpoints verified — vocab/grammar/progress/weak-points/quiz-history; streak + XP now included |
+| Dashboard | ✅ Complete + Vocab Delete + useQuery cache | All 6 endpoints verified; streak + XP included; summary now useQuery(["dashboard","summary"]) — cached 5 min, no manual focus/visibility listeners |
 | Production Hardening | ✅ Complete + Rate Limiter Fix | Rate limiter falls back to in-memory on Redis timeout (no more 500s) |
 | IPA Pronunciation | ✅ Full stack verified | Courses: IPA in all vocab items. Chatbot: /ko.soŋ/, /tə.ri.ma ka.sɪh/. Quiz: IPA in explanations |
 | Chatbot UI | ✅ Complete + Logo fix | react-markdown rendering, VocabPill extraction, Malaysia flag avatar; welcome screen now shows BahasaBot logo (was broken 🇲🇾 emoji showing as "MY" on Windows) |
@@ -31,7 +31,7 @@ _Update this file at the end of every session_
 | Sidebar Polish | ✅ Complete | Double divider removed (no border-b on logo area); ThemeToggle repositioned to header row; footer items centered except XP bar; collapsed tooltips use theme-aware bg-popover |
 | My Journey — Learning Roadmap (Phase 20) | ✅ Complete (v2 + patches + Session 16 fixes) | New user_roadmaps table; flat course-obstacle model; 3-question modal; road/path UI; overdue+extend; BPS upgrade banner; identity-verified delete; check_roadmap_progress hook; admin journeys page. Phase 20 fully complete including all 7 post-implementation patches + Session 16: obstacle → existing course navigation fixed (get_roadmap enriches elements with exists/course_id via fuzzy match); obstacle completion fix (check_roadmap_progress now uses course.topic for better fuzzy match); journey cache invalidated on new course save. |
 | Chat History Page (Phase 21) | ✅ Complete + Session Delete | /chatbot/history; ChatHistoryList (paginated, title from first user msg, message count); session detail read-only view; History button in chatbot header; backend ChatSessionResponse extended with title + message_count; DELETE /api/chatbot/sessions/{id} (ownership-verified, cascade messages, preserves vocab/grammar); Trash2 icon + inline confirm strip per row; error banner with 4s auto-dismiss |
-| Image Generation — Nano Banana 2 (Phase 22) | ✅ Complete + Personalised banners (Session 26) | image_service.py uses Gemini REST API via httpx; get_courses_list() retroactive cover healing; cover_image_url now included in get_course_with_progress(); course detail page hero banner; journey banners now use gender + age_range to build subject-specific prompt ("adult male student") |
+| Image Generation — Nano Banana 2 (Phase 22) | ✅ Complete + Personalised banners + Cover endpoint (Session 36) | image_service.py uses Gemini REST API via httpx; list endpoint returns has_cover bool (no blob); GET /api/courses/{id}/cover serves raw bytes with Cache-Control: immutable (browser caches permanently); course detail page hero banner; journey banners use gender + age_range for personalised subject prompt |
 | Course Deduplication + Clone System (Phase 24) | ✅ Complete | topic_slug + is_template + cloned_from columns on courses; Alembic migration applied; _make_topic_slug(), _find_template(), _clone_course() in course_service.py; generate_course() checks for template before calling Gemini — clone path completes in milliseconds; frontend/router unchanged |
 | Spelling Practice Game (Phase 19) | ✅ Complete + v2 redesign | Leitner-box word selection; Levenshtein fuzzy matching; Start screen → 3-2-1 countdown → 10s per-word timer (green→yellow→red pulse) → Time's Up screen with Next/Start Over; combo multiplier; session summary; keyboard shortcuts (Enter/Space/Escape); personal best; Games link in sidebar |
 | Chatbot vocab pipeline fix | ✅ Fixed | _extract_and_save() now opens its own AsyncSessionLocal session — asyncio.create_task with request-scoped session was silently failing after SSE stream ended; vocab/grammar now reliably saved after every chatbot response |
@@ -63,6 +63,88 @@ _Update this file at the end of every session_
 
 ## ✅ Fixed Issues (Session 13)
 - **Course covers not appearing (2026-04-13):** Session 12 correctly fixed `image_service.py` (httpx REST API) and `course_service.py` (retroactive healing + `asyncio.create_task`), but the backend was **never restarted** after those changes were made. Uvicorn started at 08:19, files modified at 14:22–14:28 — old broken code was still running. Fix: killed old uvicorn PIDs (18316, 25012), started fresh process on port 8000. Also manually ran `_generate_and_save_cover()` for all 3 existing courses that had `cover_image_url = NULL`. All verified: Gemini REST API returns JPEG (~1.1 MB base64, ~17s), DB save works, `GET /api/courses/` returns cover correctly. **Important**: after any code change to the backend, the uvicorn process MUST be restarted manually (no `--reload` flag in prod mode).
+
+---
+
+## What Was Done This Session (2026-04-17 Session 36 — Course cover image fix)
+
+### Problem
+Session 35 stripped `cover_image_url` from the list endpoint to eliminate the ~9 MB payload (9 × ~1 MB base64 blobs). This broke cover images on the courses page entirely.
+
+### Solution
+Dedicated cover image endpoint with permanent browser caching — list stays small, images load fast.
+
+**`backend/routers/courses.py`:**
+- Added `import base64`
+- Added `GET /api/courses/{course_id}/cover` — no auth (UUID is unguessable), reads base64 data URL from DB, decodes to raw bytes, returns with `Cache-Control: public, max-age=31536000, immutable`
+- Browser caches each cover permanently on disk after first fetch — all subsequent page loads cost 0 bytes for covers
+
+**`backend/services/course_service.py` — `get_courses_list()`:**
+- Added `"has_cover": course.cover_image_url is not None` to each list item (tiny boolean, negligible payload)
+- `cover_image_url` remains `None` in list response
+
+**`frontend/lib/types.ts`:**
+- Added `has_cover: boolean` to `CourseSummary`
+
+**`frontend/app/(dashboard)/courses/page.tsx`:**
+- Added module-level `API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"`
+- `CourseCard`: renders `<img src="${API_URL}/api/courses/${id}/cover" loading="lazy" />` when `has_cover` is true; placeholder gradient when false
+
+**Verified:** `tsc --noEmit` → 0 errors; `python -m py_compile` on both backend files → OK
+
+---
+
+## What Was Done This Session (2026-04-17 Session 35 — Page load performance optimizations)
+
+### Goal
+Eliminate the biggest payload and caching bottlenecks across the courses list, dashboard, journey, and sidebar to make every page feel fast on repeat visits.
+
+### Changes — Backend
+
+`backend/services/course_service.py` — `get_courses_list()`:
+- Changed `"cover_image_url": course.cover_image_url` → `"cover_image_url": None`
+- Eliminates ~1 MB base64 image blob per course from the list response (9 courses = ~9 MB → ~9 KB)
+- Full URL still returned in the per-course detail endpoint (`get_course_with_progress()`)
+
+### Changes — Frontend
+
+`frontend/components/providers.tsx`:
+- Global QueryClient `staleTime`: `60 * 1000` (1 min) → `5 * 60 * 1000` (5 min)
+- Reduces unnecessary background refetches on every navigation
+
+`frontend/components/nav/AppSidebar.tsx`:
+- Profile query `staleTime`: `30_000` → `5 * 60 * 1000`
+- Removed explicit `refetchOnWindowFocus: true` override (inherits global default `false`)
+- Profile no longer refetches on every tab switch
+
+`frontend/app/(dashboard)/courses/page.tsx`:
+- Removed 12-second setTimeout cover-image refetch timer (cover_image_url is now always null in list; cover displayed only in detail view)
+- Removed unused `useRef` import
+
+`frontend/app/(dashboard)/dashboard/page.tsx`:
+- Converted summary fetch from manual `useState` + `useCallback` + `useEffect` + focus/visibility listeners to `useQuery(["dashboard", "summary"])`
+- Cached for 5 min; React Query's built-in refetchOnWindowFocus replaces manual listeners
+- Removed `useCallback`, `useRef` imports
+
+`frontend/app/(dashboard)/journey/page.tsx`:
+- Added `useQuery, useQueryClient` imports
+- Replaced `Promise.allSettled([getRoadmap, getProfile, getHistory])` useEffect with three `useQuery` hooks:
+  - `["journey", "roadmap"]` — handles 404 → null without throwing
+  - `["profile"]` — reuses the same cache key as AppSidebar (saves 1 API call on every journey visit)
+  - `["journey", "history"]`
+- Added 4 sync useEffects to propagate query data into local state
+- Loading check changed: `roadmapLoading || roadmap === undefined`
+- All mutations (`handleDelete`, `handleExtend`, `handleRegenerate`, `handleDismissUpgrade`, `onGenerated`, `onStartNew`) now also call `queryClient.setQueryData(["journey", "roadmap"], ...)` to keep cache in sync
+
+### Build results (`npx next build` — clean, 0 errors)
+| Route | First Load JS |
+|---|---|
+| /chatbot | 241 kB |
+| /courses | 284 kB |
+| /dashboard | 233 kB |
+| /journey | 283 kB |
+| /games/spelling | 234 kB |
+| Shared chunks | 187 kB |
 
 ---
 

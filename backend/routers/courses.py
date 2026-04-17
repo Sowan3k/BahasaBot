@@ -12,6 +12,7 @@ Endpoints:
   POST   /api/courses/{course_id}/modules/{module_id}/quiz              — submit module quiz (Phase 5)
 """
 
+import base64
 import os
 import uuid
 from uuid import UUID
@@ -194,6 +195,45 @@ async def get_course(
     if not course:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
     return course
+
+
+# ── Course cover image ─────────────────────────────────────────────────────────
+
+
+@router.get("/{course_id}/cover")
+async def get_course_cover(
+    course_id: UUID,
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+    """Serve the course cover image as raw bytes.
+
+    No auth required — course UUIDs are 128-bit random and unguessable.
+    Returns Cache-Control: immutable so the browser caches permanently after
+    the first fetch; subsequent page loads cost 0 bytes for cover images.
+    """
+    from sqlalchemy import select as sa_select
+    from backend.models.course import Course
+
+    result = await db.execute(
+        sa_select(Course.cover_image_url).where(Course.id == course_id)
+    )
+    cover_data_url: str | None = result.scalar_one_or_none()
+
+    if not cover_data_url or not cover_data_url.startswith("data:"):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No cover image")
+
+    try:
+        header, b64data = cover_data_url.split(",", 1)
+        mime = header.split(";")[0].split(":")[1]  # e.g. "image/jpeg"
+        image_bytes = base64.b64decode(b64data)
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Invalid cover data")
+
+    return Response(
+        content=image_bytes,
+        media_type=mime,
+        headers={"Cache-Control": "public, max-age=31536000, immutable"},
+    )
 
 
 # ── Delete course ──────────────────────────────────────────────────────────────

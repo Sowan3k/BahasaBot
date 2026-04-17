@@ -137,6 +137,7 @@ export interface CourseSummary {
   description: string;
   topic: string;
   cover_image_url: string | null;
+  has_cover: boolean;
   created_at: string;
   total_classes: number;
   completed_classes: number;

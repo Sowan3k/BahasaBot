@@ -18,6 +18,7 @@ from backend.db.database import get_db
 from backend.middleware.auth_middleware import get_current_user
 from backend.models.user import User
 from backend.schemas.profile import ProfileResponse, ProfileUpdateRequest
+from backend.services.langchain_service import invalidate_profile_cache
 from backend.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -88,6 +89,8 @@ async def update_profile(
             await db.commit()
             await db.refresh(current_user)
             logger.info("Profile updated", user_id=str(current_user.id))
+            # Bust the chatbot profile cache so next message picks up new values
+            await invalidate_profile_cache(current_user.id)
         except Exception as exc:
             await db.rollback()
             logger.error("Failed to update profile", user_id=str(current_user.id), error=str(exc))

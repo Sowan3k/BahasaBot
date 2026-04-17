@@ -943,7 +943,8 @@ async def get_courses_list(
             "title": course.title,
             "description": course.description,
             "topic": course.topic,
-            "cover_image_url": course.cover_image_url,
+            "cover_image_url": None,  # omitted from list; use GET /courses/{id}/cover endpoint
+            "has_cover": course.cover_image_url is not None,
             "created_at": course.created_at.isoformat(),
             "total_classes": total_cls,
             "completed_classes": completed_cls,

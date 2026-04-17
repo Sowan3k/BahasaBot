@@ -4,7 +4,7 @@
 // Shows all of the user's generated courses with progress indicators.
 // "Generate New Course" button opens the CourseGenerationModal.
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
@@ -55,6 +55,8 @@ const DARK_COLORS = [
   "#5a5345", // dark brown (input/border) — deep anchor
 ];
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
 // ── Progress bar ──────────────────────────────────────────────────────────────
 
 function ProgressBar({ value, max }: { value: number; max: number }) {
@@ -95,13 +97,14 @@ function CourseCard({ course }: { course: CourseSummary }) {
         href={`/courses/${course.id}`}
         className="block flex-1"
       >
-        {/* Cover image — shown when available, hidden gracefully when null */}
-        {course.cover_image_url ? (
+        {/* Cover image — loaded from dedicated endpoint; browser caches permanently */}
+        {course.has_cover ? (
           /* eslint-disable-next-line @next/next/no-img-element */
           <img
-            src={course.cover_image_url}
+            src={`${API_URL}/api/courses/${course.id}/cover`}
             alt={`Cover for ${course.title}`}
             className="w-full h-24 sm:h-32 object-cover"
+            loading="lazy"
           />
         ) : (
           <div className="w-full h-24 sm:h-32 bg-gradient-to-br from-primary/20 via-primary/10 to-transparent" />
@@ -222,24 +225,6 @@ export default function CoursesPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingGenerateTopic, isLoading]);
 
-  // If any course is missing a cover image, re-fetch once after 12s to pick up
-  // the background-generated image (image generation takes ~5-10s after course creation)
-  const refetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => {
-    const hasMissingCovers = courses.length > 0 && courses.some((c) => !c.cover_image_url);
-    if (hasMissingCovers && !refetchTimerRef.current) {
-      refetchTimerRef.current = setTimeout(() => {
-        refetch();
-        refetchTimerRef.current = null;
-      }, 12_000);
-    }
-    return () => {
-      if (refetchTimerRef.current) {
-        clearTimeout(refetchTimerRef.current);
-        refetchTimerRef.current = null;
-      }
-    };
-  }, [courses, refetch]);
 
   return (
     /* Outer wrapper is relative + min-h-full so the absolute background fills it */

@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
+import { useQuery } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 
 import { dashboardApi } from "@/lib/api";
@@ -136,10 +137,19 @@ export default function DashboardPage() {
   const { status } = useSession();
   const [activeTab, setActiveTab] = useState<Tab>("overview");
 
-  // Summary (overview tab)
-  const [summary, setSummary] = useState<DashboardSummary | null>(null);
-  const [summaryLoading, setSummaryLoading] = useState(true);
-  const [summaryError, setSummaryError] = useState<string | null>(null);
+  // Summary (overview tab) — cached for 5 min via global QueryClient staleTime
+  const {
+    data: summary,
+    isLoading: summaryLoading,
+    isError: summaryIsError,
+  } = useQuery({
+    queryKey: ["dashboard", "summary"],
+    queryFn: () => dashboardApi.getSummary().then((r) => r.data),
+    enabled: status === "authenticated",
+  });
+  const summaryError = summaryIsError
+    ? "Failed to load dashboard. Please refresh the page."
+    : null;
 
   // Vocabulary tab
   const [vocabData, setVocabData] = useState<VocabularyListResponse | null>(null);
@@ -155,46 +165,6 @@ export default function DashboardPage() {
   const [quizData, setQuizData] = useState<QuizHistoryResponse | null>(null);
   const [quizPage, setQuizPage] = useState(1);
   const [quizLoading, setQuizLoading] = useState(false);
-
-  // Track last fetch time to avoid re-fetching too frequently on focus
-  const lastFetchRef = useRef<number>(0);
-
-  const fetchSummary = useCallback(
-    (force = false) => {
-      if (status !== "authenticated") return;
-      const now = Date.now();
-      // Throttle: skip refetch if data is less than 30 s old (unless forced)
-      if (!force && lastFetchRef.current > 0 && now - lastFetchRef.current < 30_000) return;
-      lastFetchRef.current = now;
-      setSummaryLoading(true);
-      dashboardApi
-        .getSummary()
-        .then((res) => setSummary(res.data))
-        .catch(() => setSummaryError("Failed to load dashboard. Please refresh the page."))
-        .finally(() => setSummaryLoading(false));
-    },
-    [status],
-  );
-
-  // Initial load — wait for session to be confirmed to avoid a 401 race on first login
-  useEffect(() => {
-    if (status !== "authenticated") return;
-    fetchSummary(true);
-  }, [status, fetchSummary]);
-
-  // Refetch XP/streak/stats when the user switches back to this tab after an activity
-  useEffect(() => {
-    const handleFocus = () => fetchSummary();
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible") fetchSummary();
-    };
-    window.addEventListener("focus", handleFocus);
-    document.addEventListener("visibilitychange", handleVisibility);
-    return () => {
-      window.removeEventListener("focus", handleFocus);
-      document.removeEventListener("visibilitychange", handleVisibility);
-    };
-  }, [fetchSummary]);
 
   // Load vocabulary when tab activates or page changes
   useEffect(() => {

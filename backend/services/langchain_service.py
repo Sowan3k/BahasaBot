@@ -99,11 +99,59 @@ HISTORY_CACHE_TTL = 1800
 # RAG context cache — avoids re-embedding + re-searching on repeated/similar queries
 _RAG_CACHE_TTL = 300  # 5 minutes
 
+# User profile cache — avoids a DB round-trip on every chatbot message
+_PROFILE_CACHE_TTL = 300  # 5 minutes
+
+# BPS proficiency descriptions — referenced in every system prompt; defined once at module level
+_BPS_DESCRIPTIONS: dict[str, str] = {
+    "BPS-1": "Beginner — very limited Malay; focus on basics, simple vocabulary, and common phrases",
+    "BPS-2": "Elementary — knows common phrases; can follow simple explanations with clear examples",
+    "BPS-3": "Intermediate — conversational; can handle most everyday topics with some complexity",
+    "BPS-4": "Advanced — near-fluent; can engage with complex grammar, idioms, and formal Malay",
+}
+
 
 def _rag_cache_key(message: str) -> str:
     """Redis key for cached RAG context — hashed on first 150 chars (case-insensitive)."""
     digest = hashlib.sha256(message[:150].strip().lower().encode()).hexdigest()[:16]
     return f"rag:ctx:{digest}"
+
+
+def _profile_cache_key(user_id: uuid.UUID) -> str:
+    return f"user:profile:{user_id}"
+
+
+async def get_cached_profile(user_id: uuid.UUID, db: AsyncSession) -> dict:
+    """
+    Return the user's native_language, learning_goal, and proficiency_level.
+    Checks Redis first (5 min TTL); falls back to a DB query on miss.
+    Eliminates one DB round-trip per chatbot message on warm path.
+    """
+    key = _profile_cache_key(user_id)
+    cached = await cache_get(key)
+    if cached is not None:
+        return cached  # type: ignore[return-value]
+
+    result = await db.execute(
+        select(
+            User.native_language,
+            User.learning_goal,
+            User.proficiency_level,
+        ).where(User.id == user_id)
+    )
+    row = result.one_or_none()
+    profile: dict = {
+        "native_language": row.native_language if row else None,
+        "learning_goal": row.learning_goal if row else None,
+        "proficiency_level": (row.proficiency_level if row else None) or "BPS-1",
+    }
+    await cache_set(key, profile, ttl=_PROFILE_CACHE_TTL)
+    return profile
+
+
+async def invalidate_profile_cache(user_id: uuid.UUID) -> None:
+    """Bust the profile cache after a PATCH /api/profile/ update."""
+    await cache_delete(_profile_cache_key(user_id))
 
 
 # ── History helpers ────────────────────────────────────────────────────────────
@@ -139,6 +187,28 @@ async def _load_history(session_id: str, db: AsyncSession) -> list[dict]:
 async def _invalidate_history_cache(session_id: str) -> None:
     """Bust the cached history so the next load re-reads from DB."""
     await cache_delete(_history_cache_key(str(session_id)))
+
+
+async def _update_history_cache(
+    session_id: str,
+    user_message: str,
+    assistant_text: str,
+) -> None:
+    """
+    Append the latest exchange to the cached history in-place.
+    Eliminates the DB round-trip on the next message in the same session.
+    If the cache has already expired, this is a no-op — the next load rebuilds from DB.
+    """
+    cache_key = _history_cache_key(session_id)
+    cached = await cache_get(cache_key)
+    if cached is None:
+        return  # expired; let next _load_history rebuild from DB
+
+    updated: list[dict] = list(cached)
+    updated.append({"role": "user", "content": user_message})
+    updated.append({"role": "assistant", "content": assistant_text})
+    trimmed = updated[-HISTORY_WINDOW:]
+    await cache_set(cache_key, trimmed, ttl=HISTORY_CACHE_TTL)
 
 
 # ── Session helpers ────────────────────────────────────────────────────────────
@@ -219,18 +289,11 @@ async def stream_chat_response(
     else:
         logger.info("RAG cache hit", query_preview=user_message[:40])
 
-    # 3. Fetch user profile for personalised tutor context
-    profile_result = await db.execute(
-        select(
-            User.native_language,
-            User.learning_goal,
-            User.proficiency_level,
-        ).where(User.id == user_id)
-    )
-    profile_row = profile_result.one_or_none()
-    native_language: str | None = profile_row.native_language if profile_row else None
-    learning_goal: str | None = profile_row.learning_goal if profile_row else None
-    proficiency_level: str = profile_row.proficiency_level if profile_row else "BPS-1"
+    # 3. Fetch user profile (Redis-cached; avoids DB round-trip on warm path)
+    profile = await get_cached_profile(user_id, db)
+    native_language: str | None = profile["native_language"]
+    learning_goal: str | None = profile["learning_goal"]
+    proficiency_level: str = profile["proficiency_level"]
 
     # Native language context
     if native_language:
@@ -254,12 +317,6 @@ async def stream_chat_response(
         learning_goal_context = ""
 
     # Proficiency context — explicitly tell Gemini the user's BPS level
-    _BPS_DESCRIPTIONS = {
-        "BPS-1": "Beginner — very limited Malay; focus on basics, simple vocabulary, and common phrases",
-        "BPS-2": "Elementary — knows common phrases; can follow simple explanations with clear examples",
-        "BPS-3": "Intermediate — conversational; can handle most everyday topics with some complexity",
-        "BPS-4": "Advanced — near-fluent; can engage with complex grammar, idioms, and formal Malay",
-    }
     proficiency_context = (
         f"\nThe user's current BPS level: {proficiency_level} — "
         f"{_BPS_DESCRIPTIONS.get(proficiency_level, _BPS_DESCRIPTIONS['BPS-1'])}. "
@@ -317,8 +374,8 @@ async def stream_chat_response(
     await db.commit()
     await db.refresh(assistant_msg)
 
-    # Invalidate the cached history so the next load includes these two new messages
-    await _invalidate_history_cache(session_id)
+    # Update cached history in-place — avoids DB round-trip on next message
+    await _update_history_cache(session_id, user_message, assistant_text)
 
     # 8. Background task: extract and persist vocab/grammar + log activity
     asyncio.create_task(
