@@ -7,6 +7,7 @@ import dynamic from "next/dynamic";
 
 import { dashboardApi } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
+import TipToast from "@/components/TipToast";
 import type {
   DashboardSummary,
   GrammarEntry,
@@ -219,6 +220,8 @@ export default function DashboardPage() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
+    <>
+      <TipToast />
     <div className="max-w-5xl mx-auto px-3 sm:px-4 py-4 sm:py-8 space-y-4 sm:space-y-6 overflow-x-hidden">
       {/* Header */}
       <div>
@@ -391,5 +394,6 @@ export default function DashboardPage() {
         </div>
       )}
     </div>
+    </>
   );
 }

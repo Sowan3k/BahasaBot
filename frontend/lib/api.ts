@@ -45,6 +45,10 @@ import type {
   GenerateRoadmapPayload,
   AdminRoadmapRow,
   PastJourneyItem,
+  Tip,
+  TipListResponse,
+  GenerateTipsPayload,
+  GenerateTipsResponse,
 } from "@/lib/types";
 
 const apiClient = axios.create({
@@ -411,4 +415,31 @@ export const feedbackApi = {
   /** Submit an optional survey response after completing a quiz. */
   submitFeedback: (payload: FeedbackPayload) =>
     apiClient.post<FeedbackSubmitResponse>("/api/evaluation/feedback", payload),
+};
+
+// ── Tips API — Daily Language Tips ───────────────────────────────────────────
+
+export const tipsApi = {
+  /** Get today's random tip — public, no auth required. */
+  getRandom: () =>
+    apiClient.get<Tip>("/api/tips/random"),
+
+  /** Admin: generate N tips for a given category via Gemini. */
+  generate: (payload: GenerateTipsPayload) =>
+    apiClient.post<GenerateTipsResponse>("/api/tips/generate", payload),
+
+  /** Admin: list all tips paginated, filterable by category and status. */
+  getAll: (page = 1, limit = 20, category?: string, is_active?: boolean) =>
+    apiClient.get<TipListResponse>("/api/tips/all", {
+      params: {
+        page,
+        limit,
+        ...(category ? { category } : {}),
+        ...(is_active !== undefined ? { is_active } : {}),
+      },
+    }),
+
+  /** Admin: toggle is_active or update content for a tip. */
+  update: (tipId: string, payload: { is_active?: boolean; content?: string }) =>
+    apiClient.patch<Tip>(`/api/tips/${tipId}`, payload),
 };

@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-18 (Session 42 — Dashboard progress-ring redesign)
+## Last Updated: 2026-04-19 (Session 44 — Daily Language Tips)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -47,6 +47,8 @@ _Update this file at the end of every session_
 | Mandatory Google password setup (Session 33) | ✅ Complete | POST /api/auth/set-password; SetPasswordRequest + SetPasswordResponse schemas; requires_password_setup in TokenResponse; has_password property on User model + ProfileResponse; SetPasswordModal (non-dismissible, z-[90]); login + register pages show modal when flag true; settings/password page routes to SetPasswordForm vs ChangePasswordForm based on has_password; change-password guard updated to check password_hash IS NULL only |
 | Adaptive Quiz Results Page | ✅ Complete | Dedicated /quiz/adaptive/results page; sessionStorage data-passing (quiz page stores result then router.push); score ring (green/amber/red by score); BPS level update banner with TrendingUp; per-question breakdown with SpeakerButton on wrong answers; FeedbackModal after 3s delay; Take Another Quiz invalidates cache + navigates to lobby; inline results block removed from quiz page |
 
+| Daily Language Tips | ✅ Complete (Session 44) | tips table + Alembic migration; GET /api/tips/random (public, Redis daily cache); POST /api/tips/generate (admin, Gemini, 4 categories); GET /api/tips/all (admin, paginated+filterable); PATCH /api/tips/{id} (toggle active); TipToast component (framer-motion slide-in, 8s auto-dismiss, shrinking progress bar, sessionStorage dedup, pretty dark+light); wired into dashboard; Language Tips panel in admin (All Tips tab + Generate New tab with category tiles + range slider) |
+
 ## Missing / Broken
 - **Admin loading skeletons** — `frontend/app/(dashboard)/admin/` pages have no skeleton states (stats cards and user table show blank until data arrives). Dashboard, journey, and courses pages all have skeletons. Admin is the only section still missing them.
 
@@ -64,6 +66,45 @@ _Update this file at the end of every session_
 
 ## ✅ Fixed Issues (Session 13)
 - **Course covers not appearing (2026-04-13):** Session 12 correctly fixed `image_service.py` (httpx REST API) and `course_service.py` (retroactive healing + `asyncio.create_task`), but the backend was **never restarted** after those changes were made. Uvicorn started at 08:19, files modified at 14:22–14:28 — old broken code was still running. Fix: killed old uvicorn PIDs (18316, 25012), started fresh process on port 8000. Also manually ran `_generate_and_save_cover()` for all 3 existing courses that had `cover_image_url = NULL`. All verified: Gemini REST API returns JPEG (~1.1 MB base64, ~17s), DB save works, `GET /api/courses/` returns cover correctly. **Important**: after any code change to the backend, the uvicorn process MUST be restarted manually (no `--reload` flag in prod mode).
+
+---
+
+## What Was Done This Session (2026-04-19 Session 44 — Daily Language Tips)
+
+### Goal
+Implement a full end-to-end Daily Language Tips feature: DB table, FastAPI router, frontend toast, and admin panel section.
+
+### Files Changed
+
+**`backend/db/migrations/versions/20260419_1000_tips_table.py`** *(new)*
+- Alembic migration: creates `tips` table (id UUID, content TEXT, category VARCHAR(50), generated_by VARCHAR(50), is_active BOOLEAN, created_at TIMESTAMPTZ); indexes on category + is_active
+
+**`backend/models/tip.py`** *(new)*
+- SQLAlchemy ORM model for `tips` table; follows same pattern as `notification.py`
+
+**`backend/routers/tips.py`** *(new)*
+- `GET /api/tips/random` — public, picks one random active tip; Redis-cached for rest of UTC day (TTL = seconds until next midnight); returns 404 if no tips exist
+- `POST /api/tips/generate` — admin only; accepts category + count (1–10); calls Gemini with category-specific prompt; saves all string items to DB; invalidates daily cache
+- `GET /api/tips/all` — admin only; paginated (default 10/page), filterable by category + is_active; newest-first
+- `PATCH /api/tips/{tip_id}` — admin only; toggle is_active or update content; invalidates daily cache
+
+**`backend/main.py`**
+- Imported `tips` model (for Alembic detection) and `tips` router; registered at `/api/tips`
+
+**`frontend/lib/types.ts`**
+- Added `TipCategory`, `Tip`, `TipListResponse`, `GenerateTipsPayload`, `GenerateTipsResponse`
+
+**`frontend/lib/api.ts`**
+- Added `tipsApi` (getRandom, generate, getAll, update) with correct TypeScript generics
+
+**`frontend/components/TipToast.tsx`** *(new)*
+- Fetches random tip on mount; 2s delay before showing; checks sessionStorage `tip_dismissed` — skips entirely if set; framer-motion spring slide-in from bottom-right (x+80, y+20); 8s auto-dismiss with 100→0 shrinking purple progress bar; X button for instant close; orange category badge with emoji; purple glow decoration; dark/light compatible using `bg-card/95 backdrop-blur-md border-border/60`; max-width 320px; never blocks page content (z-[80])
+
+**`frontend/app/(dashboard)/dashboard/page.tsx`**
+- Imported and rendered `<TipToast />` at top of return fragment
+
+**`frontend/app/(dashboard)/admin/page.tsx`**
+- Added `LanguageTipsPanel` component with two tabs: "All Tips" (paginated table, category + active filters, inline toggle with CheckCircle2/XCircle icons, refresh button) and "Generate New" (4-category tile picker, range slider for count 1–10, Gemini generate button with loading state, success banner); panel added after the Sections nav list
 
 ---
 

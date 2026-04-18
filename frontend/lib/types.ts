@@ -646,6 +646,37 @@ export interface FeedbackSubmitResponse {
   message: string;
 }
 
+// ── Daily Language Tips ────────────────────────────────────────────────────────
+
+export type TipCategory = "word_origin" | "common_mistakes" | "cultural_context" | "grammar";
+
+export interface Tip {
+  id: string;
+  content: string;
+  category: TipCategory;
+  generated_by: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface TipListResponse {
+  items: Tip[];
+  total: number;
+  page: number;
+  limit: number;
+  total_pages: number;
+}
+
+export interface GenerateTipsPayload {
+  category: TipCategory;
+  count: number;
+}
+
+export interface GenerateTipsResponse {
+  saved: number;
+  category: TipCategory;
+}
+
 /** Admin: one row in the journeys table */
 export interface AdminRoadmapRow {
   id: string;
