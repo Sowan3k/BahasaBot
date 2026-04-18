@@ -780,6 +780,12 @@ The project installs both `google-auth==2.29.0` (for Google ID token verificatio
 ### Google OAuth — Users Table Schema
 `password_hash` is nullable to support Google-only accounts. The `provider` column (`'email'` | `'google'`) tracks original sign-up method but does NOT restrict login method. All users can use both Google OAuth and email/password once a password is set. Google-created accounts with NULL `password_hash` are prompted to set a password immediately after first Google sign-in via the mandatory `SetPasswordModal`.
 
+### Neon PgBouncer + asyncpg — Prepared Statement Cache
+The `DATABASE_URL` uses Neon's pooler endpoint (`-pooler.` in hostname), which runs PgBouncer in transaction mode. asyncpg caches prepared statements per connection by default; PgBouncer recycles the underlying server connection after each transaction, so the server no longer has those statements. This causes `prepared statement "..." does not exist` errors ~5 minutes after first use. Fix: `connect_args={"statement_cache_size": 0}` in `create_async_engine()` — already applied in `backend/db/database.py`. Do NOT remove this setting.
+
+### Vercel Deployment URLs — CORS
+Vercel generates a unique subdomain for every push (e.g. `bahasa-<hash>-noor-mohammad-sowans-projects.vercel.app`). The canonical domain (`bahasa-bot.vercel.app`) is always in `ALLOWED_ORIGINS`, but deployment-specific preview URLs change every deploy. The backend uses `allow_origin_regex=r"https://bahasa-.*\.vercel\.app"` in CORSMiddleware to accept all of them without hardcoding — already applied in `backend/main.py`. Do NOT remove this regex.
+
 ---
 
 ## 15. Claude Code Rules

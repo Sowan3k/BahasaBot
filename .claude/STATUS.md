@@ -67,6 +67,27 @@ _Update this file at the end of every session_
 
 ---
 
+## What Was Done This Session (2026-04-19 Session 43 — Production deployment fixes)
+
+### Goal
+Fix login failures after deployment to Render + Vercel. Two separate root causes identified and resolved.
+
+### Files Changed
+
+**`backend/db/database.py`**
+- Added `connect_args={"statement_cache_size": 0}` — required for Neon PgBouncer (transaction mode). asyncpg caches prepared statements per connection; PgBouncer recycles the underlying server connection after each transaction, invalidating those statements. This was causing login failures after ~5 minutes of idle time.
+- Added `pool_recycle=240` — proactively recycles connections every 4 min before Neon's 5-min idle timeout kills them
+- Reduced `pool_size=10→5`, `max_overflow=20→10` — right-sized for single-worker Render free instance
+
+**`backend/main.py`**
+- Added `allow_origin_regex=r"https://bahasa-.*\.vercel\.app"` to CORSMiddleware — Vercel generates a new deployment-specific subdomain (e.g. `bahasa-<hash>.vercel.app`) on every push; these were not in `ALLOWED_ORIGINS`, causing OPTIONS preflight 400 rejections immediately after every Vercel deploy
+
+### Also done this session
+- Deleted 18 test/development user accounts and all their cascaded data (courses, progress, chat sessions, roadmaps, notifications, etc.) from the production DB. Kept 5 real users: sowangemini@gmail.com (admin), sowannoor04@gmail.com, nurmohammadsowan119@gmail.com, jannatul25056@diit.edu.bd, yessir@gmail.com.
+- Verified Phase 24 course deduplication system: 4 template courses exist, 0 clones (expected — only one user has generated courses). Schema, ORM model, migration, and code all confirmed working.
+
+---
+
 ## What Was Done This Session (2026-04-18 Session 42 — Dashboard progress-ring redesign)
 
 ### Goal
