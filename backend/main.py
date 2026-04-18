@@ -114,6 +114,10 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
+    # Accepts all Vercel deployment-specific preview URLs for this project.
+    # Vercel generates a new subdomain on every push (e.g. bahasa-<hash>.vercel.app);
+    # listing them statically is impossible, so we match the project prefix instead.
+    allow_origin_regex=r"https://bahasa-.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
