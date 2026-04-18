@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -145,7 +145,6 @@ export default function LoginPage() {
     }
   }
 
-  const googleBtnRef = useRef<HTMLDivElement>(null);
 
   const isLoading = isSubmitting || googleLoading;
 
@@ -313,51 +312,14 @@ export default function LoginPage() {
           <div className="flex-1 border-t border-white/[0.08]" />
         </div>
 
-        {/* Google sign-in — hidden real button + custom themed overlay */}
-        <div className="relative">
-          {/* Hidden GoogleLogin — handles actual OAuth credential flow.
-              Only rendered when NEXT_PUBLIC_GOOGLE_CLIENT_ID is present;
-              if absent, GoogleOAuthProvider receives clientId="" and Google
-              immediately returns "invalid_request: missing client_id". */}
-          {GOOGLE_CLIENT_ID_PRESENT && (
-            <div
-              ref={googleBtnRef}
-              // Position offscreen at full size. Google's GIS renders the button
-              // inside a cross-origin iframe (accounts.google.com/gsi/button).
-              // A 1×1 container offsets the button away from (0,0), so the
-              // programmatic .click() misses it. Full dimensions ensure the
-              // iframe loads the button centred and clickable.
-              style={{
-                position: "absolute",
-                top: "-9999px",
-                left: "-9999px",
-                width: "340px",
-                height: "44px",
-                overflow: "hidden",
-              }}
-            >
-              <GoogleLogin
-                onSuccess={handleGoogleSuccess}
-                onError={() => setAuthError("Google sign-in failed. Please try again.")}
-                useOneTap={false}
-                text="signin_with"
-                shape="rectangular"
-                theme="filled_black"
-                size="large"
-                width="340"
-              />
-            </div>
-          )}
-
-          {/* Visible themed button — disabled + tooltip when client ID absent */}
+        {/* Google sign-in */}
+        <div className="relative h-10">
+          {/* Visible themed button (visual only — pointer events are captured by the
+              transparent GIS overlay above it, so no onClick needed here) */}
           <button
             type="button"
             disabled={isLoading || !GOOGLE_CLIENT_ID_PRESENT}
             title={!GOOGLE_CLIENT_ID_PRESENT ? "Google sign-in is not configured" : undefined}
-            onClick={() => {
-              if (!GOOGLE_CLIENT_ID_PRESENT) return;
-              googleBtnRef.current?.querySelector<HTMLElement>("div[role=button], iframe")?.click();
-            }}
             className="w-full flex items-center justify-center gap-3 h-10 rounded-lg
                        border border-white/15 bg-white/[0.06] hover:bg-white/10
                        text-white/75 hover:text-white text-sm font-medium
@@ -371,6 +333,35 @@ export default function LoginPage() {
             </svg>
             Continue with Google
           </button>
+
+          {/* Transparent GIS overlay — positioned directly over the button so the
+              user's natural click lands on the GIS iframe (cross-origin; cannot be
+              clicked programmatically). opacity:0.001 keeps pointer-events active
+              while staying visually invisible. overflow:hidden clips the GIS button
+              to our button's dimensions. */}
+          {GOOGLE_CLIENT_ID_PRESENT && !isLoading && (
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                opacity: 0.001,
+                overflow: "hidden",
+                borderRadius: "8px",
+                cursor: "pointer",
+              }}
+            >
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => setAuthError("Google sign-in failed. Please try again.")}
+                useOneTap={false}
+                text="signin_with"
+                shape="rectangular"
+                theme="filled_black"
+                size="large"
+                width="460"
+              />
+            </div>
+          )}
         </div>
 
         {/* Register link */}

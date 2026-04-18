@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -128,7 +128,6 @@ export default function RegisterPage() {
     }
   }
 
-  const googleBtnRef = useRef<HTMLDivElement>(null);
   const isLoading = isSubmitting || googleLoading;
 
   // ── Render ───────────────────────────────────────────────────────────────
@@ -311,37 +310,11 @@ export default function RegisterPage() {
           <div className="flex-1 border-t border-white/[0.08]" />
         </div>
 
-        {/* Google sign-up — hidden real button + custom themed overlay.
-            Same pattern as login page: GoogleLogin rendered off-screen at full size
-            (340×44px) so the GIS iframe loads correctly. Custom button triggers
-            a programmatic click on the iframe. */}
-        <div className="relative">
-          <div
-            ref={googleBtnRef}
-            style={{
-              position: "absolute",
-              top: "-9999px",
-              left: "-9999px",
-              width: "340px",
-              height: "44px",
-              overflow: "hidden",
-            }}
-          >
-            <GoogleLogin
-              onSuccess={handleGoogleSuccess}
-              onError={() => setServerError("Google sign-up failed. Please try again.")}
-              useOneTap={false}
-              text="signup_with"
-              shape="rectangular"
-              theme="filled_black"
-              size="large"
-              width="340"
-            />
-          </div>
+        {/* Google sign-up */}
+        <div className="relative h-10">
           <button
             type="button"
             disabled={isLoading}
-            onClick={() => googleBtnRef.current?.querySelector<HTMLElement>("div[role=button], iframe")?.click()}
             className="w-full flex items-center justify-center gap-3 h-10 rounded-lg
                        border border-white/15 bg-white/[0.06] hover:bg-white/10
                        text-white/75 hover:text-white text-sm font-medium
@@ -355,6 +328,31 @@ export default function RegisterPage() {
             </svg>
             Continue with Google
           </button>
+
+          {/* Transparent GIS overlay — same pattern as login page */}
+          {!isLoading && (
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                opacity: 0.001,
+                overflow: "hidden",
+                borderRadius: "8px",
+                cursor: "pointer",
+              }}
+            >
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => setServerError("Google sign-up failed. Please try again.")}
+                useOneTap={false}
+                text="signup_with"
+                shape="rectangular"
+                theme="filled_black"
+                size="large"
+                width="460"
+              />
+            </div>
+          )}
         </div>
 
         {/* Login link */}
