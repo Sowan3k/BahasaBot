@@ -57,7 +57,7 @@ async def _award_chatbot_xp(session_id: str, user_id: UUID) -> None:
             xp = 0 if already else 5
             if xp:
                 await cache_set(xp_key, "1", ttl=172800)
-            await record_learning_activity(user_id=user_id, db=db, xp_amount=xp)
+            await record_learning_activity(user_id=user_id, db=db, xp_amount=xp, source="chatbot_session")
         except Exception:
             pass
 

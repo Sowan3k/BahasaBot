@@ -341,6 +341,26 @@ export interface DashboardSummary {
   recent_quiz_history: QuizHistoryEntry[];
 }
 
+/** GET /api/dashboard/leaderboard */
+export interface LeaderboardEntry {
+  rank: number;
+  name: string;
+  initials: string;
+  weekly_xp: number;
+  bps_level: ProficiencyLevel;
+  streak_count: number;
+  is_current_user: boolean;
+  /** Only present in admin leaderboard response */
+  email?: string;
+}
+
+export interface LeaderboardResponse {
+  entries: LeaderboardEntry[];
+  week_start: string;  // e.g. "Apr 14"
+  week_end: string;    // e.g. "Apr 20"
+  your_rank: number | null;
+}
+
 /** GET /api/dashboard/vocabulary */
 export interface VocabularyListResponse {
   items: VocabularyEntry[];

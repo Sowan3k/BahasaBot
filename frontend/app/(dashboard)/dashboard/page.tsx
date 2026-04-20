@@ -25,6 +25,7 @@ const QuizHistoryTable = dynamic(() => import("@/components/dashboard/QuizHistor
 const StatsCards = dynamic(() => import("@/components/dashboard/StatsCards"), { ssr: false });
 const VocabularyTable = dynamic(() => import("@/components/dashboard/VocabularyTable"), { ssr: false });
 const WeakPointsChart = dynamic(() => import("@/components/dashboard/WeakPointsChart"), { ssr: false });
+const LeaderboardCard = dynamic(() => import("@/components/dashboard/LeaderboardCard"), { ssr: false });
 const GlowingEffect = dynamic(
   () => import("@/components/ui/glowing-effect").then((m) => ({ default: m.GlowingEffect })),
   { ssr: false, loading: () => null }
@@ -123,13 +124,14 @@ function GrammarTable({
 
 // ── Tab type ──────────────────────────────────────────────────────────────────
 
-type Tab = "overview" | "vocabulary" | "grammar" | "quiz-history";
+type Tab = "overview" | "vocabulary" | "grammar" | "quiz-history" | "leaderboard";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "overview", label: "Overview" },
   { id: "vocabulary", label: "Vocabulary" },
   { id: "grammar", label: "Grammar" },
   { id: "quiz-history", label: "Quiz History" },
+  { id: "leaderboard", label: "🏆 Leaderboard" },
 ];
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -216,6 +218,17 @@ export default function DashboardPage() {
       .catch(() => {})
       .finally(() => setQuizLoading(false));
   }, [activeTab, quizPage]);
+
+  // Leaderboard — loaded when tab activates, cached 5 min
+  const {
+    data: leaderboardData,
+    isLoading: leaderboardLoading,
+  } = useQuery({
+    queryKey: ["leaderboard"],
+    queryFn: () => dashboardApi.getLeaderboard().then((r) => r.data),
+    enabled: status === "authenticated" && activeTab === "leaderboard",
+    staleTime: 5 * 60 * 1000,
+  });
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -391,6 +404,19 @@ export default function DashboardPage() {
             loading={quizLoading}
             onPageChange={(p) => setQuizPage(p)}
           />
+        </div>
+      )}
+
+      {/* ── Leaderboard tab ────────────────────────────────────────────────── */}
+      {activeTab === "leaderboard" && (
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-xl font-semibold tracking-tight">Weekly Leaderboard</h2>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Top learners ranked by XP earned this week. Resets every Monday.
+            </p>
+          </div>
+          <LeaderboardCard data={leaderboardData} isLoading={leaderboardLoading} />
         </div>
       )}
     </div>

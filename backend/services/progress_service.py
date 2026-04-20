@@ -12,6 +12,9 @@ Public functions:
   get_quiz_history(user_id, page, limit, db)      — paginated quiz attempt history
 """
 
+import json
+import uuid
+from datetime import date, datetime, timedelta, timezone
 from uuid import UUID
 
 from sqlalchemy import and_, func, select
@@ -21,6 +24,7 @@ from backend.models.course import Class, Course, Module
 from backend.models.progress import GrammarLearned, UserProgress, VocabularyLearned, WeakPoint
 from backend.models.quiz import ModuleQuizAttempt, StandaloneQuizAttempt
 from backend.models.user import User
+from backend.models.xp_log import XPLog
 from backend.utils.cache import cache_delete, cache_get, cache_set
 from backend.utils.logger import get_logger
 
@@ -479,3 +483,137 @@ async def get_quiz_history(
     total = len(all_attempts)
     items = all_attempts[offset: offset + limit]
     return {"items": items, "total": total, "page": page, "limit": limit}
+
+
+_LEADERBOARD_TTL = 300  # 5 minutes
+
+
+def _make_initials(name: str) -> str:
+    """Return up to 2 uppercase initials from a display name."""
+    parts = (name or "?").split()
+    if len(parts) >= 2:
+        return (parts[0][0] + parts[-1][0]).upper()
+    return name[:2].upper() if name else "?"
+
+
+async def get_weekly_leaderboard(
+    current_user_id: UUID,
+    db: AsyncSession,
+    limit: int = 10,
+    include_email: bool = False,
+) -> dict:
+    """
+    Return the top N users ranked by XP earned in the current ISO week
+    (Monday 00:00 UTC → Sunday 23:59 UTC).
+
+    The current user's rank is always included even when outside top-N so
+    they can see where they stand.
+
+    Result is cached in Redis for 5 minutes per ISO-week key so repeated
+    dashboard loads don't hammer the DB.
+    """
+    today = datetime.now(timezone.utc).date()
+    # ISO weekday: Monday=1 … Sunday=7
+    week_start: date = today - timedelta(days=today.isoweekday() - 1)
+    week_end: date = week_start + timedelta(days=6)
+    iso_week = week_start.isoformat()
+
+    cache_key = f"leaderboard:weekly:{iso_week}"
+    cached = await cache_get(cache_key)
+    if cached and not include_email:
+        try:
+            return json.loads(cached)
+        except Exception:
+            pass
+
+    week_start_dt = datetime(week_start.year, week_start.month, week_start.day, tzinfo=timezone.utc)
+
+    # Aggregate weekly XP per user
+    xp_sub = (
+        select(
+            XPLog.user_id.label("user_id"),
+            func.sum(XPLog.xp_amount).label("weekly_xp"),
+        )
+        .where(XPLog.created_at >= week_start_dt)
+        .group_by(XPLog.user_id)
+        .subquery()
+    )
+
+    # Join with users to get display info, order by weekly_xp desc
+    stmt = (
+        select(
+            User.id,
+            User.name,
+            User.email,
+            User.proficiency_level,
+            User.streak_count,
+            xp_sub.c.weekly_xp,
+        )
+        .join(xp_sub, User.id == xp_sub.c.user_id)
+        .order_by(xp_sub.c.weekly_xp.desc())
+        .limit(limit + 1)  # fetch one extra to detect >limit entries
+    )
+    rows = (await db.execute(stmt)).all()
+
+    entries = []
+    current_user_in_top = False
+    for i, row in enumerate(rows[:limit]):
+        is_me = str(row.id) == str(current_user_id)
+        if is_me:
+            current_user_in_top = True
+        entry: dict = {
+            "rank": i + 1,
+            "name": row.name or "Unknown",
+            "initials": _make_initials(row.name or ""),
+            "weekly_xp": int(row.weekly_xp or 0),
+            "bps_level": row.proficiency_level or "BPS-1",
+            "streak_count": row.streak_count or 0,
+            "is_current_user": is_me,
+        }
+        if include_email:
+            entry["email"] = row.email
+        entries.append(entry)
+
+    # Determine current user's rank if outside top-N
+    your_rank: int | None = None
+    if current_user_in_top:
+        your_rank = next(e["rank"] for e in entries if e["is_current_user"])
+    else:
+        # Count users with more XP than the current user this week
+        count_stmt = (
+            select(func.count())
+            .select_from(xp_sub)
+            .where(
+                xp_sub.c.weekly_xp > (
+                    select(func.coalesce(func.sum(XPLog.xp_amount), 0))
+                    .where(
+                        XPLog.user_id == current_user_id,
+                        XPLog.created_at >= week_start_dt,
+                    )
+                    .scalar_subquery()
+                )
+            )
+        )
+        count_result = await db.execute(count_stmt)
+        users_ahead = count_result.scalar() or 0
+        # Only set a rank if the user actually earned some XP this week
+        user_xp_stmt = select(func.coalesce(func.sum(XPLog.xp_amount), 0)).where(
+            XPLog.user_id == current_user_id,
+            XPLog.created_at >= week_start_dt,
+        )
+        user_weekly_xp = (await db.execute(user_xp_stmt)).scalar() or 0
+        if user_weekly_xp > 0:
+            your_rank = int(users_ahead) + 1
+
+    result = {
+        "entries": entries,
+        "week_start": f"{week_start.strftime('%b')} {week_start.day}",
+        "week_end": f"{week_end.strftime('%b')} {week_end.day}",
+        "your_rank": your_rank,
+    }
+
+    # Cache only the non-admin view (no emails)
+    if not include_email:
+        await cache_set(cache_key, json.dumps(result), ttl=_LEADERBOARD_TTL)
+
+    return result

@@ -61,6 +61,9 @@ from backend.models.chatbot import ChatMessage, ChatSession  # noqa: F401, E402
 # RAG documents
 from backend.models.document import Document  # noqa: F401, E402
 
+# XP event log (weekly leaderboard)
+from backend.models.xp_log import XPLog  # noqa: F401, E402
+
 target_metadata = Base.metadata
 
 # ── Migration helpers ─────────────────────────────────────────────────────────

@@ -26,6 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.models.notification import Notification
 from backend.models.user import User
+from backend.models.xp_log import XPLog
 from backend.utils.cache import cache_delete, cache_get, cache_set
 from backend.utils.logger import get_logger
 
@@ -111,6 +112,7 @@ async def record_learning_activity(
     user_id: uuid.UUID,
     db: AsyncSession,
     xp_amount: int,
+    source: str = "activity",
 ) -> None:
     """
     Record a learning activity: update the daily streak and award XP.
@@ -168,6 +170,9 @@ async def record_learning_activity(
         if changed:
             user.streak_count = new_streak
             user.xp_total = new_xp
+            # Append XP event to log for weekly leaderboard queries
+            if xp_amount > 0:
+                db.add(XPLog(user_id=user_id, xp_amount=xp_amount, source=source))
             await db.commit()
             # Invalidate the dashboard summary cache so streak/XP are immediately
             # consistent with what the sidebar shows via /api/profile/.

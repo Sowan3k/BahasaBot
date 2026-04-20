@@ -96,7 +96,7 @@ async def submit_adaptive_quiz(
         try:
             from backend.services.gamification_service import record_learning_activity
             xp = 25 if result.get("score_percent", 0) >= 70 else 0
-            await record_learning_activity(user_id=current_user.id, db=db, xp_amount=xp)
+            await record_learning_activity(user_id=current_user.id, db=db, xp_amount=xp, source="quiz_pass")
         except Exception:
             pass
         return StandaloneQuizResultResponse(**result)

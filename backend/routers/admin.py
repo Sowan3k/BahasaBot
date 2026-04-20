@@ -304,3 +304,29 @@ async def get_admin_journeys(
     except Exception as exc:
         logger.error("Failed to fetch admin journeys", error=str(exc))
         raise HTTPException(status_code=500, detail="Failed to fetch journeys")
+
+
+# ── GET /api/admin/leaderboard ────────────────────────────────────────────────
+
+
+@router.get("/leaderboard")
+async def get_admin_leaderboard(
+    _admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """
+    Admin-only view of the weekly XP leaderboard.
+    Includes email for each entry so admins can identify users.
+    """
+    try:
+        from backend.services.progress_service import get_weekly_leaderboard
+        data = await get_weekly_leaderboard(
+            current_user_id=_admin.id,
+            db=db,
+            limit=50,
+            include_email=True,
+        )
+        return data
+    except Exception as exc:
+        logger.error("Failed to fetch admin leaderboard", error=str(exc))
+        raise HTTPException(status_code=500, detail="Failed to fetch leaderboard")

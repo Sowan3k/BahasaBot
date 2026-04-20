@@ -141,3 +141,27 @@ class DashboardSummaryResponse(BaseModel):
     recent_grammar: list[GrammarEntry]          # last 5 grammar rules
     top_weak_points: list[WeakPointEntry]       # top 3 weakest areas
     recent_quiz_history: list[QuizHistoryEntry] # last 5 quiz attempts
+
+
+# ── Leaderboard ────────────────────────────────────────────────────────────────
+
+
+class LeaderboardEntry(BaseModel):
+    rank: int
+    name: str
+    initials: str           # up to 2 chars derived from name
+    weekly_xp: int
+    bps_level: str          # BPS-1 … BPS-4
+    streak_count: int
+    is_current_user: bool
+
+
+class AdminLeaderboardEntry(LeaderboardEntry):
+    email: str              # only exposed to admins
+
+
+class LeaderboardResponse(BaseModel):
+    entries: list[LeaderboardEntry]
+    week_start: str         # e.g. "Apr 14"
+    week_end: str           # e.g. "Apr 20"
+    your_rank: int | None   # None when user has no XP this week

@@ -151,6 +151,7 @@ async def submit_spelling_answer(
                     user_id=current_user.id,
                     db=db,
                     xp_amount=result["xp_awarded"],
+                    source="spelling_correct",
                 )
             except Exception as xp_exc:
                 logger.warning(

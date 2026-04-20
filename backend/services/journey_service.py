@@ -673,7 +673,7 @@ async def check_roadmap_progress(
                 create_notification_fire_and_forget,
                 record_learning_activity,
             )
-            await record_learning_activity(user_id=user_id, db=db, xp_amount=100)
+            await record_learning_activity(user_id=user_id, db=db, xp_amount=100, source="roadmap_obstacle")
 
             # Fire obstacle-cleared notification
             await create_notification_fire_and_forget(
@@ -705,7 +705,8 @@ async def check_roadmap_progress(
                     record_learning_activity,
                 )
                 bonus_xp = 500 if on_time else 200
-                await record_learning_activity(user_id=user_id, db=db, xp_amount=bonus_xp)
+                src = "roadmap_complete" if on_time else "roadmap_complete_late"
+                await record_learning_activity(user_id=user_id, db=db, xp_amount=bonus_xp, source=src)
 
                 msg = (
                     "You completed your entire journey! 🎉 Amazing work!"

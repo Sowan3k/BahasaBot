@@ -314,7 +314,7 @@ async def complete_class(
     # Award 10 XP + update streak for completing a class — fire-and-forget
     try:
         from backend.services.gamification_service import record_learning_activity
-        await record_learning_activity(user_id=current_user.id, db=db, xp_amount=10)
+        await record_learning_activity(user_id=current_user.id, db=db, xp_amount=10, source="class_complete")
     except Exception:
         pass
 
@@ -428,7 +428,7 @@ async def submit_module_quiz_endpoint(
     try:
         from backend.services.gamification_service import record_learning_activity
         xp = 25 if result.get("passed", False) else 0
-        await record_learning_activity(user_id=current_user.id, db=db, xp_amount=xp)
+        await record_learning_activity(user_id=current_user.id, db=db, xp_amount=xp, source="quiz_pass")
     except Exception:
         pass
 

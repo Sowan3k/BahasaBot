@@ -49,6 +49,7 @@ import type {
   TipListResponse,
   GenerateTipsPayload,
   GenerateTipsResponse,
+  LeaderboardResponse,
 } from "@/lib/types";
 
 const apiClient = axios.create({
@@ -239,6 +240,10 @@ export const dashboardApi = {
     apiClient.get<QuizHistoryResponse>("/api/dashboard/quiz-history", {
       params: { page, limit },
     }),
+
+  /** Weekly XP leaderboard — top 10 users + current user's rank. */
+  getLeaderboard: () =>
+    apiClient.get<LeaderboardResponse>("/api/dashboard/leaderboard"),
 };
 
 // ── Profile API (Phase 13) ────────────────────────────────────────────────────
@@ -315,6 +320,10 @@ export const adminApi = {
     apiClient.get<AdminFeedbackResponse>("/api/admin/feedback", {
       params: { page, limit },
     }),
+
+  /** Admin weekly XP leaderboard (includes email). */
+  getLeaderboard: () =>
+    apiClient.get<LeaderboardResponse>("/api/admin/leaderboard"),
 };
 
 // ── Notifications API (Phase 17) ──────────────────────────────────────────────

@@ -21,6 +21,7 @@ import {
   XCircle,
   Loader2,
   Sparkles,
+  Trophy,
   type LucideIcon,
 } from "lucide-react";
 import { adminApi, profileApi, tipsApi } from "@/lib/api";
@@ -54,6 +55,14 @@ const ADMIN_SECTIONS = [
     description: "Read-only view of all user learning roadmaps, progress, and deadlines",
     color: "text-emerald-500",
     bg: "bg-emerald-500/10",
+  },
+  {
+    href: "/admin/leaderboard",
+    icon: Trophy,
+    label: "Weekly Leaderboard",
+    description: "Top users ranked by XP earned this week — resets every Monday",
+    color: "text-amber-400",
+    bg: "bg-amber-400/10",
   },
 ] as const;
 

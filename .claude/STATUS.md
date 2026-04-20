@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-20 (Session 45 — Settings debugged + account deletion)
+## Last Updated: 2026-04-20 (Session 46 — Weekly XP Leaderboard)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -49,6 +49,7 @@ _Update this file at the end of every session_
 
 | User Profile + Settings (Phase 13) | ✅ Complete + Debugged (Session 45) | native_language fixed: switched from `<select>` to free-text `<input list="...">` with datalist — now shows any DB value regardless of format; learning_goal fixed: switched from `<select>` (predefined options that don't match Journey free-text goal) to `<textarea>` with 500-char counter; form rewritten with controlled inputs + useRef origin tracking (no react-hook-form/reset timing issues); Delete Account: POST /api/profile/delete-account (bcrypt verify for email accounts, email match for Google); frontend DeleteAccountModal with danger zone card; signs user out + redirects to /login after deletion; About page: Developer name updated to "Noor Mohammad Sowan" |
 | Daily Language Tips | ✅ Complete (Session 44) | tips table + Alembic migration; GET /api/tips/random (public, Redis daily cache); POST /api/tips/generate (admin, Gemini, 4 categories); GET /api/tips/all (admin, paginated+filterable); PATCH /api/tips/{id} (toggle active); TipToast component (framer-motion slide-in, 8s auto-dismiss, shrinking progress bar, sessionStorage dedup, pretty dark+light); wired into dashboard; Language Tips panel in admin (All Tips tab + Generate New tab with category tiles + range slider) |
+| Weekly XP Leaderboard | ✅ Complete (Session 46) | New xp_logs table (Alembic migration c1d2e3f4a5b6); XPLog ORM model; record_learning_activity() now inserts into xp_logs on every XP award (source field: class_complete/quiz_pass/chatbot_session/spelling_correct/roadmap_obstacle/roadmap_complete/roadmap_complete_late); journey_service roadmap XP bonuses also log; GET /api/dashboard/leaderboard (top-10 by weekly XP, current-user rank, Redis-cached 5 min, week resets Monday); GET /api/admin/leaderboard (same + email field, limit 50); LeaderboardEntry + LeaderboardResponse schemas; frontend: LeaderboardCard component (GlowCard, medal icons, BPS avatars, streak, XP, current-user highlight, empty/loading states, mobile-responsive); 5th "🏆 Leaderboard" tab on dashboard page with tab-scoped React Query; admin/leaderboard page (full table with email, BPS badge, streak, weekly XP); Leaderboard added to ADMIN_SECTIONS nav list on admin/page.tsx; tsc --noEmit: 0 errors; live API test: 200 ✅ |
 
 ## Missing / Broken
 - **Admin loading skeletons** — `frontend/app/(dashboard)/admin/` pages have no skeleton states (stats cards and user table show blank until data arrives). Dashboard, journey, and courses pages all have skeletons. Admin is the only section still missing them.
@@ -69,6 +70,36 @@ _Update this file at the end of every session_
 - **Course covers not appearing (2026-04-13):** Session 12 correctly fixed `image_service.py` (httpx REST API) and `course_service.py` (retroactive healing + `asyncio.create_task`), but the backend was **never restarted** after those changes were made. Uvicorn started at 08:19, files modified at 14:22–14:28 — old broken code was still running. Fix: killed old uvicorn PIDs (18316, 25012), started fresh process on port 8000. Also manually ran `_generate_and_save_cover()` for all 3 existing courses that had `cover_image_url = NULL`. All verified: Gemini REST API returns JPEG (~1.1 MB base64, ~17s), DB save works, `GET /api/courses/` returns cover correctly. **Important**: after any code change to the backend, the uvicorn process MUST be restarted manually (no `--reload` flag in prod mode).
 
 ---
+
+## What Was Done This Session (2026-04-20 Session 46 — Weekly XP Leaderboard)
+
+### Goal
+Add a weekly XP leaderboard so users can see who earned the most XP in the current week.
+
+### Changes
+
+**Backend:**
+- `backend/db/migrations/versions/20260420_1200_xp_logs_table.py` — new Alembic migration; creates `xp_logs` table and indexes
+- `backend/models/xp_log.py` — new XPLog ORM model (user_id, xp_amount, source, created_at)
+- `backend/db/migrations/env.py` — added XPLog import
+- `backend/services/gamification_service.py` — added `XPLog` import + `source` param to `record_learning_activity()` + inserts into `xp_logs` on every XP award
+- `backend/services/journey_service.py` — passes `source="roadmap_obstacle"/"roadmap_complete"/"roadmap_complete_late"` to roadmap XP calls
+- `backend/routers/chatbot.py` — passes `source="chatbot_session"`
+- `backend/routers/courses.py` — passes `source="class_complete"` and `source="quiz_pass"`
+- `backend/routers/games.py` — passes `source="spelling_correct"`
+- `backend/routers/quiz.py` — passes `source="quiz_pass"`
+- `backend/services/progress_service.py` — added `get_weekly_leaderboard()` (ISO week window, top-N users, current-user rank, Redis cache 5 min)
+- `backend/schemas/dashboard.py` — added `LeaderboardEntry`, `AdminLeaderboardEntry`, `LeaderboardResponse`
+- `backend/routers/dashboard.py` — added `GET /api/dashboard/leaderboard`
+- `backend/routers/admin.py` — added `GET /api/admin/leaderboard`
+
+**Frontend:**
+- `frontend/lib/types.ts` — added `LeaderboardEntry`, `LeaderboardResponse`
+- `frontend/lib/api.ts` — added `dashboardApi.getLeaderboard()`, `adminApi.getLeaderboard()`
+- `frontend/components/dashboard/LeaderboardCard.tsx` — new component (GlowCard, medal/avatar/BPS/streak/XP rows, current-user highlight, mobile-responsive)
+- `frontend/app/(dashboard)/dashboard/page.tsx` — added 5th "🏆 Leaderboard" tab + `useQuery(["leaderboard"])` + `LeaderboardCard`
+- `frontend/app/(dashboard)/admin/page.tsx` — added `Trophy` icon import + "Weekly Leaderboard" entry to ADMIN_SECTIONS
+- `frontend/app/(dashboard)/admin/leaderboard/page.tsx` — new admin page (full table with email, BPS, streak, weekly XP)
 
 ## What Was Done This Session (2026-04-20 Session 45 — Settings debugged + account deletion)
 

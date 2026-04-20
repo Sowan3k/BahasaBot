@@ -23,6 +23,7 @@ from backend.models.user import User
 from backend.schemas.dashboard import (
     DashboardSummaryResponse,
     GrammarListResponse,
+    LeaderboardResponse,
     ProgressResponse,
     QuizHistoryResponse,
     VocabularyListResponse,
@@ -35,6 +36,7 @@ from backend.services.progress_service import (
     get_quiz_history,
     get_vocabulary_list,
     get_weak_points,
+    get_weekly_leaderboard,
 )
 from backend.utils.logger import get_logger
 
@@ -234,4 +236,35 @@ async def delete_vocabulary(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete vocabulary. Please try again.",
+        )
+
+
+@router.get("/leaderboard", response_model=LeaderboardResponse)
+async def get_leaderboard(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> LeaderboardResponse:
+    """
+    GET /api/dashboard/leaderboard
+
+    Returns the top-10 users by XP earned in the current ISO week, plus the
+    requesting user's own rank even when outside the top 10.
+
+    Result is Redis-cached for 5 minutes.
+    """
+    try:
+        data = await get_weekly_leaderboard(
+            current_user_id=current_user.id,
+            db=db,
+        )
+        return LeaderboardResponse(**data)
+    except Exception as exc:
+        logger.exception(
+            "Leaderboard fetch failed",
+            user_id=str(current_user.id),
+            error=str(exc),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to load leaderboard. Please try again.",
         )
