@@ -67,13 +67,26 @@ type CachedSession = Awaited<ReturnType<typeof getSession>>;
 let _sessionCache: { value: CachedSession; expiresAt: number } | null = null;
 const SESSION_CACHE_TTL_MS = 60_000; // 1 minute
 
+// Deduplicates concurrent getSession() calls — multiple components mounting
+// simultaneously (e.g. two NotificationBells) will share the same in-flight
+// promise instead of each making a separate /api/auth/session request.
+let _sessionInflight: Promise<CachedSession> | null = null;
+
 async function getCachedSession(): Promise<CachedSession> {
   if (_sessionCache && Date.now() < _sessionCache.expiresAt) {
     return _sessionCache.value;
   }
-  const session = await getSession();
-  _sessionCache = { value: session, expiresAt: Date.now() + SESSION_CACHE_TTL_MS };
-  return session;
+  if (!_sessionInflight) {
+    _sessionInflight = getSession()
+      .then((session) => {
+        _sessionCache = { value: session, expiresAt: Date.now() + SESSION_CACHE_TTL_MS };
+        return session;
+      })
+      .finally(() => {
+        _sessionInflight = null;
+      });
+  }
+  return _sessionInflight;
 }
 
 /** Call this on sign-out or after a new sign-in so the cache is refreshed. */

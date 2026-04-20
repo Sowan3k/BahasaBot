@@ -40,6 +40,7 @@ import backend.models.evaluation    # noqa: F401
 import backend.models.journey       # noqa: F401
 import backend.models.tip           # noqa: F401
 import backend.models.user          # noqa: F401
+import backend.models.xp_log        # noqa: F401
 
 setup_logging()
 logger = get_logger(__name__)

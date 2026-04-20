@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-20 (Session 46 — Weekly XP Leaderboard)
+## Last Updated: 2026-04-20 (Session 47 — Production deployment bug fixes)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -70,6 +70,38 @@ _Update this file at the end of every session_
 - **Course covers not appearing (2026-04-13):** Session 12 correctly fixed `image_service.py` (httpx REST API) and `course_service.py` (retroactive healing + `asyncio.create_task`), but the backend was **never restarted** after those changes were made. Uvicorn started at 08:19, files modified at 14:22–14:28 — old broken code was still running. Fix: killed old uvicorn PIDs (18316, 25012), started fresh process on port 8000. Also manually ran `_generate_and_save_cover()` for all 3 existing courses that had `cover_image_url = NULL`. All verified: Gemini REST API returns JPEG (~1.1 MB base64, ~17s), DB save works, `GET /api/courses/` returns cover correctly. **Important**: after any code change to the backend, the uvicorn process MUST be restarted manually (no `--reload` flag in prod mode).
 
 ---
+
+## What Was Done This Session (2026-04-20 Session 47 — Production deployment bug fixes)
+
+### Goal
+Fix production deployment breaking after login: "Failed to load courses", excessive API calls, doubled polling.
+
+### Root Causes Found & Fixed
+
+1. **Double NotificationBell polling (main culprit for excess API calls)**
+   - `AppSidebar.tsx` rendered `<NotificationBell>` at line 96 (inside `md:hidden` mobile header) AND at line 261 (desktop sidebar footer)
+   - CSS `display:none` via `md:hidden` does NOT unmount the React component — both bells were mounted and polling simultaneously on desktop
+   - This doubled every `/api/notifications/` call AND doubled the session cache misses
+   - **Fix**: Converted `NotificationBell` from `setInterval` → `useQuery({ refetchInterval })`. React Query automatically deduplicates the `["notifications"]` query across all mounted instances — only ONE fetch fires per poll interval regardless of how many bells are mounted
+
+2. **Session cache thundering herd (concurrent requests all calling getSession())**
+   - When multiple components mount simultaneously (page load), all called `getCachedSession()` concurrently with empty cache — each made its own `getSession()` → `/api/auth/session` network call
+   - **Fix**: Added `_sessionInflight` promise dedup in `getCachedSession()` in `api.ts` — concurrent calls share one in-flight `getSession()` promise
+
+3. **gamification_service.py missing rollback on failure**
+   - `record_learning_activity()` caught its own exceptions but didn't rollback the shared request-scoped session — leaving it in an aborted transaction state that could corrupt subsequent DB calls in the same request
+   - **Fix**: Added explicit `await db.rollback()` in the except block
+
+4. **Missing `import backend.models.xp_log` in main.py**
+   - XPLog model was imported transitively but not explicitly registered in the startup model imports
+   - **Fix**: Added `import backend.models.xp_log  # noqa: F401` to main.py
+
+### Files Changed
+- `backend/main.py` — added xp_log model import
+- `backend/services/gamification_service.py` — explicit rollback on failure
+- `frontend/lib/api.ts` — session cache deduplication via `_sessionInflight` promise
+- `frontend/components/notifications/NotificationBell.tsx` — converted to React Query (eliminates double-polling)
+- `.claude/STATUS.md` — this update
 
 ## What Was Done This Session (2026-04-20 Session 46 — Weekly XP Leaderboard)
 

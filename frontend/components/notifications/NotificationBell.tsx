@@ -3,15 +3,18 @@
 /**
  * NotificationBell — inline notification trigger.
  *
- * Owns data fetching + polling.
- * Renders <NotificationPopover> — caller controls positioning via the wrapper.
+ * Uses React Query for fetching + polling. React Query automatically
+ * deduplicates the ["notifications"] query across both mounted instances
+ * (mobile header + desktop sidebar), so only ONE /api/notifications/ call
+ * fires per poll interval regardless of how many bells are mounted.
  *
  * Props:
  *   panelSide — "left" (sidebar placement) | "right" (top-right placement, default)
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback } from "react";
 import { useSession } from "next-auth/react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { notificationsApi } from "@/lib/api";
 import type { AppNotification } from "@/lib/types";
 import { NotificationPopover, type NotificationItem } from "@/components/ui/notification-popover";
@@ -47,40 +50,33 @@ interface NotificationBellProps {
 
 export function NotificationBell({ panelSide = "left", panelDirection = "down" }: NotificationBellProps) {
   const { status } = useSession();
-  const [items, setItems] = useState<AppNotification[]>([]);
-  const pollerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const queryClient = useQueryClient();
 
-  // ── Fetch ─────────────────────────────────────────────────────────────────
+  const { data } = useQuery({
+    queryKey: ["notifications"],
+    queryFn: () => notificationsApi.getNotifications().then((r) => r.data),
+    enabled: status === "authenticated",
+    refetchInterval: POLL_INTERVAL_MS,
+    staleTime: 30_000,
+  });
 
-  const fetchNotifications = useCallback(async () => {
-    try {
-      const res = await notificationsApi.getNotifications();
-      setItems(res.data.notifications);
-    } catch {
-      // Silent — bell just won't refresh
-    }
-  }, []);
-
-  // ── Start polling ─────────────────────────────────────────────────────────
-
-  useEffect(() => {
-    if (status !== "authenticated") return;
-    fetchNotifications();
-    pollerRef.current = setInterval(fetchNotifications, POLL_INTERVAL_MS);
-    return () => { if (pollerRef.current) clearInterval(pollerRef.current); };
-  }, [status, fetchNotifications]);
+  const items: AppNotification[] = data?.notifications ?? [];
 
   // ── Handle mark-read callbacks from popover ───────────────────────────────
 
   const handleChange = useCallback(
     async (updated: NotificationItem[]) => {
-      // Sync local state back to AppNotification shape
-      setItems((prev) =>
-        prev.map((n) => {
-          const match = updated.find((u) => u.id === n.id);
-          return match ? { ...n, read: match.read } : n;
-        })
-      );
+      // Optimistically update cache so the UI responds immediately
+      queryClient.setQueryData<typeof data>(["notifications"], (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          notifications: old.notifications.map((n) => {
+            const match = updated.find((u) => u.id === n.id);
+            return match ? { ...n, read: match.read } : n;
+          }),
+        };
+      });
 
       // Determine which IDs just became read and call the API
       const nowRead = updated.filter((u) => u.read).map((u) => u.id);
@@ -95,15 +91,17 @@ export function NotificationBell({ panelSide = "left", panelDirection = "down" }
         );
       }
     },
-    [items]
+    [items, queryClient]
   );
 
   // ── Clear all ─────────────────────────────────────────────────────────────
 
   const handleClearAll = useCallback(async () => {
-    await notificationsApi.clearAll(); // let error propagate — popover's try/catch handles it
-    setItems([]);
-  }, []);
+    await notificationsApi.clearAll();
+    queryClient.setQueryData(["notifications"], (old: typeof data) =>
+      old ? { ...old, notifications: [] } : old
+    );
+  }, [queryClient]);
 
   // ── Render ────────────────────────────────────────────────────────────────
 

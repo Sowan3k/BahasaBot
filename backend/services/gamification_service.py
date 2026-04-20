@@ -206,6 +206,12 @@ async def record_learning_activity(
         )
 
     except Exception as exc:
+        # Explicitly rollback so the request-scoped session is returned to the
+        # pool in a clean state, even if the caller's try/except never sees this.
+        try:
+            await db.rollback()
+        except Exception:
+            pass
         logger.error(
             "record_learning_activity failed",
             user_id=str(user_id),
