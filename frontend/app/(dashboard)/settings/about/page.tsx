@@ -55,7 +55,7 @@ export default function AboutPage() {
           <Row label="Institution" value="Universiti Sains Malaysia (USM)" />
           <Row label="Programme" value="Final Year Project (FYP)" />
           <Row label="Academic Year" value={FYP_YEAR} />
-          <Row label="Developer" value="Sowan" />
+          <Row label="Developer" value="Noor Mohammad Sowan" />
           <Row label="Supervisor" value="Dr. Tan Tien Ping" />
         </GlowCard>
 

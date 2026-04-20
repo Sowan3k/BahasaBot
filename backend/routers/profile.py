@@ -2,16 +2,18 @@
 Profile Router
 
 Endpoints:
-  GET  /api/profile/   — Return the current user's full profile
-  PATCH /api/profile/  — Update editable profile fields (name, native_language,
-                          learning_goal, profile_picture_url)
+  GET    /api/profile/                — Return the current user's full profile
+  PATCH  /api/profile/                — Update editable profile fields
+  POST   /api/profile/change-password — Change password (existing-password guard)
+  POST   /api/profile/delete-account  — Permanently delete the authenticated user's account
 
-email and role are NOT editable through this endpoint.
+email and role are NOT editable through the PATCH endpoint.
 """
 
 import bcrypt
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, field_validator
+from sqlalchemy import delete as sql_delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.db.database import get_db
@@ -159,3 +161,82 @@ async def change_password(
         raise HTTPException(status_code=500, detail="Failed to update password")
 
     return ChangePasswordResponse(message="Password updated successfully")
+
+
+# ── POST /api/profile/delete-account ──────────────────────────────────────────
+
+
+class DeleteAccountRequest(BaseModel):
+    """Body for POST /api/profile/delete-account.
+
+    Email accounts must supply their password.
+    Google-only accounts supply confirm_email matching their account email.
+    """
+    password: str | None = None
+    confirm_email: str | None = None
+
+
+class DeleteAccountResponse(BaseModel):
+    deleted: bool
+    message: str
+
+
+@router.post("/delete-account", response_model=DeleteAccountResponse)
+async def delete_account(
+    body: DeleteAccountRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> DeleteAccountResponse:
+    """Permanently delete the authenticated user's account.
+
+    Identity verification:
+    - Email/password accounts: body.password must match the stored hash.
+    - Google-only accounts (password_hash IS NULL): body.confirm_email must
+      match the account email (case-insensitive).
+
+    All user data is deleted via ON DELETE CASCADE in the DB schema.
+    """
+    # ── Verify identity ──────────────────────────────────────────────────────
+    if current_user.password_hash is not None:
+        # Email/password account — require password
+        if not body.password:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Password is required to delete your account",
+            )
+        password_matches = bcrypt.checkpw(
+            body.password.encode("utf-8"),
+            current_user.password_hash.encode("utf-8"),
+        )
+        if not password_matches:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Incorrect password",
+            )
+    else:
+        # Google-only account — require email confirmation
+        if not body.confirm_email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email confirmation is required to delete your account",
+            )
+        if body.confirm_email.strip().lower() != current_user.email.lower():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email does not match your account",
+            )
+
+    # ── Delete user (cascade handles all child rows) ─────────────────────────
+    user_id = str(current_user.id)
+    try:
+        await db.execute(sql_delete(User).where(User.id == current_user.id))
+        await db.commit()
+        # Bust profile cache so chatbot doesn't serve stale data
+        await invalidate_profile_cache(current_user.id)
+        logger.info("Account deleted", user_id=user_id)
+    except Exception as exc:
+        await db.rollback()
+        logger.error("Failed to delete account", user_id=user_id, error=str(exc))
+        raise HTTPException(status_code=500, detail="Failed to delete account")
+
+    return DeleteAccountResponse(deleted=True, message="Account permanently deleted")

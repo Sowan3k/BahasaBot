@@ -255,6 +255,17 @@ export const profileApi = {
   /** Change password (email accounts only). */
   changePassword: (payload: ChangePasswordPayload) =>
     apiClient.post<ChangePasswordResponse>("/api/profile/change-password", payload),
+
+  /**
+   * Permanently delete the current user's account.
+   * Email accounts must supply { password }.
+   * Google-only accounts must supply { confirm_email } matching their email.
+   */
+  deleteAccount: (payload: { password?: string; confirm_email?: string }) =>
+    apiClient.post<{ deleted: boolean; message: string }>(
+      "/api/profile/delete-account",
+      payload
+    ),
 };
 
 // ── Admin API (Phase 15) ──────────────────────────────────────────────────────

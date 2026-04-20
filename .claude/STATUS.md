@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-19 (Session 44 — Daily Language Tips)
+## Last Updated: 2026-04-20 (Session 45 — Settings debugged + account deletion)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -47,6 +47,7 @@ _Update this file at the end of every session_
 | Mandatory Google password setup (Session 33) | ✅ Complete | POST /api/auth/set-password; SetPasswordRequest + SetPasswordResponse schemas; requires_password_setup in TokenResponse; has_password property on User model + ProfileResponse; SetPasswordModal (non-dismissible, z-[90]); login + register pages show modal when flag true; settings/password page routes to SetPasswordForm vs ChangePasswordForm based on has_password; change-password guard updated to check password_hash IS NULL only |
 | Adaptive Quiz Results Page | ✅ Complete | Dedicated /quiz/adaptive/results page; sessionStorage data-passing (quiz page stores result then router.push); score ring (green/amber/red by score); BPS level update banner with TrendingUp; per-question breakdown with SpeakerButton on wrong answers; FeedbackModal after 3s delay; Take Another Quiz invalidates cache + navigates to lobby; inline results block removed from quiz page |
 
+| User Profile + Settings (Phase 13) | ✅ Complete + Debugged (Session 45) | native_language fixed: switched from `<select>` to free-text `<input list="...">` with datalist — now shows any DB value regardless of format; learning_goal fixed: switched from `<select>` (predefined options that don't match Journey free-text goal) to `<textarea>` with 500-char counter; form rewritten with controlled inputs + useRef origin tracking (no react-hook-form/reset timing issues); Delete Account: POST /api/profile/delete-account (bcrypt verify for email accounts, email match for Google); frontend DeleteAccountModal with danger zone card; signs user out + redirects to /login after deletion; About page: Developer name updated to "Noor Mohammad Sowan" |
 | Daily Language Tips | ✅ Complete (Session 44) | tips table + Alembic migration; GET /api/tips/random (public, Redis daily cache); POST /api/tips/generate (admin, Gemini, 4 categories); GET /api/tips/all (admin, paginated+filterable); PATCH /api/tips/{id} (toggle active); TipToast component (framer-motion slide-in, 8s auto-dismiss, shrinking progress bar, sessionStorage dedup, pretty dark+light); wired into dashboard; Language Tips panel in admin (All Tips tab + Generate New tab with category tiles + range slider) |
 
 ## Missing / Broken
@@ -66,6 +67,46 @@ _Update this file at the end of every session_
 
 ## ✅ Fixed Issues (Session 13)
 - **Course covers not appearing (2026-04-13):** Session 12 correctly fixed `image_service.py` (httpx REST API) and `course_service.py` (retroactive healing + `asyncio.create_task`), but the backend was **never restarted** after those changes were made. Uvicorn started at 08:19, files modified at 14:22–14:28 — old broken code was still running. Fix: killed old uvicorn PIDs (18316, 25012), started fresh process on port 8000. Also manually ran `_generate_and_save_cover()` for all 3 existing courses that had `cover_image_url = NULL`. All verified: Gemini REST API returns JPEG (~1.1 MB base64, ~17s), DB save works, `GET /api/courses/` returns cover correctly. **Important**: after any code change to the backend, the uvicorn process MUST be restarted manually (no `--reload` flag in prod mode).
+
+---
+
+## What Was Done This Session (2026-04-20 Session 45 — Settings debugged + account deletion)
+
+### Goal
+Debug the profile settings page (native language always showing blank), add account deletion, update the about page.
+
+### Root Causes Found
+
+**Bug 1 — native_language always blank in select:**
+`react-hook-form`'s `reset()` sets the select value correctly only if the stored value matches a `<option value="">` exactly. The onboarding modal stores free-text (e.g. "Mandarin" vs "Mandarin Chinese"); Journey roadmap generation stores long free-text goals like "I want to pass my Malay proficiency exam" which NEVER match the 5 predefined `GOAL_OPTIONS` entries. Any mismatch silently falls back to the placeholder.
+
+**Bug 2 — learning_goal always blank in select:**
+The Journey modal's `goal` field is free text and overwrites `users.learning_goal` (by design, per CLAUDE.md). So the profile page's fixed 5-option dropdown will never match it after first Journey creation.
+
+**Fix:** Replaced both `<select>` elements with controlled inputs — `native_language` → `<input type="text" list="lang-suggestions">` with datalist; `learning_goal` → `<textarea>`. Also rewrote the form to use plain `useState` + `useRef` for dirty tracking (removes the react-hook-form `reset()` timing dependency entirely).
+
+### Files Changed
+
+**`backend/routers/profile.py`**
+- Added `POST /api/profile/delete-account`: verifies identity (bcrypt for email accounts; email match for Google-only accounts), then `DELETE FROM users WHERE id = ?` (cascade clears all child rows), busts profile cache
+
+**`frontend/lib/api.ts`**
+- Added `profileApi.deleteAccount({ password? | confirm_email? })`
+
+**`frontend/app/(dashboard)/settings/profile/page.tsx`** — complete rewrite
+- Form rewritten with plain controlled `useState` + `useRef` origin tracking; no `react-hook-form`
+- `native_language`: free-text `<input list="lang-suggestions">` with datalist (shows any DB value)
+- `learning_goal`: `<textarea>` with 500-char counter (shows any DB value)
+- `DeleteAccountModal`: red danger modal; email accounts → password field; Google accounts → email confirmation field; calls `POST /api/profile/delete-account`, then `signOut()` + redirect to `/login`
+- "Danger Zone" card added at bottom of page
+
+**`frontend/app/(dashboard)/settings/about/page.tsx`**
+- Developer row updated: "Sowan" → "Noor Mohammad Sowan"
+
+### native_language — Is it fulfilling its purpose?
+Yes. `langchain_service.py` injects it into the chatbot system prompt as:
+> "The user's native language is {native_language}. Where helpful, draw on similarities or differences between {native_language} and Malay to aid understanding."
+It works correctly whenever a value is stored. The fix ensures the UI now reliably shows and saves that value.
 
 ---
 
