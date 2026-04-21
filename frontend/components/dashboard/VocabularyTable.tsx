@@ -159,13 +159,14 @@ export default function VocabularyTable({
                   <td className="px-4 py-2.5 text-muted-foreground">{v.meaning}</td>
                   <td className="px-4 py-2.5">
                     <span
-                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                      title={v.source_name}
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap max-w-[120px] overflow-hidden ${
                         v.source_type === "chatbot"
                           ? "bg-secondary text-secondary-foreground"
                           : "bg-accent text-accent-foreground"
                       }`}
                     >
-                      {v.source_name}
+                      <span className="truncate">{v.source_name}</span>
                     </span>
                   </td>
                   <td className="px-4 py-2.5 text-muted-foreground whitespace-nowrap">
