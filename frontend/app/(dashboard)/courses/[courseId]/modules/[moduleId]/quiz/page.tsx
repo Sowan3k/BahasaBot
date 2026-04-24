@@ -54,6 +54,8 @@ export default function ModuleQuizPage({
     onSuccess: (data: ModuleQuizResult) => {
       // Invalidate course cache so module lock states refresh correctly
       queryClient.invalidateQueries({ queryKey: ["course", courseId] });
+      queryClient.invalidateQueries({ queryKey: ["courses"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       // Store result in sessionStorage so the results page can read it without
       // an extra API call. The key is namespaced by moduleId to avoid collisions.
       sessionStorage.setItem(

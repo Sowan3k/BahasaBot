@@ -30,7 +30,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 5 * 60 * 1000, // 5 minutes
+            // staleTime: 0 — data is immediately stale so React Query always
+            // refetches on mount and window focus.  Stale data from the cache
+            // is still shown instantly while the background fetch completes
+            // (stale-while-revalidate), so there is no loading flash on
+            // navigation.  This prevents pages from serving up to 5-minute-old
+            // data after actions in other pages (e.g. completing a class then
+            // visiting the dashboard).
+            staleTime: 0,
             retry: 1,
           },
         },

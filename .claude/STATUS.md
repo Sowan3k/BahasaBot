@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-20 (Session 47 — Production deployment bug fixes)
+## Last Updated: 2026-04-25 (Session 48 — Stale-data bug fix + Leaderboard redesign)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -49,7 +49,8 @@ _Update this file at the end of every session_
 
 | User Profile + Settings (Phase 13) | ✅ Complete + Debugged (Session 45) | native_language fixed: switched from `<select>` to free-text `<input list="...">` with datalist — now shows any DB value regardless of format; learning_goal fixed: switched from `<select>` (predefined options that don't match Journey free-text goal) to `<textarea>` with 500-char counter; form rewritten with controlled inputs + useRef origin tracking (no react-hook-form/reset timing issues); Delete Account: POST /api/profile/delete-account (bcrypt verify for email accounts, email match for Google); frontend DeleteAccountModal with danger zone card; signs user out + redirects to /login after deletion; About page: Developer name updated to "Noor Mohammad Sowan" |
 | Daily Language Tips | ✅ Complete (Session 44) | tips table + Alembic migration; GET /api/tips/random (public, Redis daily cache); POST /api/tips/generate (admin, Gemini, 4 categories); GET /api/tips/all (admin, paginated+filterable); PATCH /api/tips/{id} (toggle active); TipToast component (framer-motion slide-in, 8s auto-dismiss, shrinking progress bar, sessionStorage dedup, pretty dark+light); wired into dashboard; Language Tips panel in admin (All Tips tab + Generate New tab with category tiles + range slider) |
-| Weekly XP Leaderboard | ✅ Complete (Session 46) | New xp_logs table (Alembic migration c1d2e3f4a5b6); XPLog ORM model; record_learning_activity() now inserts into xp_logs on every XP award (source field: class_complete/quiz_pass/chatbot_session/spelling_correct/roadmap_obstacle/roadmap_complete/roadmap_complete_late); journey_service roadmap XP bonuses also log; GET /api/dashboard/leaderboard (top-10 by weekly XP, current-user rank, Redis-cached 5 min, week resets Monday); GET /api/admin/leaderboard (same + email field, limit 50); LeaderboardEntry + LeaderboardResponse schemas; frontend: LeaderboardCard component (GlowCard, medal icons, BPS avatars, streak, XP, current-user highlight, empty/loading states, mobile-responsive); 5th "🏆 Leaderboard" tab on dashboard page with tab-scoped React Query; admin/leaderboard page (full table with email, BPS badge, streak, weekly XP); Leaderboard added to ADMIN_SECTIONS nav list on admin/page.tsx; tsc --noEmit: 0 errors; live API test: 200 ✅ |
+| Weekly XP Leaderboard | ✅ Complete + Visual Redesign (Session 48) | New xp_logs table (Alembic migration c1d2e3f4a5b6); XPLog ORM model; record_learning_activity() now inserts into xp_logs on every XP award; GET /api/dashboard/leaderboard (top-10 by weekly XP, current-user rank, Redis-cached 5 min, week resets Monday); LeaderboardCard fully redesigned: animated framer-motion podium (2nd–1st–3rd) for top 3; animated XP progress bars for ranks 4–10 (relative to leader's XP); days-until-Monday-reset countdown chip; empty/loading/outside-top-10 states; tsc --noEmit: 0 errors |
+| Page-refresh Bug Fix | ✅ Fixed (Session 48) | Global React Query staleTime reduced from 5 min → 0 (stale-while-revalidate: data shown instantly from cache while background refetch runs); after class completion now also invalidates ["courses"] and ["dashboard"] queries (previously only ["course", courseId] was invalidated); after module quiz submission also invalidates ["courses"] and ["dashboard"]; AppSidebar profile staleTime lowered 5 min → 60s to match layout (keeps XP/streak display fresh) |
 
 ## Missing / Broken
 - **Admin loading skeletons** — `frontend/app/(dashboard)/admin/` pages have no skeleton states (stats cards and user table show blank until data arrives). Dashboard, journey, and courses pages all have skeletons. Admin is the only section still missing them.
@@ -2048,3 +2049,37 @@ All three Gemini prompts in `course_service.py` said "Use Malaysian Bahasa Melay
 ### Feedback page TS fix
 - **`frontend/app/(dashboard)/settings/feedback/page.tsx`** — `feedbackApi.submit` → `feedbackApi.submitFeedback` (wrong method name causing runtime error on form submit)
 - Zero TypeScript errors confirmed via `tsc --noEmit`
+
+## What Was Done This Session (2026-04-25 Session 48 — Stale-data bug fix + Leaderboard redesign)
+
+### Goal 1 — Fix pages requiring hard reload between navigations
+
+**Root cause:** React Query global `staleTime: 5 * 60 * 1000` (5 min). When navigating to a page visited within 5 min, React Query served cached data without refetching. Any server-side changes (completed class, quiz passed, XP awarded) were invisible until either 5 min elapsed or the user hard-reloaded.
+
+**Fixes:**
+1. `frontend/components/providers.tsx` — global `staleTime: 0` (stale-while-revalidate: cached data shown instantly while background refetch runs)
+2. `frontend/app/(dashboard)/courses/[courseId]/modules/[moduleId]/classes/[classId]/page.tsx` — class completion `onSuccess` now also invalidates `["courses"]` and `["dashboard"]` (previously only `["course", courseId]` and `["class", ...]`)
+3. `frontend/app/(dashboard)/courses/[courseId]/modules/[moduleId]/quiz/page.tsx` — module quiz submission now also invalidates `["courses"]` and `["dashboard"]`
+4. `frontend/components/nav/AppSidebar.tsx` — profile `staleTime: 5 min → 60s` (consistent with layout; keeps XP/streak sidebar display fresh)
+
+### Goal 2 — Leaderboard visualization redesign
+
+**Purpose of leaderboard:** Motivate weekly XP earning through social competition. Ranks all learners by XP earned in the current Monday–Sunday window; resets every Monday. Combined with streak tracking, creates a two-dimensional motivation layer.
+
+**Problem with old design:** Flat list with emoji medals — no visual hierarchy, no relative performance context, no urgency around weekly reset.
+
+**New design in `frontend/components/dashboard/LeaderboardCard.tsx`:**
+- **Animated podium** (framer-motion): top 3 displayed as 2nd (left) · 1st (centre, tallest) · 3rd (right) — platform height creates natural visual hierarchy; staggered entrance animation
+- **Animated XP progress bars** for ranks 4–10: each bar fills from 0 → (user_xp / leader_xp) on mount, giving instant visual comparison context
+- **Days-until-reset chip** in header showing countdown to next Monday reset (creates urgency)
+- **Current user highlighting**: `ring-2 ring-primary/50` on podium avatar + `bg-primary/10 border border-primary/25` on rank rows
+- **Edge cases handled**: <3 entrants (placeholder columns keep #1 centred), outside top-10 (rank shown in footer), no XP yet (empty state), loading (skeleton matches new podium layout)
+- `tsc --noEmit`: 0 errors
+
+### Files Changed
+- `frontend/components/providers.tsx` — staleTime 5 min → 0
+- `frontend/app/(dashboard)/courses/[courseId]/modules/[moduleId]/classes/[classId]/page.tsx` — invalidate courses + dashboard on class complete
+- `frontend/app/(dashboard)/courses/[courseId]/modules/[moduleId]/quiz/page.tsx` — invalidate courses + dashboard on module quiz submit
+- `frontend/components/nav/AppSidebar.tsx` — profile staleTime 5 min → 60s
+- `frontend/components/dashboard/LeaderboardCard.tsx` — full visual redesign (podium + animated bars + countdown)
+- `.claude/STATUS.md` — this update

@@ -54,7 +54,7 @@ export function AppSidebar() {
     queryKey: ["profile"],
     queryFn: () => profileApi.getProfile().then((r) => r.data),
     enabled: status === "authenticated",
-    staleTime: 5 * 60 * 1000,
+    staleTime: 60_000,
   });
 
   const isAdmin = profileData?.role === "admin";

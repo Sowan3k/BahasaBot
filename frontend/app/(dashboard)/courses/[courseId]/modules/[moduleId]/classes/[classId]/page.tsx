@@ -186,6 +186,9 @@ export default function ClassPage({
       setJustCompleted(true);
       queryClient.invalidateQueries({ queryKey: ["course", courseId] });
       queryClient.invalidateQueries({ queryKey: ["class", courseId, moduleId, classId] });
+      // Also refresh the courses list and dashboard so XP/progress update immediately
+      queryClient.invalidateQueries({ queryKey: ["courses"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 
