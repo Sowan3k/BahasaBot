@@ -1,19 +1,19 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-25 (Session 50 - Daily tips visibility fix)
+## Last Updated: 2026-04-25 (Session 51 — Chatbot redesign + skeleton overhaul + wave background)
 
 ## Feature Status
 | Feature | Status | Notes |
 |---|---|---|
 | Auth | ✅ Complete + Google password setup | Email + Google OAuth, JWT, token refresh, 30-min sessions; mandatory SetPasswordModal for Google users with NULL password_hash; POST /api/auth/set-password; has_password in profile API; settings/password page now routes to SetPassword vs ChangePassword form based on has_password |
-| AI Chatbot Tutor | ✅ Complete + App-awareness (Session 40) | SSE streaming, LangChain, RAG — Malaysian Malay + IPA in prompt; markdown rendering; session persistence; native_language injected into system prompt; RAG context Redis-cached (5 min) saving ~1.3s on repeat queries; ping SSE event for early frontend feedback; typing dots UX while waiting for first token; user profile Redis-cached (5 min TTL, invalidated on PATCH /profile); history cache updated in-place after each message (no more DB re-read on next turn); gamification XP awarded as asyncio.create_task with own session (no longer blocks SSE startup); GET /api/chatbot/prewarm warms profile cache on page load; ChatMessage wrapped in React.memo (previous messages never re-render during streaming); token batching via requestAnimationFrame (cuts setState calls from ~100/s to ≤60/s during streaming) |
+| AI Chatbot Tutor | ✅ Complete + App-awareness (Session 40) + Language rule (Session 51) | SSE streaming, LangChain, RAG — Malaysian Malay + IPA in prompt; markdown rendering; session persistence; native_language injected into system prompt; RAG context Redis-cached (5 min) saving ~1.3s on repeat queries; ping SSE event for early frontend feedback; typing dots UX while waiting for first token; user profile Redis-cached (5 min TTL, invalidated on PATCH /profile); history cache updated in-place after each message (no more DB re-read on next turn); gamification XP awarded as asyncio.create_task with own session (no longer blocks SSE startup); GET /api/chatbot/prewarm warms profile cache on page load; ChatMessage wrapped in React.memo (previous messages never re-render during streaming); token batching via requestAnimationFrame (cuts setState calls from ~100/s to ≤60/s during streaming); **language detection rule**: if student writes in English → full English response; if Malay → full Malay; if mixed → English (overrides all other rules); dialect rule demoted to secondary |
 | Course Generator | ✅ Complete + English-medium fix | Lesson content in English; Malay words taught inline; Malaysian BM only |
 | Quiz | ✅ Complete + English-medium fix | Question text explicitly English; Malay vocabulary uses Malaysian BM; IPA in explanations |
-| Dashboard | ✅ Complete + Progress Ring Redesign (Session 42) | All 6 endpoints verified; Overview tab completely redesigned: 3 SVG progress rings (Learning/Vocabulary/Quiz) with GlowCard hover, BPS slim strip, inline stats row (emoji), glowing pill Quick Actions, compact VocabPreview (no search bar, 5 rows, SpeakerButton), Weak Points + Quiz History in GlowCards; mobile-responsive (rings stay 3-col, wrap gracefully); StatsCards removed from overview |
+| Dashboard | ✅ Complete + Wave background (Session 51) | All 6 endpoints verified; Overview tab completely redesigned: 3 SVG progress rings (Learning/Vocabulary/Quiz) with GlowCard hover, BPS slim strip, inline stats row (emoji), glowing pill Quick Actions, compact VocabPreview (no search bar, 5 rows, SpeakerButton), Weak Points + Quiz History in GlowCards; mobile-responsive (rings stay 3-col, wrap gracefully); StatsCards removed from overview; `DashboardWaveBackground` canvas component: slow sine-wave animation at ¼ resolution, dark-mode-only (#25221a→#38332a palette), faint olive tint at peaks, fixed full-screen z-0, content at z-10 |
 | Production Hardening | ✅ Complete + Rate Limiter Fix | Rate limiter falls back to in-memory on Redis timeout (no more 500s) |
 | IPA Pronunciation | ✅ Full stack verified | Courses: IPA in all vocab items. Chatbot: /ko.soŋ/, /tə.ri.ma ka.sɪh/. Quiz: IPA in explanations |
-| Chatbot UI | ✅ Complete + Logo fix | react-markdown rendering, VocabPill extraction, Malaysia flag avatar; welcome screen now shows BahasaBot logo (was broken 🇲🇾 emoji showing as "MY" on Windows) |
+| Chatbot UI | ✅ Complete + Full redesign (Session 51) | react-markdown rendering, VocabPill extraction, Malaysia flag avatar; header: backdrop-blur + live green status pulse dot + Plus icon on "New chat"; input footer: backdrop-blur + top shadow + decorative glow line + border-primary textarea + send button `bg-foreground text-background` with audio-visualizer bars while streaming; EmptyState: ambient logo glow + decorative side lines on title + starter buttons with `›` prefix arrow; error: styled bordered card; message bubbles: user → `bg-primary/25 backdrop-blur` with right gradient accent line; bot → `bg-card/60 backdrop-blur` with left gradient accent line; typing indicator → 5-bar audio visualizer (replaced 3 bouncing dots) |
 | Dark Mode | ✅ Complete + Repositioned | ThemeToggle moved to top-right of sidebar header row (industry standard); icon variant added for collapsed/mobile |
 | UI Polish | ✅ Complete | Space Grotesk font, botanical color palette, glowing dashboard cards, animated auth pages |
 | Local Dev Launcher | ✅ Complete | `start-bahasabot.bat` launches both frontend + backend; PM2 config removed from root |
@@ -53,7 +53,7 @@ _Update this file at the end of every session_
 | Page-refresh Bug Fix | ✅ Fixed (Session 48) | Global React Query staleTime reduced from 5 min → 0 (stale-while-revalidate: data shown instantly from cache while background refetch runs); after class completion now also invalidates ["courses"] and ["dashboard"] queries (previously only ["course", courseId] was invalidated); after module quiz submission also invalidates ["courses"] and ["dashboard"]; AppSidebar profile staleTime lowered 5 min → 60s to match layout (keeps XP/streak display fresh) |
 
 ## Missing / Broken
-- **Admin loading skeletons** — `frontend/app/(dashboard)/admin/` pages have no skeleton states (stats cards and user table show blank until data arrives). Dashboard, journey, and courses pages all have skeletons. Admin is the only section still missing them.
+*(no known missing items)*
 
 ## ⚠️ Manual Action Required (Google OAuth Production)
 - Add the production Vercel URL to **Authorized JavaScript origins** in Google Cloud Console (OAuth Client → your client ID)
@@ -72,7 +72,74 @@ _Update this file at the end of every session_
 
 ---
 
-## What Was Done This Session (2026-04-25 Session 50 - Daily tips visibility fix)
+## What Was Done This Session (2026-04-25 Session 51 — Chatbot redesign + skeleton overhaul + wave background)
+
+### Goal
+Polish the chatbot UI, fix the chatbot language detection bug, overhaul all loading skeletons to match real page layouts, and add an animated wave background to the dashboard.
+
+### Changes
+
+**`backend/services/langchain_service.py`**
+- Added explicit `RESPONSE LANGUAGE RULE` at the top of `CHATBOT_SYSTEM_PROMPT` (overrides everything else):
+  - Student wrote in English → entire response must be in English (Malay appears as teaching examples only)
+  - Student wrote in Malay → entire response in Malay
+  - Mixed → respond in English
+- Renamed old "CRITICAL — DIALECT RULE" → "CRITICAL — MALAY DIALECT RULE (applies to Malay examples and responses only)"
+- Root cause: tutor was writing full Malay paragraphs when students asked questions in English
+
+**`frontend/components/chatbot/ChatMessage.tsx`**
+- User bubble: `bg-primary` solid → `bg-primary/25 backdrop-blur-sm border border-primary/30` + right gradient accent line
+- Bot bubble: `bg-card border` → `bg-card/60 backdrop-blur-sm border border-white/8` + left gradient accent line + deeper drop shadow
+- Typing indicator: 3 bouncing dots → `TypingBars` component (5 audio-visualizer bars with staggered pulse)
+- Streaming cursor: `w-1.5 h-4` → `w-1 h-4 bg-primary/70`
+- Blockquote: `border-l-4 border-border` → `border-l-2 border-primary/40`
+- Inline code: `rounded` → `rounded-sm`
+
+**`frontend/app/(dashboard)/chatbot/page.tsx`**
+- Header: `bg-card border-b` → `bg-background/90 backdrop-blur-xl shadow-[0_4px_24px_...]`; live green pulse dot beside "Bahasa Melayu" subtitle; History + New chat buttons use `border-primary/20 hover:border-primary/50 hover:bg-primary/5`; New chat gets `Plus` icon
+- Input footer: `bg-card border-t` → `bg-background/90 backdrop-blur-xl shadow-[0_-6px_28px_...]` + decorative top glow line; textarea `border-primary/30` + larger min-height (48px); send button redesigned `bg-foreground text-background`; streaming state shows 5-bar visualizer (matches `TypingBars`)
+- Error banner: plain text → bordered `bg-destructive/5 border border-destructive/30` pill card
+- `EmptyState`: logo removed from glass card, now floats with ambient blur glow; decorative `h-px` side lines flank the welcome title; starter buttons get `›` prefix arrow + `backdrop-blur-sm`
+
+**`frontend/app/(dashboard)/chatbot/loading.tsx`**
+- Reflects new header (2 buttons) and new footer (input + separate send button)
+
+**`frontend/app/(dashboard)/admin/loading.tsx` + inline skeleton in `admin/page.tsx`**
+- Complete overhaul: header (icon+title+subtitle), 7 stat cards in `grid-cols-2 lg:grid-cols-3`, navigation section with 4 list items (icon+title+description+chevron)
+- Both `loading.tsx` and the `if (loading)` block in `page.tsx` are now identical (eliminates flash of different skeleton on client hydration)
+- Resolves the "Admin loading skeletons" missing item
+
+**`frontend/app/(dashboard)/courses/loading.tsx` + inline skeleton in `courses/page.tsx`**
+- Both updated to precisely mirror `CourseCard`: cover image area (`h-24 sm:h-32`), padded content section, progress bar, delete row at bottom
+
+**`frontend/app/(dashboard)/dashboard/loading.tsx` + inline skeleton in `dashboard/page.tsx`**
+- `loading.tsx`: header, 5-tab strip with realistic widths, 8 stat cards (`grid-cols-2 sm:grid-cols-3 lg:grid-cols-4`), tall BPS strip, 2-column weak points/quiz history
+- Inline skeleton: stat card count 6 → 8, `h-24 rounded-lg` → `h-28 sm:h-40 rounded-[1.25rem]`, BPS block `h-[140px]`, weak-points/quiz grid updated
+
+**`frontend/app/(dashboard)/journey/loading.tsx` + inline skeleton in `journey/page.tsx`**
+- Both updated to match road UI: header with delete button, banner image, progress summary card, obstacle nodes with `pl-16` layout (absolute dot + card)
+
+**`frontend/app/(dashboard)/settings/loading.tsx`**
+- Refreshed to match settings hub: header, GlowCard list with icon+title+description+chevron rows
+
+**`frontend/app/(dashboard)/settings/about/page.tsx`**
+- `backdrop-blur-sm` → `backdrop-blur-xl` on all three GlowCards (minor visual polish)
+
+**`frontend/components/ui/dashboard-wave-background.tsx`** *(new)*
+- Canvas-based animated wave background for the dashboard
+- Dark mode only — light mode clears to transparent (CSS bg shows through unchanged)
+- Slow sine-wave shader (4 octaves) at ¼ resolution (16× cheaper); bilinear upscale via `drawImage`
+- Palette: #25221a → #38332a (≈19 RGB units) with faint olive tint (`g += peak * 6`) at peaks > 0.6
+- Pre-built 1024-entry sin/cos lookup tables; correct negative-modulo handling to prevent flat bands
+- `fixed inset-0 z-0`; dashboard content wrapped in `relative z-10`
+
+**`frontend/components/ui/background-paths.tsx`**
+- `absolute inset-0` → `fixed inset-0 z-0` (auth pages: paths now cover full viewport on all screen sizes)
+- Added `preserveAspectRatio="xMidYMid slice"` to SVG (prevents letterboxing)
+
+---
+
+## What Was Done Previous Session (2026-04-25 Session 50 — Daily tips visibility fix)
 
 ### Goal
 Fix the Daily Language Tips toast not appearing after login even though the tips feature and random endpoint were already implemented.
@@ -80,34 +147,12 @@ Fix the Daily Language Tips toast not appearing after login even though the tips
 ### Root Cause
 Two frontend issues prevented users from seeing tips:
 - `TipToast.tsx` stores `sessionStorage["tip_dismissed"] = "1"` after auto-dismiss or manual close. Login and registration only cleared chatbot session keys, so a later logout/login in the same browser tab skipped the tip entirely.
-- On first-login flows, onboarding renders at `z-[80]`, the same layer as the tip toast. Because onboarding is rendered later in the dashboard layout, it could cover the tip while the 8-second timer continued and dismissed it invisibly.
+- On first-login flows, onboarding renders at `z-[80]`, the same layer as the tip toast. Onboarding is rendered later in the dashboard layout and can cover the tip while the 8-second timer continues, dismissing it invisibly.
 
 ### Fix
-- `frontend/app/(auth)/login/page.tsx` - email and Google login now clear `sessionStorage.removeItem("tip_dismissed")` after successful session storage.
-- `frontend/app/(auth)/register/page.tsx` - email and Google registration now clear `sessionStorage.removeItem("tip_dismissed")` after successful session storage.
-- `frontend/components/TipToast.tsx` - toast z-index raised from `z-[80]` to `z-[85]`, above onboarding (`z-[80]`) but below mandatory SetPasswordModal (`z-[90]`).
-
-### Verification
-`npx tsc --noEmit` passed with 0 TypeScript errors.
-
----
-
-## What Was Done Previous Session (2026-04-25 Session 49 — Daily tips random-per-login fix)
-
-### Goal
-Fix the daily language tip showing the same tip on every login despite having 10+ tips in the DB.
-
-### Root Cause
-`GET /api/tips/random` cached the selected tip in Redis under key `daily_tip` with TTL until midnight UTC. Every login throughout the day received the same cached tip regardless of how many tips existed in the DB.
-
-### Fix
-`backend/routers/tips.py` — removed Redis cache from `get_random_tip()`:
-- Deleted `cache_key`, `cache_get()` lookup, `cache_set()` call, and `_seconds_until_midnight_utc()` helper
-- Removed now-unused `cache_get`, `cache_set` imports and unused `json`, `datetime`, `timezone` imports
-- Each request now hits `SELECT ... ORDER BY random() LIMIT 1` directly (trivially cheap for a ~10-row table)
-- Result: every login/page-load gets a fresh random tip from the pool
-
-Follow-up Session 50 updated the frontend: `tip_dismissed` is now cleared on successful login/register, and the toast z-index was raised above onboarding so the tip cannot dismiss invisibly behind the first-login modal.
+- `frontend/app/(auth)/login/page.tsx` — email and Google login now call `sessionStorage.removeItem("tip_dismissed")` after successful login
+- `frontend/app/(auth)/register/page.tsx` — email and Google registration now clear `tip_dismissed` after successful registration
+- `frontend/components/TipToast.tsx` — z-index raised from `z-[80]` to `z-[85]` (above onboarding `z-[80]`, below SetPasswordModal `z-[90]`)
 
 ---
 

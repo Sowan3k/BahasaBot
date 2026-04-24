@@ -4,8 +4,8 @@
  * ChatMessage
  *
  * Renders a single chat message bubble.
- * - User messages: right-aligned, blue background, plain text, max-w-sm.
- * - Assistant messages: left-aligned, white background, max-w-2xl.
+ * - User messages: right-aligned, gradient primary bg, sharp rounded corners.
+ * - Assistant messages: left-aligned, glass card with left accent line, max-w-2xl.
  *   - Rendered via react-markdown so bold, lists, and inline code display correctly.
  *   - **word** = meaning patterns are extracted BEFORE markdown parsing and
  *     replaced with interactive VocabPill components (hover to see translation).
@@ -43,7 +43,6 @@ function preprocessContent(text: string): string {
 
 /** Split a plain text string on §V§ placeholders → React nodes. */
 function parseVocabText(text: string): React.ReactNode[] {
-  // Split by the two-capture-group pattern → ["before", "malay", "english", "after", ...]
   const parts = text.split(/§V§([^§]+)§([^§]+)§/);
   if (parts.length === 1) return [text];
 
@@ -122,19 +121,40 @@ const mdComponents: Components = {
   },
   code({ children }) {
     return (
-      <code className="px-1 py-0.5 rounded text-xs font-mono bg-primary/10 text-primary border border-primary/20">
+      <code className="px-1 py-0.5 rounded-sm text-xs font-mono bg-primary/10 text-primary border border-primary/20">
         {children}
       </code>
     );
   },
   blockquote({ children }) {
     return (
-      <blockquote className="border-l-4 border-border pl-3 italic text-muted-foreground my-2">
+      <blockquote className="border-l-2 border-primary/40 pl-3 italic text-muted-foreground my-2">
         {children}
       </blockquote>
     );
   },
 };
+
+// ── Typing indicator — audio-visualizer style ────────────────────────────────
+
+function TypingBars() {
+  const heights = [10, 14, 8, 13, 7];
+  return (
+    <span className="flex gap-0.5 items-end py-0.5 h-5">
+      {heights.map((h, i) => (
+        <span
+          key={i}
+          className="w-0.5 bg-primary/50 rounded-sm animate-pulse"
+          style={{
+            height: `${h}px`,
+            animationDelay: `${i * 110}ms`,
+            animationDuration: "750ms",
+          }}
+        />
+      ))}
+    </span>
+  );
+}
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -153,6 +173,7 @@ const ChatMessage = memo(function ChatMessage({
 
   return (
     <div className={`flex w-full ${isUser ? "justify-end" : "justify-start"} mb-3`}>
+
       {/* Avatar — bot only */}
       {!isUser && (
         <img
@@ -162,43 +183,50 @@ const ChatMessage = memo(function ChatMessage({
         />
       )}
 
-      <div
-        className={`rounded-2xl px-4 py-3 shadow-sm
-          ${isUser
-            ? "max-w-sm bg-primary text-primary-foreground rounded-br-sm"
-            : "max-w-2xl bg-card text-card-foreground border border-border rounded-bl-sm"
-          }`}
-      >
-        {isUser ? (
-          /* User messages: plain text, no markdown parsing */
-          <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap break-words">
-            {content}
-          </p>
-        ) : (
-          /* Assistant messages: full markdown + vocab pills */
-          <div className="text-sm sm:text-base leading-relaxed">
-            {content === "" && isStreaming ? (
-              /* Typing dots — shown while waiting for the first token */
-              <span className="flex gap-1 items-center py-0.5">
-                <span className="w-2 h-2 bg-primary/50 rounded-full animate-bounce [animation-delay:0ms]" />
-                <span className="w-2 h-2 bg-primary/50 rounded-full animate-bounce [animation-delay:150ms]" />
-                <span className="w-2 h-2 bg-primary/50 rounded-full animate-bounce [animation-delay:300ms]" />
-              </span>
-            ) : (
-              <>
-                <ReactMarkdown components={mdComponents}>
-                  {processedContent}
-                </ReactMarkdown>
-                {isStreaming && (
-                  <span className="inline-block w-1.5 h-4 bg-primary ml-0.5 animate-pulse rounded-sm" />
-                )}
-              </>
-            )}
+      {isUser ? (
+        /* ── User bubble — olive/primary tint so it's clearly distinct from bot ── */
+        <div className="flex items-stretch max-w-[78%] sm:max-w-sm">
+          <div className="rounded-2xl rounded-br-sm px-4 py-3
+            bg-primary/25 backdrop-blur-sm
+            border border-primary/30
+            text-foreground shadow-[0_4px_16px_rgba(0,0,0,0.3)]">
+            <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+              {content}
+            </p>
           </div>
-        )}
-      </div>
 
-      {/* No "You" avatar — right-aligned blue bubble is sufficient identification */}
+          {/* Right accent line */}
+          <div className="w-0.5 flex-shrink-0 rounded-full ml-2 self-stretch
+            bg-gradient-to-b from-primary/70 via-primary/40 to-transparent" />
+        </div>
+      ) : (
+        /* ── Assistant bubble — neutral glass card, clearly different from user ── */
+        <div className="flex items-stretch max-w-[88%] sm:max-w-2xl">
+          {/* Left accent line */}
+          <div className="w-0.5 flex-shrink-0 rounded-full mr-2 self-stretch
+            bg-gradient-to-b from-border via-border/50 to-transparent" />
+
+          <div className="rounded-2xl rounded-bl-sm px-4 py-3
+            bg-card/60 backdrop-blur-sm
+            border border-white/8
+            text-card-foreground shadow-[0_8px_32px_rgba(0,0,0,0.45)]">
+            <div className="text-sm leading-relaxed">
+              {content === "" && isStreaming ? (
+                <TypingBars />
+              ) : (
+                <>
+                  <ReactMarkdown components={mdComponents}>
+                    {processedContent}
+                  </ReactMarkdown>
+                  {isStreaming && (
+                    <span className="inline-block w-1 h-4 bg-primary/70 ml-0.5 animate-pulse rounded-sm" />
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 });

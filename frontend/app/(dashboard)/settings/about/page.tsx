@@ -30,7 +30,7 @@ export default function AboutPage() {
         </div>
 
         {/* App identity card */}
-        <GlowCard className="bg-card/80 backdrop-blur-sm p-6 flex flex-col items-center text-center gap-3">
+        <GlowCard className="bg-card/80 backdrop-blur-xl p-6 flex flex-col items-center text-center gap-3">
           <Image
             src="/Logo new (1).svg"
             alt="BahasaBot"
@@ -51,7 +51,7 @@ export default function AboutPage() {
         </GlowCard>
 
         {/* Academic details */}
-        <GlowCard className="bg-card/80 backdrop-blur-sm divide-y divide-border overflow-hidden !rounded-xl">
+        <GlowCard className="bg-card/80 backdrop-blur-xl divide-y divide-border overflow-hidden !rounded-xl">
           <Row label="Institution" value="Universiti Sains Malaysia (USM)" />
           <Row label="Programme" value="Final Year Project (FYP)" />
           <Row label="Academic Year" value={FYP_YEAR} />
@@ -60,7 +60,7 @@ export default function AboutPage() {
         </GlowCard>
 
         {/* Tech stack highlights */}
-        <GlowCard className="bg-card/80 backdrop-blur-sm p-5 space-y-3">
+        <GlowCard className="bg-card/80 backdrop-blur-xl p-5 space-y-3">
           <h3 className="text-sm font-semibold text-foreground">Built with</h3>
           <div className="flex flex-wrap gap-2">
             {[

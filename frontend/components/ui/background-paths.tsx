@@ -20,6 +20,7 @@ function FloatingPaths({ position }: { position: number }) {
       <svg
         className="w-full h-full text-primary/20 dark:text-primary/15"
         viewBox="0 0 696 316"
+        preserveAspectRatio="xMidYMid slice"
         fill="none"
       >
         <title>Background Paths</title>
@@ -50,7 +51,7 @@ function FloatingPaths({ position }: { position: number }) {
 
 export function BackgroundPaths() {
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+    <div className="fixed inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 0 }}>
       <FloatingPaths position={1} />
       <FloatingPaths position={-1} />
     </div>

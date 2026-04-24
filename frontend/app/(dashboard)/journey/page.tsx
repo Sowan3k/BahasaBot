@@ -816,14 +816,25 @@ export default function JourneyPage() {
 
   if (roadmapLoading || roadmap === undefined) {
     return (
-      <div className="w-full p-4 sm:p-6 space-y-4 max-w-xl mx-auto">
-        <Skeleton className="h-8 w-48 rounded" />
-        <Skeleton className="h-4 w-72 rounded" />
-        <Skeleton className="h-32 w-full rounded-2xl" />
+      <div className="w-full max-w-xl mx-auto px-3 pt-4 pb-4 sm:p-6 space-y-4 sm:space-y-5">
+        {/* Header — icon+label row + title + goal text + trash button */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-3 w-24 rounded" />
+            <Skeleton className="h-7 w-48 rounded" />
+            <Skeleton className="h-4 w-64 rounded" />
+          </div>
+          <Skeleton className="h-8 w-8 rounded-lg shrink-0" />
+        </div>
+        {/* Banner image — matches actual h-24 sm:h-32 */}
+        <Skeleton className="h-24 sm:h-32 w-full rounded-2xl" />
+        {/* Progress summary card — flag+text row + progress bar + deadline row */}
+        <Skeleton className="h-24 w-full rounded-xl" />
+        {/* Obstacle nodes — h-12 circle + card matching p-3 sm:p-4 content */}
         {[1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="flex items-center gap-4">
-            <Skeleton className="h-12 w-12 rounded-full shrink-0" />
-            <Skeleton className="flex-1 h-16 rounded-xl" />
+          <div key={i} className="relative pl-16">
+            <Skeleton className="absolute left-4 top-5 h-4 w-4 rounded-full" />
+            <Skeleton className="h-20 w-full rounded-xl" />
           </div>
         ))}
       </div>

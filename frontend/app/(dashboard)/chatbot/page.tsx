@@ -20,7 +20,7 @@ import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { History } from "lucide-react";
+import { History, Plus } from "lucide-react";
 import ChatMessage from "@/components/chatbot/ChatMessage";
 import { useTheme } from "@/lib/use-theme";
 
@@ -191,7 +191,7 @@ export default function ChatbotPage() {
               message?: string;
             };
 
-            // ping = server acknowledged the request; typing dots already shown
+            // ping = server acknowledged the request; typing indicator already shown
             if (event.type === "ping") continue;
 
             if (event.type === "token" && event.content) {
@@ -284,34 +284,58 @@ export default function ChatbotPage() {
   }
 
   return (
-    // flex-1 min-h-0 fills the flex-col parent from the layout without overflowing
     <div className="flex flex-col flex-1 min-h-0 bg-background relative">
 
       {/* ── Header ── */}
-      <header className="flex items-center justify-between px-4 py-3 bg-card border-b shrink-0 relative z-10">
-        <div className="flex items-center gap-2">
+      <header className="flex items-center justify-between px-4 py-2.5
+        bg-background/90 backdrop-blur-xl shrink-0 relative z-10
+        shadow-[0_4px_24px_rgba(0,0,0,0.45)]">
+
+        {/* Left: Brand + live status */}
+        <div className="flex items-center gap-3">
           <div className="relative w-7 h-7 flex-shrink-0 select-none">
-            <Image src="/Logo new only box (1).svg" alt="BahasaBot" fill sizes="28px" className="object-contain" />
+            <Image
+              src="/Logo new only box (1).svg"
+              alt="BahasaBot"
+              fill
+              sizes="28px"
+              className="object-contain"
+            />
           </div>
           <div>
-            <p className="text-sm font-semibold tracking-tight leading-tight">AI Tutor</p>
-            <p className="text-xs text-muted-foreground leading-tight">Bahasa Melayu</p>
+            <p className="text-sm font-semibold tracking-tight leading-tight">
+              AI Tutor
+            </p>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"
+                style={{ boxShadow: "0 0 5px #4ade80" }} />
+              <p className="text-xs text-muted-foreground leading-tight">
+                Bahasa Melayu
+              </p>
+            </div>
           </div>
         </div>
+
+        {/* Right: Actions */}
         <div className="flex items-center gap-2">
           <Link
             href="/chatbot/history"
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border
-                       text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg
+              border border-primary/20 text-muted-foreground
+              hover:border-primary/50 hover:text-primary hover:bg-primary/5
+              transition-all"
           >
             <History className="w-3.5 h-3.5" />
             History
           </Link>
           <button
             onClick={startNewSession}
-            className="text-xs px-3 py-1.5 rounded-lg border text-muted-foreground
-                       hover:bg-muted hover:text-foreground transition-colors"
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg
+              border border-primary/20 text-muted-foreground
+              hover:border-primary/50 hover:text-primary hover:bg-primary/5
+              transition-all"
           >
+            <Plus className="w-3.5 h-3.5" />
             New chat
           </button>
         </div>
@@ -344,14 +368,26 @@ export default function ChatbotPage() {
         )}
 
         {error && (
-          <div className="text-center text-xs text-destructive my-2">{error}</div>
+          <div className="flex items-center gap-2 text-xs text-destructive/80 my-2
+            px-3 py-2 rounded-lg border border-destructive/30 bg-destructive/5
+            max-w-md mx-auto">
+            <span className="text-destructive font-bold">⚠</span>
+            {error}
+          </div>
         )}
 
         <div ref={bottomRef} />
       </main>
 
       {/* ── Input area ── */}
-      <footer className="bg-card border-t px-3 sm:px-4 py-2.5 sm:py-3 shrink-0 relative">
+      <footer className="bg-background/90 backdrop-blur-xl
+        px-3 sm:px-4 py-3 shrink-0 relative
+        shadow-[0_-6px_28px_rgba(0,0,0,0.5)]">
+
+        {/* Decorative top-center glow line */}
+        <div className="absolute top-0 left-1/4 right-1/4 h-px
+          bg-gradient-to-r from-transparent via-primary/25 to-transparent pointer-events-none" />
+
         <div className="flex items-end gap-2 max-w-3xl mx-auto">
           <textarea
             ref={inputRef}
@@ -362,30 +398,48 @@ export default function ChatbotPage() {
             rows={1}
             disabled={isStreaming}
             autoComplete="off"
-            className="flex-1 resize-none rounded-xl border px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base bg-background
-                       text-foreground placeholder:text-muted-foreground focus:outline-none
-                       focus:ring-2 focus:ring-ring focus:border-transparent
-                       disabled:opacity-50 max-h-32 overflow-y-auto leading-relaxed"
-            style={{ minHeight: "44px" }}
+            className="flex-1 resize-none rounded-xl border border-primary/30 px-4 py-3 text-sm
+              bg-card text-foreground shadow-md
+              placeholder:text-muted-foreground
+              focus:outline-none focus:border-primary/60 focus:shadow-lg
+              disabled:opacity-40 max-h-32 overflow-y-auto leading-relaxed
+              transition-all duration-200"
+            style={{ minHeight: "48px" }}
           />
           <button
             onClick={sendMessage}
             disabled={isStreaming || !input.trim()}
-            className="flex-shrink-0 w-11 h-11 rounded-xl bg-primary text-primary-foreground flex items-center
-                       justify-center hover:bg-primary/90 active:scale-95 transition-all
-                       disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
+            className="flex-shrink-0 w-12 h-12 rounded-xl
+              bg-foreground text-background
+              flex items-center justify-center shadow-lg
+              hover:opacity-85 hover:shadow-xl
+              active:scale-95 transition-all
+              disabled:opacity-25 disabled:cursor-not-allowed disabled:active:scale-100
+              disabled:shadow-none"
             aria-label="Send message"
           >
             {isStreaming ? (
-              <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              /* Audio-visualizer bars while streaming */
+              <span className="flex gap-0.5 items-end h-4">
+                {([10, 14, 8, 12, 6] as number[]).map((h, i) => (
+                  <span
+                    key={i}
+                    className="w-0.5 bg-primary-foreground/80 rounded-sm animate-pulse"
+                    style={{ height: `${h}px`, animationDelay: `${i * 100}ms`, animationDuration: "700ms" }}
+                  />
+                ))}
+              </span>
             ) : (
               <SendIcon />
             )}
           </button>
         </div>
-        <p className="text-center text-xs text-muted-foreground mt-2">
-          <kbd className="px-1 py-0.5 bg-muted rounded text-xs">Enter</kbd> to send &nbsp;·&nbsp;
-          <kbd className="px-1 py-0.5 bg-muted rounded text-xs">Shift+Enter</kbd> for new line
+
+        <p className="text-center text-xs text-muted-foreground/50 mt-2">
+          <kbd className="px-1 py-0.5 bg-muted border border-border rounded text-xs">Enter</kbd>
+          {" "}to send{" · "}
+          <kbd className="px-1 py-0.5 bg-muted border border-border rounded text-xs">Shift+Enter</kbd>
+          {" "}for new line
         </p>
       </footer>
     </div>
@@ -405,28 +459,39 @@ function EmptyState() {
   ];
 
   return (
-    <div className="flex flex-col items-center justify-center h-full text-center py-12">
-      {/* Glass card keeps content readable over the wave animation */}
-      <div className="rounded-2xl px-8 py-8 backdrop-blur-sm bg-card/70 border border-primary/20 shadow-sm max-w-lg w-full mx-4">
-        <div className="mb-4 mx-auto">
-          <Image
-            src="/Logo new (1).svg"
-            width={189}
-            height={60}
-            alt="BahasaBot"
-            className="object-contain"
-          />
-        </div>
-        <h2 className="text-xl font-semibold tracking-tight mb-1">Selamat datang! Welcome!</h2>
-        <p className="text-sm text-muted-foreground leading-relaxed mb-6 max-w-sm mx-auto">
-          I&apos;m BahasaBot, your personal Bahasa Melayu tutor. Ask me anything
-          about Malay language, grammar, or culture.
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full">
-          {starters.map((s) => (
-            <StarterButton key={s} text={s} />
-          ))}
-        </div>
+    <div className="flex flex-col items-center justify-center h-full text-center py-10 px-4">
+
+      {/* Logo with ambient glow */}
+      <div className="relative mb-5">
+        <div className="absolute inset-0 rounded-full bg-primary/15 blur-2xl scale-[2]
+          pointer-events-none" />
+        <Image
+          src="/Logo new (1).svg"
+          width={172}
+          height={55}
+          alt="BahasaBot"
+          className="object-contain relative z-10 drop-shadow-2xl"
+        />
+      </div>
+
+      {/* Title with decorative side lines */}
+      <div className="flex items-center gap-3 mb-1">
+        <div className="h-px w-10 bg-gradient-to-r from-transparent to-primary/40" />
+        <h2 className="text-xl font-semibold tracking-tight">
+          Selamat datang! Welcome!
+        </h2>
+        <div className="h-px w-10 bg-gradient-to-l from-transparent to-primary/40" />
+      </div>
+      <p className="text-sm text-muted-foreground leading-relaxed mb-7 max-w-sm mx-auto">
+        I&apos;m BahasaBot, your personal Bahasa Melayu tutor. Ask me anything
+        about Malay language, grammar, or culture.
+      </p>
+
+      {/* Starter prompt grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 w-full max-w-lg">
+        {starters.map((s) => (
+          <StarterButton key={s} text={s} />
+        ))}
       </div>
     </div>
   );
@@ -440,10 +505,13 @@ function StarterButton({ text }: { text: string }) {
   return (
     <button
       onClick={click}
-      className="text-left text-sm px-3 py-2 rounded-lg border bg-card
-                 text-muted-foreground hover:border-primary hover:text-primary
-                 hover:bg-primary/10 transition-colors leading-snug"
+      className="text-left text-sm px-3.5 py-2.5 rounded-xl
+        border border-primary/15 bg-card/25 backdrop-blur-sm shadow-sm
+        text-muted-foreground
+        hover:border-primary/50 hover:text-primary hover:bg-primary/5 hover:shadow-md
+        transition-all group leading-snug"
     >
+      <span className="text-primary/40 group-hover:text-primary/70 transition-colors mr-1.5">›</span>
       {text}
     </button>
   );

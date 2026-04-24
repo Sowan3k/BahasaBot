@@ -266,17 +266,24 @@ export default function CoursesPage() {
           </Button>
         </div>
 
-        {/* Loading skeletons */}
+        {/* Loading skeletons — mirror CourseCard structure exactly */}
         {isLoading && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="rounded-lg border bg-card/80 overflow-hidden">
-                <Skeleton className="h-32 w-full rounded-none" />
-                <div className="p-5 space-y-3">
+              <div key={i} className="rounded-lg border bg-card/90 overflow-hidden flex flex-col">
+                {/* Cover image area — h-24 mobile, h-32 sm+ matching object-cover area */}
+                <Skeleton className="h-24 sm:h-32 w-full rounded-none flex-shrink-0" />
+                {/* Content — p-3 mobile, p-5 sm+ matching card padding */}
+                <div className="p-3 sm:p-5 space-y-2 sm:space-y-3 flex-1">
                   <Skeleton className="h-3 w-24 rounded" />
                   <Skeleton className="h-5 w-full rounded" />
                   <Skeleton className="h-4 w-3/4 rounded" />
-                  <Skeleton className="h-3 w-1/2 rounded" />
+                  <Skeleton className="h-3 w-2/5 rounded" />
+                  <Skeleton className="h-1.5 w-full rounded-full" />
+                </div>
+                {/* Delete row — matches px-5 pb-4 pt-1 border-t */}
+                <div className="px-5 pb-4 pt-2 border-t border-border/50">
+                  <Skeleton className="h-7 w-16 rounded ml-auto" />
                 </div>
               </div>
             ))}

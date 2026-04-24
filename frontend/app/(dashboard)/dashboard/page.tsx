@@ -30,6 +30,10 @@ const GlowingEffect = dynamic(
   () => import("@/components/ui/glowing-effect").then((m) => ({ default: m.GlowingEffect })),
   { ssr: false, loading: () => null }
 );
+const DashboardWaveBackground = dynamic(
+  () => import("@/components/ui/dashboard-wave-background"),
+  { ssr: false, loading: () => null }
+);
 
 // ── Simple inline grammar table ───────────────────────────────────────────────
 
@@ -234,8 +238,9 @@ export default function DashboardPage() {
 
   return (
     <>
+      <DashboardWaveBackground />
       <TipToast />
-    <div className="max-w-5xl mx-auto px-3 sm:px-4 py-4 sm:py-8 space-y-4 sm:space-y-6 overflow-x-hidden">
+    <div className="relative z-10 max-w-5xl mx-auto px-3 sm:px-4 py-4 sm:py-8 space-y-4 sm:space-y-6 overflow-x-hidden">
       {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
@@ -283,15 +288,20 @@ export default function DashboardPage() {
         <div className="space-y-6">
           {summaryLoading ? (
             <div className="space-y-6">
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <Skeleton key={i} className="h-24 rounded-lg" />
+              {/* Stat cards — 8 cards matching StatsCards grid exactly */}
+              <ul className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <li key={i} className="list-none">
+                    <Skeleton className="h-28 sm:h-40 w-full rounded-[1.25rem]" />
+                  </li>
                 ))}
-              </div>
-              <Skeleton className="h-24 w-full rounded-xl" />
+              </ul>
+              {/* BPS progress bar — matches GlowCard wrapper + inner content height */}
+              <Skeleton className="h-[140px] w-full rounded-[1.25rem]" />
+              {/* Weak points + quiz history */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Skeleton className="h-64 rounded-xl" />
-                <Skeleton className="h-64 rounded-xl" />
+                <Skeleton className="h-64 rounded-[1.25rem]" />
+                <Skeleton className="h-64 rounded-[1.25rem]" />
               </div>
             </div>
           ) : summary ? (
