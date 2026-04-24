@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-25 (Session 48 — Stale-data bug fix + Leaderboard redesign)
+## Last Updated: 2026-04-25 (Session 49 — Daily tips random-per-login fix)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -48,7 +48,7 @@ _Update this file at the end of every session_
 | Adaptive Quiz Results Page | ✅ Complete | Dedicated /quiz/adaptive/results page; sessionStorage data-passing (quiz page stores result then router.push); score ring (green/amber/red by score); BPS level update banner with TrendingUp; per-question breakdown with SpeakerButton on wrong answers; FeedbackModal after 3s delay; Take Another Quiz invalidates cache + navigates to lobby; inline results block removed from quiz page |
 
 | User Profile + Settings (Phase 13) | ✅ Complete + Debugged (Session 45) | native_language fixed: switched from `<select>` to free-text `<input list="...">` with datalist — now shows any DB value regardless of format; learning_goal fixed: switched from `<select>` (predefined options that don't match Journey free-text goal) to `<textarea>` with 500-char counter; form rewritten with controlled inputs + useRef origin tracking (no react-hook-form/reset timing issues); Delete Account: POST /api/profile/delete-account (bcrypt verify for email accounts, email match for Google); frontend DeleteAccountModal with danger zone card; signs user out + redirects to /login after deletion; About page: Developer name updated to "Noor Mohammad Sowan" |
-| Daily Language Tips | ✅ Complete (Session 44) | tips table + Alembic migration; GET /api/tips/random (public, Redis daily cache); POST /api/tips/generate (admin, Gemini, 4 categories); GET /api/tips/all (admin, paginated+filterable); PATCH /api/tips/{id} (toggle active); TipToast component (framer-motion slide-in, 8s auto-dismiss, shrinking progress bar, sessionStorage dedup, pretty dark+light); wired into dashboard; Language Tips panel in admin (All Tips tab + Generate New tab with category tiles + range slider) |
+| Daily Language Tips | ✅ Complete + Random-per-login fix (Session 49) | tips table + Alembic migration; GET /api/tips/random (public, no cache — returns a fresh random tip on every call so each login sees a different tip); POST /api/tips/generate (admin, Gemini, 4 categories); GET /api/tips/all (admin, paginated+filterable); PATCH /api/tips/{id} (toggle active); TipToast component (framer-motion slide-in, 8s auto-dismiss, shrinking progress bar, sessionStorage dedup within a tab session, pretty dark+light); wired into dashboard; Language Tips panel in admin (All Tips tab + Generate New tab with category tiles + range slider) |
 | Weekly XP Leaderboard | ✅ Complete + Visual Redesign (Session 48) | New xp_logs table (Alembic migration c1d2e3f4a5b6); XPLog ORM model; record_learning_activity() now inserts into xp_logs on every XP award; GET /api/dashboard/leaderboard (top-10 by weekly XP, current-user rank, Redis-cached 5 min, week resets Monday); LeaderboardCard fully redesigned: animated framer-motion podium (2nd–1st–3rd) for top 3; animated XP progress bars for ranks 4–10 (relative to leader's XP); days-until-Monday-reset countdown chip; empty/loading/outside-top-10 states; tsc --noEmit: 0 errors |
 | Page-refresh Bug Fix | ✅ Fixed (Session 48) | Global React Query staleTime reduced from 5 min → 0 (stale-while-revalidate: data shown instantly from cache while background refetch runs); after class completion now also invalidates ["courses"] and ["dashboard"] queries (previously only ["course", courseId] was invalidated); after module quiz submission also invalidates ["courses"] and ["dashboard"]; AppSidebar profile staleTime lowered 5 min → 60s to match layout (keeps XP/streak display fresh) |
 
@@ -69,6 +69,25 @@ _Update this file at the end of every session_
 
 ## ✅ Fixed Issues (Session 13)
 - **Course covers not appearing (2026-04-13):** Session 12 correctly fixed `image_service.py` (httpx REST API) and `course_service.py` (retroactive healing + `asyncio.create_task`), but the backend was **never restarted** after those changes were made. Uvicorn started at 08:19, files modified at 14:22–14:28 — old broken code was still running. Fix: killed old uvicorn PIDs (18316, 25012), started fresh process on port 8000. Also manually ran `_generate_and_save_cover()` for all 3 existing courses that had `cover_image_url = NULL`. All verified: Gemini REST API returns JPEG (~1.1 MB base64, ~17s), DB save works, `GET /api/courses/` returns cover correctly. **Important**: after any code change to the backend, the uvicorn process MUST be restarted manually (no `--reload` flag in prod mode).
+
+---
+
+## What Was Done This Session (2026-04-25 Session 49 — Daily tips random-per-login fix)
+
+### Goal
+Fix the daily language tip showing the same tip on every login despite having 10+ tips in the DB.
+
+### Root Cause
+`GET /api/tips/random` cached the selected tip in Redis under key `daily_tip` with TTL until midnight UTC. Every login throughout the day received the same cached tip regardless of how many tips existed in the DB.
+
+### Fix
+`backend/routers/tips.py` — removed Redis cache from `get_random_tip()`:
+- Deleted `cache_key`, `cache_get()` lookup, `cache_set()` call, and `_seconds_until_midnight_utc()` helper
+- Removed now-unused `cache_get`, `cache_set` imports and unused `json`, `datetime`, `timezone` imports
+- Each request now hits `SELECT ... ORDER BY random() LIMIT 1` directly (trivially cheap for a ~10-row table)
+- Result: every login/page-load gets a fresh random tip from the pool
+
+Frontend `TipToast.tsx` is unchanged — `sessionStorage` dedup (`tip_dismissed`) still correctly prevents the same tip from re-appearing on every navigation within one browser tab session.
 
 ---
 
