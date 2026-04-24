@@ -119,7 +119,7 @@ export default function TipToast() {
           exit={{ opacity: 0, x: 80, y: 20 }}
           transition={{ type: "spring", stiffness: 320, damping: 30 }}
           // Fixed bottom-right — sits above all content
-          className="fixed bottom-6 right-6 z-[80] w-[320px] max-w-[calc(100vw-2rem)]"
+          className="fixed bottom-6 right-6 z-[85] w-[320px] max-w-[calc(100vw-2rem)]"
           role="status"
           aria-live="polite"
         >

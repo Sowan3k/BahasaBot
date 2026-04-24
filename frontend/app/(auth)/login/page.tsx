@@ -90,6 +90,7 @@ export default function LoginPage() {
       // Clear any previous chat session so each login starts fresh
       sessionStorage.removeItem("chatbot_messages");
       sessionStorage.removeItem("chatbot_session_id");
+      sessionStorage.removeItem("tip_dismissed");
       // Force light mode on every sign-in — updates React context + localStorage + DOM in one call
       setTheme("light");
       setRedirecting(true);
@@ -129,6 +130,7 @@ export default function LoginPage() {
       // Clear any previous chat session so each login starts fresh
       sessionStorage.removeItem("chatbot_messages");
       sessionStorage.removeItem("chatbot_session_id");
+      sessionStorage.removeItem("tip_dismissed");
       // Force light mode on every sign-in — updates React context + localStorage + DOM in one call
       setTheme("light");
       if (data.requires_password_setup) {

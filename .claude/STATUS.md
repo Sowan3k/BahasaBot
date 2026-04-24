@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-25 (Session 49 — Daily tips random-per-login fix)
+## Last Updated: 2026-04-25 (Session 50 - Daily tips visibility fix)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -48,7 +48,7 @@ _Update this file at the end of every session_
 | Adaptive Quiz Results Page | ✅ Complete | Dedicated /quiz/adaptive/results page; sessionStorage data-passing (quiz page stores result then router.push); score ring (green/amber/red by score); BPS level update banner with TrendingUp; per-question breakdown with SpeakerButton on wrong answers; FeedbackModal after 3s delay; Take Another Quiz invalidates cache + navigates to lobby; inline results block removed from quiz page |
 
 | User Profile + Settings (Phase 13) | ✅ Complete + Debugged (Session 45) | native_language fixed: switched from `<select>` to free-text `<input list="...">` with datalist — now shows any DB value regardless of format; learning_goal fixed: switched from `<select>` (predefined options that don't match Journey free-text goal) to `<textarea>` with 500-char counter; form rewritten with controlled inputs + useRef origin tracking (no react-hook-form/reset timing issues); Delete Account: POST /api/profile/delete-account (bcrypt verify for email accounts, email match for Google); frontend DeleteAccountModal with danger zone card; signs user out + redirects to /login after deletion; About page: Developer name updated to "Noor Mohammad Sowan" |
-| Daily Language Tips | ✅ Complete + Random-per-login fix (Session 49) | tips table + Alembic migration; GET /api/tips/random (public, no cache — returns a fresh random tip on every call so each login sees a different tip); POST /api/tips/generate (admin, Gemini, 4 categories); GET /api/tips/all (admin, paginated+filterable); PATCH /api/tips/{id} (toggle active); TipToast component (framer-motion slide-in, 8s auto-dismiss, shrinking progress bar, sessionStorage dedup within a tab session, pretty dark+light); wired into dashboard; Language Tips panel in admin (All Tips tab + Generate New tab with category tiles + range slider) |
+| Daily Language Tips | ✅ Complete + Random-per-login + visibility fix (Session 50) | tips table + Alembic migration; GET /api/tips/random (public, no cache - returns a fresh random tip on every call so each login sees a different tip); POST /api/tips/generate (admin, Gemini, 4 categories); GET /api/tips/all (admin, paginated+filterable); PATCH /api/tips/{id} (toggle active); TipToast component (framer-motion slide-in, 8s auto-dismiss, shrinking progress bar, pretty dark+light); wired into dashboard; login/register now clear `tip_dismissed` so a fresh sign-in can show a tip again; TipToast z-index raised above onboarding; Language Tips panel in admin (All Tips tab + Generate New tab with category tiles + range slider) |
 | Weekly XP Leaderboard | ✅ Complete + Visual Redesign (Session 48) | New xp_logs table (Alembic migration c1d2e3f4a5b6); XPLog ORM model; record_learning_activity() now inserts into xp_logs on every XP award; GET /api/dashboard/leaderboard (top-10 by weekly XP, current-user rank, Redis-cached 5 min, week resets Monday); LeaderboardCard fully redesigned: animated framer-motion podium (2nd–1st–3rd) for top 3; animated XP progress bars for ranks 4–10 (relative to leader's XP); days-until-Monday-reset countdown chip; empty/loading/outside-top-10 states; tsc --noEmit: 0 errors |
 | Page-refresh Bug Fix | ✅ Fixed (Session 48) | Global React Query staleTime reduced from 5 min → 0 (stale-while-revalidate: data shown instantly from cache while background refetch runs); after class completion now also invalidates ["courses"] and ["dashboard"] queries (previously only ["course", courseId] was invalidated); after module quiz submission also invalidates ["courses"] and ["dashboard"]; AppSidebar profile staleTime lowered 5 min → 60s to match layout (keeps XP/streak display fresh) |
 
@@ -72,7 +72,27 @@ _Update this file at the end of every session_
 
 ---
 
-## What Was Done This Session (2026-04-25 Session 49 — Daily tips random-per-login fix)
+## What Was Done This Session (2026-04-25 Session 50 - Daily tips visibility fix)
+
+### Goal
+Fix the Daily Language Tips toast not appearing after login even though the tips feature and random endpoint were already implemented.
+
+### Root Cause
+Two frontend issues prevented users from seeing tips:
+- `TipToast.tsx` stores `sessionStorage["tip_dismissed"] = "1"` after auto-dismiss or manual close. Login and registration only cleared chatbot session keys, so a later logout/login in the same browser tab skipped the tip entirely.
+- On first-login flows, onboarding renders at `z-[80]`, the same layer as the tip toast. Because onboarding is rendered later in the dashboard layout, it could cover the tip while the 8-second timer continued and dismissed it invisibly.
+
+### Fix
+- `frontend/app/(auth)/login/page.tsx` - email and Google login now clear `sessionStorage.removeItem("tip_dismissed")` after successful session storage.
+- `frontend/app/(auth)/register/page.tsx` - email and Google registration now clear `sessionStorage.removeItem("tip_dismissed")` after successful session storage.
+- `frontend/components/TipToast.tsx` - toast z-index raised from `z-[80]` to `z-[85]`, above onboarding (`z-[80]`) but below mandatory SetPasswordModal (`z-[90]`).
+
+### Verification
+`npx tsc --noEmit` passed with 0 TypeScript errors.
+
+---
+
+## What Was Done Previous Session (2026-04-25 Session 49 — Daily tips random-per-login fix)
 
 ### Goal
 Fix the daily language tip showing the same tip on every login despite having 10+ tips in the DB.
@@ -87,7 +107,7 @@ Fix the daily language tip showing the same tip on every login despite having 10
 - Each request now hits `SELECT ... ORDER BY random() LIMIT 1` directly (trivially cheap for a ~10-row table)
 - Result: every login/page-load gets a fresh random tip from the pool
 
-Frontend `TipToast.tsx` is unchanged — `sessionStorage` dedup (`tip_dismissed`) still correctly prevents the same tip from re-appearing on every navigation within one browser tab session.
+Follow-up Session 50 updated the frontend: `tip_dismissed` is now cleared on successful login/register, and the toast z-index was raised above onboarding so the tip cannot dismiss invisibly behind the first-login modal.
 
 ---
 

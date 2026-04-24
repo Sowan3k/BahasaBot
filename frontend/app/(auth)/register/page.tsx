@@ -87,6 +87,7 @@ export default function RegisterPage() {
       if (!ok) { setServerError("Account created but sign-in failed. Please go to Login."); return; }
       sessionStorage.removeItem("chatbot_messages");
       sessionStorage.removeItem("chatbot_session_id");
+      sessionStorage.removeItem("tip_dismissed");
       router.push("/dashboard");
     } catch (err: unknown) {
       if (axios.isAxiosError(err) && err.response?.status === 409) {
@@ -115,6 +116,7 @@ export default function RegisterPage() {
       if (!ok) { setServerError("Google sign-up failed. Please try again."); return; }
       sessionStorage.removeItem("chatbot_messages");
       sessionStorage.removeItem("chatbot_session_id");
+      sessionStorage.removeItem("tip_dismissed");
       if (data.requires_password_setup) {
         // New Google account — show mandatory set-password modal before dashboard
         setShowSetPassword(true);
