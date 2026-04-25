@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-25 (Session 52 — UI polish pass: dark mode + mobile + chatbot UX)
+## Last Updated: 2026-04-25 (Session 53 — Corrective mobile dashboard fix: remove overflow masking, single-column stat grid)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -10,7 +10,7 @@ _Update this file at the end of every session_
 | AI Chatbot Tutor | ✅ Complete + App-awareness (Session 40) + Language rule (Session 51) | SSE streaming, LangChain, RAG — Malaysian Malay + IPA in prompt; markdown rendering; session persistence; native_language injected into system prompt; RAG context Redis-cached (5 min) saving ~1.3s on repeat queries; ping SSE event for early frontend feedback; typing dots UX while waiting for first token; user profile Redis-cached (5 min TTL, invalidated on PATCH /profile); history cache updated in-place after each message (no more DB re-read on next turn); gamification XP awarded as asyncio.create_task with own session (no longer blocks SSE startup); GET /api/chatbot/prewarm warms profile cache on page load; ChatMessage wrapped in React.memo (previous messages never re-render during streaming); token batching via requestAnimationFrame (cuts setState calls from ~100/s to ≤60/s during streaming); **language detection rule**: if student writes in English → full English response; if Malay → full Malay; if mixed → English (overrides all other rules); dialect rule demoted to secondary |
 | Course Generator | ✅ Complete + English-medium fix | Lesson content in English; Malay words taught inline; Malaysian BM only |
 | Quiz | ✅ Complete + English-medium fix | Question text explicitly English; Malay vocabulary uses Malaysian BM; IPA in explanations |
-| Dashboard | ✅ Complete + Wave background + Mobile fix (Session 52) | All 6 endpoints verified; Overview tab completely redesigned: 3 SVG progress rings (Learning/Vocabulary/Quiz) with GlowCard hover, BPS slim strip, inline stats row (emoji), glowing pill Quick Actions, compact VocabPreview (no search bar, 5 rows, SpeakerButton), Weak Points + Quiz History in GlowCards; mobile-responsive (rings stay 3-col, wrap gracefully); StatsCards removed from overview; `DashboardWaveBackground` canvas component: slow sine-wave animation at ¼ resolution, dark-mode-only (#25221a→#38332a palette), faint olive tint at peaks, fixed full-screen z-0, content at z-10 |
+| Dashboard | ✅ Complete + Wave background + Mobile fix (Session 53) | All 6 endpoints verified; Overview tab completely redesigned: 3 SVG progress rings (Learning/Vocabulary/Quiz) with GlowCard hover, BPS slim strip, inline stats row (emoji), glowing pill Quick Actions, compact VocabPreview (no search bar, 5 rows, SpeakerButton), Weak Points + Quiz History in GlowCards; mobile-responsive (rings stay 3-col, wrap gracefully); StatsCards removed from overview; `DashboardWaveBackground` canvas component: slow sine-wave animation at ¼ resolution, dark-mode-only, faint olive tint at peaks, fixed full-screen z-0, content at z-10; Session 53: `overflow-x-hidden` masking removed from layout.tsx + dashboard container; stat grid corrected to `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4` so tiles fit at all mobile widths without horizontal scroll |
 | Production Hardening | ✅ Complete + Rate Limiter Fix | Rate limiter falls back to in-memory on Redis timeout (no more 500s) |
 | IPA Pronunciation | ✅ Full stack verified | Courses: IPA in all vocab items. Chatbot: /ko.soŋ/, /tə.ri.ma ka.sɪh/. Quiz: IPA in explanations |
 | Chatbot UI | ✅ Complete + Full redesign + UX polish (Session 52) | react-markdown rendering, VocabPill extraction, Malaysia flag avatar; header: backdrop-blur + live green status pulse dot + Plus icon on "New chat"; input footer: backdrop-blur + top shadow + decorative glow line + border-primary textarea + send button `bg-foreground text-background` with audio-visualizer bars while streaming; EmptyState: ambient logo glow + decorative side lines on title + starter buttons with `›` prefix arrow; error: styled bordered card; message bubbles: user → `bg-primary/25 backdrop-blur` with right gradient accent line; bot → `bg-card/60 backdrop-blur` with left gradient accent line; typing indicator → 5-bar audio visualizer (replaced 3 bouncing dots) |
@@ -72,7 +72,40 @@ _Update this file at the end of every session_
 
 ---
 
-## What Was Done This Session (2026-04-25 Session 52 — UI polish pass: dark mode + mobile + chatbot UX)
+## What Was Done This Session (2026-04-25 Session 53 — Corrective mobile dashboard fix)
+
+### Goal
+Session 52's mobile dashboard fix used `overflow-x: hidden` to mask horizontal overflow rather than resolving it — content on the right side of the viewport became silently unreachable (not scrollable, just clipped). Session 53 removes the masking and fixes the root cause by making the stat grid single-column at mobile.
+
+### Changes
+
+**`frontend/app/(dashboard)/layout.tsx`**
+- Removed `overflow-x-hidden` from `<main>` (the shared authenticated layout wrapper) — was masking overflowing content on every dashboard page
+
+**`frontend/app/(dashboard)/dashboard/page.tsx`**
+- Removed `overflow-x-hidden` from the dashboard container div
+- Inline loading skeleton stat grid: `grid-cols-2 sm:grid-cols-3` → `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4`
+
+**`frontend/app/(dashboard)/dashboard/loading.tsx`**
+- Stat card skeleton grid: `grid-cols-2 sm:grid-cols-3` → `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4`
+
+**`frontend/components/dashboard/StatsCards.tsx`**
+- Live stat grid: `grid-cols-2 sm:grid-cols-3` → `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4`
+- The Session 52 tile redesign (watermark icon top-right, left-aligned content, label/value/description layout) is unchanged
+
+### What was NOT changed
+- Dark mode palette (globals.css) — Session 52 work kept
+- Chatbot changes (asymmetric bubbles, InlineMalayWord, Waves opacity) — Session 52 work kept
+- BPSProgressBar mobile stacking — Session 52 work kept
+- Stat tile visual composition — Session 52 work kept; only the grid column count changed
+- Light mode — untouched in both sessions
+
+### Root cause analysis
+`overflow-x: hidden` on a flex scroll container parent clips absolutely-positioned children and hidden overflow rather than causing reflow. The correct approach is ensuring children actually fit within the viewport — done here by making the stat grid single-column at mobile so no tile can exceed viewport width.
+
+---
+
+## What Was Done Previous Session (2026-04-25 Session 52 — UI polish pass: dark mode + mobile + chatbot UX)
 
 ### Goal
 Six-issue UI polish pass: dark mode overhaul, background animation subtlety, chatbot asymmetric bubbles + inline vocab chips + header tagline removal, mobile top-bar overlap fix, mobile dashboard horizontal scroll fix, and stat tile layout redesign.
