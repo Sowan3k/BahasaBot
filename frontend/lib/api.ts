@@ -293,10 +293,10 @@ export const adminApi = {
   getStats: () =>
     apiClient.get<AdminStats>("/api/admin/stats"),
 
-  /** Paginated + searchable list of all users. */
-  getUsers: (page = 1, limit = 20, search = "") =>
+  /** Paginated + searchable list of all users with optional signup date range. */
+  getUsers: (page = 1, limit = 20, search = "", start_date?: string, end_date?: string) =>
     apiClient.get<PaginatedResponse<AdminUser>>("/api/admin/users", {
-      params: { page, limit, search },
+      params: { page, limit, search, start_date, end_date },
     }),
 
   /** Full profile + activity stats for a single user. */
@@ -337,6 +337,27 @@ export const adminApi = {
   /** Admin weekly XP leaderboard (includes email). */
   getLeaderboard: () =>
     apiClient.get<LeaderboardResponse>("/api/admin/leaderboard"),
+
+  /** Download users CSV — returns a Blob so the caller can trigger a browser download. */
+  exportUsers: (start_date?: string, end_date?: string) =>
+    apiClient.get<Blob>("/api/admin/export/users", {
+      params: { start_date, end_date },
+      responseType: "blob",
+    }),
+
+  /** Download quiz attempts CSV. */
+  exportQuizAttempts: (start_date?: string, end_date?: string) =>
+    apiClient.get<Blob>("/api/admin/export/quiz-attempts", {
+      params: { start_date, end_date },
+      responseType: "blob",
+    }),
+
+  /** Download feedback CSV. */
+  exportFeedback: (start_date?: string, end_date?: string) =>
+    apiClient.get<Blob>("/api/admin/export/feedback", {
+      params: { start_date, end_date },
+      responseType: "blob",
+    }),
 };
 
 // ── Notifications API (Phase 17) ──────────────────────────────────────────────

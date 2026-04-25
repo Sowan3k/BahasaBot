@@ -94,6 +94,8 @@ async def get_admin_users(
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=20, ge=1, le=100),
     search: str = Query(default="", description="Filter by name or email (case-insensitive)"),
+    start_date: str | None = Query(default=None, description="Filter signup date from (ISO: 2026-01-01)"),
+    end_date: str | None = Query(default=None, description="Filter signup date to (ISO: 2026-12-31)"),
     _admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
@@ -101,10 +103,14 @@ async def get_admin_users(
     Paginated list of all registered users.
 
     Pass ?search=<query> to filter by name or email.
+    Pass ?start_date=YYYY-MM-DD and/or ?end_date=YYYY-MM-DD to filter by signup date.
     Sorted by registration date (newest first).
     """
     try:
-        return await admin_service.get_all_users(db, page=page, limit=limit, search=search)
+        return await admin_service.get_all_users(
+            db, page=page, limit=limit, search=search,
+            start_date=start_date, end_date=end_date,
+        )
     except Exception as exc:
         logger.error("Failed to fetch admin users", error=str(exc))
         raise HTTPException(status_code=500, detail="Failed to fetch users")

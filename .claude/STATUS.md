@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-25 (Session 53 — Corrective mobile dashboard fix: remove overflow masking, single-column stat grid)
+## Last Updated: 2026-04-26 (Session 54 — Admin panel evaluation enhancements: CSV export, last_active column, date filters, score trajectory chart, feedback label fix)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -24,7 +24,7 @@ _Update this file at the end of every session_
 | User Profile + Settings (Phase 13) | ✅ Complete | GET + PATCH /api/profile/, change-password endpoint; /settings hub + /profile + /password + /about pages; Settings in sidebar |
 | Onboarding Flow (Phase 14) | ✅ Complete + Enhanced (Session 26) | 8-step questionnaire (Welcome → Gender/Age → NativeLang → WhyLearning → CurrentLevel → Goal → Timeline → DailyStudy); gender + age_range collected for personalised roadmap banner; roadmap auto-generated on finish; loading screen during generation; sonner toast on roadmap_ready; skip at any step saves partial data |
 | First-Login UI Tour | ✅ Complete + Race-fix + Dark theme (Session 30) | driver.js spotlight tour; 8 steps covering sidebar + all nav sections; triggers once after onboarding; has_seen_tour flag on users table; PATCH saves flag on tour done/skip. Race condition fixed: `active={showTour && !showOnboarding}`. Popover fully re-themed: dark card #2e2b22, warm text, olive-green Next button, ghost Back button, matching arrow — replaces default white popover |
-| Admin Control Panel (Phase 15) | ✅ Complete + Verified | /api/admin/* fully tested; stats, users (search + detail + delete + reset + analytics), feedback; password guards verified; recharts LineChart + BarChart confirmed working; analytics bug fixed (NullType → timedelta) |
+| Admin Control Panel (Phase 15) | ✅ Complete + Evaluation enhancements (Session 54) | /api/admin/* fully tested; stats, users (search + detail + delete + reset + analytics), feedback; password guards verified; recharts LineChart + BarChart confirmed working; analytics bug fixed (NullType → timedelta); CSV export endpoints (users/quiz-attempts/feedback with optional date range); last_active column on user list (from activity_logs MAX); date range filter on user list; avg quiz score pills + score trajectory LineChart on user detail; feedback label fix (general vs quiz context) |
 | Pronunciation Audio (Phase 16) | ✅ Complete + Debugged | usePronunciation hook (ms-MY → ms → default fallback); SpeakerButton component; wired into VocabPills (chatbot), course class vocab cards, quiz results breakdown, dashboard vocabulary table; 3 post-implementation bugs fixed |
 | Notification System (Phase 17) | ✅ Complete | GET /api/notifications/ (last 20 + unread_count), POST mark-read, POST read-all; NotificationBell (60s polling, unread badge) + NotificationPanel; floating global icon in layout.tsx |
 | Gamification — Streak + XP (Phase 18) | ✅ Complete | record_learning_activity() in gamification_service.py; Redis-keyed daily streak; XP awards: class=10, quiz pass=25, chatbot session=5; milestone notifications (streak 3/7/14/30, every 100 XP); wired into 4 routers (courses, quiz, chatbot); StreakBadge + XPBar components; dashboard +2 stat cards; sidebar footer shows streak+XP |
@@ -72,7 +72,33 @@ _Update this file at the end of every session_
 
 ---
 
-## What Was Done This Session (2026-04-25 Session 53 — Corrective mobile dashboard fix)
+## What Was Done This Session (2026-04-26 Session 54 — Admin panel evaluation enhancements)
+
+### Goal
+Harden the admin panel for the 30-user evaluation study: add CSV export for all three datasets, surface last_active on the user list, add date range filters to user list and exports, show avg quiz score + score trajectory on user detail, and fix the feedback label bug (general feedback showed "Quiz matched weak areas" instead of "Content is relevant").
+
+### New files
+- `backend/routers/admin_export.py` — three CSV export endpoints under `/api/admin/export/*` (users, quiz-attempts, feedback), all gated by `require_admin`; `_csv_response()` helper; `_start_dt()` / `_end_dt()` ISO date → UTC-aware datetime; bulk GROUP BY aggregation (not N+1)
+
+### Backend changes
+- `backend/main.py` — import + register `admin_export` router; add missing `backend.models.analytics` to model import block
+- `backend/services/admin_service.py` — `get_all_users()` extended with `start_date/end_date` params + `last_active` from `MAX(activity_logs.created_at)` GROUP BY; `get_user_detail()` extended with `avg_quiz_score_module`, `avg_quiz_score_standalone`, and `score_trajectory` (merged module+standalone, sorted asc, capped at 50)
+- `backend/routers/admin.py` — `GET /api/admin/users` now accepts `start_date` + `end_date` Query params
+
+### Frontend changes
+- `frontend/lib/types.ts` — `AdminUser.last_active: string | null`; `AdminUserDetail.stats` + avg score fields; `AdminUserDetail.score_trajectory` array
+- `frontend/lib/api.ts` — `getUsers` extended with date params; `exportUsers`, `exportQuizAttempts`, `exportFeedback` blob functions added
+- `frontend/app/(dashboard)/admin/page.tsx` — `DataExportPanel` component with date pickers + three download buttons; `triggerBlobDownload` (DOM-attached `<a>` for Firefox compat); improved catch block shows HTTP status + `console.error`
+- `frontend/app/(dashboard)/admin/users/page.tsx` — `formatRelativeTime()` helper; `last_active` column; start/end date inputs + Clear filters button; table grid 6-col → 7-col
+- `frontend/app/(dashboard)/admin/users/[userId]/page.tsx` — two avg score pills (module %, adaptive %); Recharts `LineChart` for score trajectory (module=purple, adaptive=green, `connectNulls`)
+- `frontend/app/(dashboard)/admin/feedback/page.tsx` — conditional label: `quiz_type === "general"` → "Content is relevant:" else "Quiz matched weak areas:"
+
+### Known issue
+CSV download requires backend restart to pick up the new `admin_export.py` module. If downloads show an HTTP 404 error, restart uvicorn.
+
+---
+
+## What Was Done Previous Session (2026-04-25 Session 53 — Corrective mobile dashboard fix)
 
 ### Goal
 Session 52's mobile dashboard fix used `overflow-x: hidden` to mask horizontal overflow rather than resolving it — content on the right side of the viewport became silently unreachable (not scrollable, just clipped). Session 53 removes the masking and fixes the root cause by making the stat grid single-column at mobile.

@@ -205,7 +205,9 @@ export default function AdminFeedbackPage() {
               <div className="flex flex-wrap items-center gap-4">
                 <StarRating rating={fb.rating} />
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <span>Quiz matched weak areas:</span>
+                  <span>
+                    {fb.quiz_type === "general" ? "Content is relevant:" : "Quiz matched weak areas:"}
+                  </span>
                   <RelevanceBadge value={fb.weak_points_relevant} />
                 </div>
               </div>

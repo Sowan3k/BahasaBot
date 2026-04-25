@@ -470,6 +470,8 @@ export interface AdminUser {
   xp_total: number;
   provider: "email" | "google";
   created_at: string;
+  /** ISO datetime of last activity_log entry, or null if never active */
+  last_active: string | null;
 }
 
 /** Row in GET /api/admin/feedback */
@@ -536,7 +538,17 @@ export interface AdminUserDetail {
     standalone_quiz_attempts: number;
     chat_sessions: number;
     weak_points: number;
+    /** Average module quiz score 0.0–1.0, null if no attempts */
+    avg_quiz_score_module: number | null;
+    /** Average standalone quiz score 0.0–1.0, null if no attempts */
+    avg_quiz_score_standalone: number | null;
   };
+  /** Chronological quiz score history, newest 50 attempts across both types */
+  score_trajectory: {
+    score: number;
+    attempted_at: string;
+    quiz_type: "module" | "standalone";
+  }[];
   recent_courses: { id: string; title: string; topic: string; created_at: string }[];
 }
 

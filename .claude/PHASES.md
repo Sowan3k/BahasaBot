@@ -1025,6 +1025,28 @@ No changes required. `generate_course()` returns an identical `Course` object wh
 
 ---
 
+## Session 54 — Admin Panel Evaluation Enhancements (2026-04-26)
+
+**Goal:** Prepare the admin panel for the 30-user evaluation study with CSV export, additional user metrics, and bug fixes.
+
+### Backend (new file)
+- [x] `backend/routers/admin_export.py` — `GET /api/admin/export/users`, `GET /api/admin/export/quiz-attempts`, `GET /api/admin/export/feedback`; all require `require_admin`; optional `start_date`/`end_date` ISO query params; `_csv_response()` StreamingResponse helper; bulk GROUP BY aggregation (not N+1)
+
+### Backend (modified)
+- [x] `backend/main.py` — import + register `admin_export` router; add `backend.models.analytics` to model import block (was missing)
+- [x] `backend/services/admin_service.py` — `get_all_users()` + `start_date`/`end_date` + `last_active` from MAX(activity_logs.created_at); `get_user_detail()` + `avg_quiz_score_module`, `avg_quiz_score_standalone`, `score_trajectory` (merged, sorted asc, capped 50)
+- [x] `backend/routers/admin.py` — `GET /api/admin/users` accepts `start_date` + `end_date` Query params
+
+### Frontend
+- [x] `frontend/lib/types.ts` — `AdminUser.last_active`; `AdminUserDetail.stats` avg score fields; `AdminUserDetail.score_trajectory`
+- [x] `frontend/lib/api.ts` — `getUsers` date params; `exportUsers`, `exportQuizAttempts`, `exportFeedback` blob functions
+- [x] `frontend/app/(dashboard)/admin/page.tsx` — `DataExportPanel` with date pickers + download buttons; `triggerBlobDownload` DOM-appends `<a>` (Firefox compat); improved error shows HTTP status
+- [x] `frontend/app/(dashboard)/admin/users/page.tsx` — `formatRelativeTime()` helper; Last Active column; date range filter + Clear; grid 6→7 col
+- [x] `frontend/app/(dashboard)/admin/users/[userId]/page.tsx` — avg score pills (module/adaptive %); score trajectory Recharts LineChart (connectNulls, two series)
+- [x] `frontend/app/(dashboard)/admin/feedback/page.tsx` — conditional relevance label: "Content is relevant:" vs "Quiz matched weak areas:" based on quiz_type
+
+---
+
 ## Session 34 — Chatbot Latency Optimizations (2026-04-17)
 
 **Goal:** Reduce cold TTFT (~4.5s) and warm TTFT (~3.2s) by eliminating every avoidable sequential operation before first token delivery.

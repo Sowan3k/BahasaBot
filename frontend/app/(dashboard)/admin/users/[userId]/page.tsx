@@ -390,8 +390,82 @@ export default function AdminUserDetailPage() {
             <StatPill icon={Brain} label="Adaptive Quizzes" value={user.stats.standalone_quiz_attempts} color="text-orange-500" />
             <StatPill icon={MessageSquare} label="Chat Sessions" value={user.stats.chat_sessions} color="text-cyan-500" />
             <StatPill icon={AlertTriangle} label="Weak Points" value={user.stats.weak_points} color="text-red-400" />
+            {/* Avg quiz score pills */}
+            <GlowCard className="bg-card p-4 flex flex-col items-center gap-1 text-center">
+              <Brain size={18} className="text-violet-500" />
+              <p className="font-heading text-xl font-bold text-foreground">
+                {user.stats.avg_quiz_score_module !== null && user.stats.avg_quiz_score_module !== undefined
+                  ? `${Math.round(user.stats.avg_quiz_score_module * 100)}%`
+                  : "—"}
+              </p>
+              <p className="text-xs text-muted-foreground">Avg Module Score</p>
+            </GlowCard>
+            <GlowCard className="bg-card p-4 flex flex-col items-center gap-1 text-center">
+              <Brain size={18} className="text-teal-500" />
+              <p className="font-heading text-xl font-bold text-foreground">
+                {user.stats.avg_quiz_score_standalone !== null && user.stats.avg_quiz_score_standalone !== undefined
+                  ? `${Math.round(user.stats.avg_quiz_score_standalone * 100)}%`
+                  : "—"}
+              </p>
+              <p className="text-xs text-muted-foreground">Avg Adaptive Score</p>
+            </GlowCard>
           </div>
         </div>
+
+        {/* ── Quiz Score Trajectory ── */}
+        {(user.score_trajectory ?? []).length > 0 && (
+          <div className="rounded-2xl border border-border bg-card p-5">
+            <p className="text-sm font-semibold text-foreground mb-4">Quiz Score Over Time</p>
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart
+                data={(user.score_trajectory ?? []).map((pt) => ({
+                  date: fmtDate(pt.attempted_at),
+                  module: pt.quiz_type === "module" ? pt.score : undefined,
+                  adaptive: pt.quiz_type === "standalone" ? pt.score : undefined,
+                }))}
+                margin={{ top: 4, right: 8, left: -16, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis dataKey="date" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
+                <YAxis tick={{ fontSize: 10 }} domain={[0, 1]} tickFormatter={(v) => `${Math.round(v * 100)}%`} />
+                <Tooltip
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload?.length) return null;
+                    return (
+                      <div className="rounded-lg border border-border bg-card px-3 py-2 shadow text-xs">
+                        <p className="text-muted-foreground mb-1">{label}</p>
+                        {payload.map((p) => (
+                          <p key={p.name} className="font-semibold text-foreground">
+                            {p.name}: <span className="text-primary">{Math.round((p.value as number) * 100)}%</span>
+                          </p>
+                        ))}
+                      </div>
+                    );
+                  }}
+                />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+                <Line
+                  type="monotone"
+                  dataKey="module"
+                  name="Module"
+                  stroke="#6d28d9"
+                  strokeWidth={2}
+                  dot={{ r: 3 }}
+                  connectNulls
+                />
+                <Line
+                  type="monotone"
+                  dataKey="adaptive"
+                  name="Adaptive"
+                  stroke="#059669"
+                  strokeWidth={2}
+                  dot={{ r: 3 }}
+                  connectNulls
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
 
         {/* ── Analytics section ── */}
         <div className="space-y-6">

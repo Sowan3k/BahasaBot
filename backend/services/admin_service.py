@@ -15,6 +15,7 @@ Functions:
 """
 
 import uuid
+from datetime import datetime, timedelta, timezone
 
 import bcrypt
 from sqlalchemy import func, or_, select
@@ -95,14 +96,23 @@ async def get_stats(db: AsyncSession) -> dict:
 # ── Users ─────────────────────────────────────────────────────────────────────
 
 
-async def get_all_users(db: AsyncSession, page: int, limit: int, search: str = "") -> dict:
+async def get_all_users(
+    db: AsyncSession,
+    page: int,
+    limit: int,
+    search: str = "",
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> dict:
     """
     Return a paginated list of all users for the admin user management table.
 
     Fields returned: id, name, email, proficiency_level, role, is_active,
-                     streak_count, xp_total, created_at
+                     streak_count, xp_total, created_at, last_active
 
     Optional search: filters by name OR email (case-insensitive ILIKE).
+    Optional start_date / end_date (ISO date strings): filter by users.created_at.
+    last_active is derived from MAX(activity_logs.created_at) per user.
     """
     offset = (page - 1) * limit
 
@@ -118,6 +128,15 @@ async def get_all_users(db: AsyncSession, page: int, limit: int, search: str = "
         base_query = base_query.where(filter_clause)
         count_query = count_query.where(filter_clause)
 
+    if start_date:
+        sd = datetime.fromisoformat(start_date).replace(tzinfo=timezone.utc)
+        base_query = base_query.where(User.created_at >= sd)
+        count_query = count_query.where(User.created_at >= sd)
+    if end_date:
+        ed = datetime.fromisoformat(end_date).replace(tzinfo=timezone.utc) + timedelta(days=1) - timedelta(microseconds=1)
+        base_query = base_query.where(User.created_at <= ed)
+        count_query = count_query.where(User.created_at <= ed)
+
     total = await db.scalar(count_query)
 
     result = await db.execute(
@@ -127,6 +146,17 @@ async def get_all_users(db: AsyncSession, page: int, limit: int, search: str = "
         .limit(limit)
     )
     users = result.scalars().all()
+
+    # last_active: MAX(activity_logs.created_at) per user — one query for the whole page
+    last_active_map: dict = {}
+    if users:
+        user_ids = [u.id for u in users]
+        la_result = await db.execute(
+            select(ActivityLog.user_id, func.max(ActivityLog.created_at).label("la"))
+            .where(ActivityLog.user_id.in_(user_ids))
+            .group_by(ActivityLog.user_id)
+        )
+        last_active_map = {r.user_id: r.la for r in la_result.all()}
 
     items = [
         {
@@ -140,6 +170,7 @@ async def get_all_users(db: AsyncSession, page: int, limit: int, search: str = "
             "xp_total": u.xp_total,
             "provider": u.provider,
             "created_at": u.created_at.isoformat(),
+            "last_active": last_active_map[u.id].isoformat() if u.id in last_active_map else None,
         }
         for u in users
     ]
@@ -291,6 +322,37 @@ async def get_user_detail(db: AsyncSession, user_id: uuid.UUID) -> dict:
         for r in courses_result.all()
     ]
 
+    # Average quiz scores (module vs standalone separately)
+    avg_module = await db.scalar(
+        select(func.avg(ModuleQuizAttempt.score))
+        .where(ModuleQuizAttempt.user_id == user_id)
+    )
+    avg_standalone = await db.scalar(
+        select(func.avg(StandaloneQuizAttempt.score))
+        .where(StandaloneQuizAttempt.user_id == user_id)
+    )
+
+    # Score trajectory: both attempt types merged, sorted oldest→newest, capped at 50
+    mod_traj = await db.execute(
+        select(ModuleQuizAttempt.score, ModuleQuizAttempt.taken_at)
+        .where(ModuleQuizAttempt.user_id == user_id)
+        .order_by(ModuleQuizAttempt.taken_at.asc())
+    )
+    std_traj = await db.execute(
+        select(StandaloneQuizAttempt.score, StandaloneQuizAttempt.taken_at)
+        .where(StandaloneQuizAttempt.user_id == user_id)
+        .order_by(StandaloneQuizAttempt.taken_at.asc())
+    )
+    trajectory: list[dict] = [
+        {"score": round(r.score, 4), "attempted_at": r.taken_at.isoformat(), "quiz_type": "module"}
+        for r in mod_traj.all()
+    ] + [
+        {"score": round(r.score, 4), "attempted_at": r.taken_at.isoformat(), "quiz_type": "standalone"}
+        for r in std_traj.all()
+    ]
+    trajectory.sort(key=lambda x: x["attempted_at"])
+    trajectory = trajectory[-50:]  # keep the 50 most recent in ascending order
+
     return {
         "id": str(user.id),
         "name": user.name,
@@ -315,7 +377,10 @@ async def get_user_detail(db: AsyncSession, user_id: uuid.UUID) -> dict:
             "standalone_quiz_attempts": standalone_quiz_count or 0,
             "chat_sessions": chat_session_count or 0,
             "weak_points": weak_points_count or 0,
+            "avg_quiz_score_module": round(float(avg_module), 4) if avg_module is not None else None,
+            "avg_quiz_score_standalone": round(float(avg_standalone), 4) if avg_standalone is not None else None,
         },
+        "score_trajectory": trajectory,
         "recent_courses": recent_courses,
     }
 

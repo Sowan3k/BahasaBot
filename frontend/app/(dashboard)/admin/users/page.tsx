@@ -13,10 +13,26 @@ import {
   XCircle,
   Search,
   ExternalLink,
+  X,
 } from "lucide-react";
 import { adminApi, profileApi } from "@/lib/api";
 import type { AdminUser, PaginatedResponse } from "@/lib/types";
 import { GlowCard } from "@/components/ui/glow-card";
+
+function formatRelativeTime(iso: string | null): string {
+  if (!iso) return "Never";
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months}mo ago`;
+  return `${Math.floor(months / 12)}y ago`;
+}
 
 const BPS_COLORS: Record<string, string> = {
   "BPS-1": "bg-muted text-muted-foreground",
@@ -31,6 +47,8 @@ export default function AdminUsersPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deactivating, setDeactivating] = useState<string | null>(null);
@@ -45,15 +63,15 @@ export default function AdminUsersPage() {
       .catch(() => router.replace("/dashboard"));
   }, [router]);
 
-  // Fetch users whenever page or search changes
+  // Fetch users whenever page, search, or date filter changes
   useEffect(() => {
     setLoading(true);
     setError(null);
-    adminApi.getUsers(page, LIMIT, search)
+    adminApi.getUsers(page, LIMIT, search, startDate || undefined, endDate || undefined)
       .then((res) => setData(res.data))
       .catch(() => setError("Failed to load users"))
       .finally(() => setLoading(false));
-  }, [page, search]);
+  }, [page, search, startDate, endDate]);
 
   // Debounce search input — wait 400ms after last keystroke
   function handleSearchInput(val: string) {
@@ -99,16 +117,54 @@ export default function AdminUsersPage() {
         </div>
       </div>
 
-      {/* ── Search bar ── */}
-      <div className="relative">
-        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-        <input
-          type="text"
-          placeholder="Search by name or email…"
-          value={searchInput}
-          onChange={(e) => handleSearchInput(e.target.value)}
-          className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-        />
+      {/* ── Search + date filters ── */}
+      <div className="flex flex-wrap gap-3 items-center">
+        {/* Search box */}
+        <div className="relative flex-1 min-w-[220px]">
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Search by name or email…"
+            value={searchInput}
+            onChange={(e) => handleSearchInput(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+          />
+        </div>
+
+        {/* Signup date range */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-muted-foreground whitespace-nowrap">Signed up:</span>
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => { setStartDate(e.target.value); setPage(1); }}
+            className="text-sm rounded-xl border border-border bg-card text-foreground px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/30"
+          />
+          <span className="text-xs text-muted-foreground">–</span>
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => { setEndDate(e.target.value); setPage(1); }}
+            className="text-sm rounded-xl border border-border bg-card text-foreground px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/30"
+          />
+        </div>
+
+        {/* Clear filters */}
+        {(search || startDate || endDate) && (
+          <button
+            onClick={() => {
+              setSearchInput("");
+              setSearch("");
+              setStartDate("");
+              setEndDate("");
+              setPage(1);
+            }}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors border border-border/60 rounded-lg px-3 py-2.5"
+          >
+            <X size={12} />
+            Clear filters
+          </button>
+        )}
       </div>
 
       {/* ── Error ── */}
@@ -134,12 +190,13 @@ export default function AdminUsersPage() {
         <GlowCard className="bg-card overflow-x-auto !rounded-xl">
           <div className="min-w-[700px]">
           {/* Table header */}
-          <div className="grid grid-cols-[2fr_2fr_1fr_1fr_1fr_auto] gap-4 px-5 py-3 bg-muted/50 border-b border-border text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+          <div className="grid grid-cols-[2fr_2fr_1fr_1fr_1fr_1fr_auto] gap-4 px-5 py-3 bg-muted/50 border-b border-border text-xs font-semibold text-muted-foreground uppercase tracking-wide">
             <span>User</span>
             <span>Email</span>
             <span>BPS Level</span>
             <span>XP</span>
             <span>Status</span>
+            <span>Last Active</span>
             <span />
           </div>
 
@@ -147,7 +204,7 @@ export default function AdminUsersPage() {
           {data.items.map((user) => (
             <div
               key={user.id}
-              className="grid grid-cols-[2fr_2fr_1fr_1fr_1fr_auto] gap-4 px-5 py-3.5 border-b border-border last:border-b-0 items-center hover:bg-muted/30 transition-colors"
+              className="grid grid-cols-[2fr_2fr_1fr_1fr_1fr_1fr_auto] gap-4 px-5 py-3.5 border-b border-border last:border-b-0 items-center hover:bg-muted/30 transition-colors"
             >
               {/* Name + role */}
               <div className="min-w-0">
@@ -178,6 +235,11 @@ export default function AdminUsersPage() {
                   <XCircle size={13} /> Inactive
                 </span>
               )}
+
+              {/* Last Active */}
+              <p className="text-xs text-muted-foreground">
+                {formatRelativeTime(user.last_active ?? null)}
+              </p>
 
               {/* Actions */}
               <div className="flex items-center gap-2">

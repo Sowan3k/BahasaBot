@@ -24,20 +24,21 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from backend.middleware.rate_limiter import limiter
-from backend.routers import admin, auth, chatbot, courses, dashboard, evaluation, games, journey, notifications, profile, quiz, tips
+from backend.routers import admin, admin_export, auth, chatbot, courses, dashboard, evaluation, games, journey, notifications, profile, quiz, tips
 from backend.utils.cache import close_redis, init_redis
 from backend.utils.logger import get_logger, setup_logging
 
 # Import all models so they are registered on Base.metadata at startup.
 # Required for Alembic autogenerate to pick up all tables.
+import backend.models.analytics     # noqa: F401
 import backend.models.chatbot       # noqa: F401
 import backend.models.course        # noqa: F401
 import backend.models.document      # noqa: F401
+import backend.models.evaluation    # noqa: F401
+import backend.models.journey       # noqa: F401
 import backend.models.notification  # noqa: F401
 import backend.models.progress      # noqa: F401
 import backend.models.quiz          # noqa: F401
-import backend.models.evaluation    # noqa: F401
-import backend.models.journey       # noqa: F401
 import backend.models.tip           # noqa: F401
 import backend.models.user          # noqa: F401
 import backend.models.xp_log        # noqa: F401
@@ -167,6 +168,7 @@ app.include_router(quiz.router, prefix="/api/quiz", tags=["quiz"])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["dashboard"])
 app.include_router(profile.router, prefix="/api/profile", tags=["profile"])
 app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
+app.include_router(admin_export.router, prefix="/api/admin", tags=["admin"])
 app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
 app.include_router(games.router, prefix="/api/games", tags=["games"])
 app.include_router(journey.router, prefix="/api/journey", tags=["journey"])

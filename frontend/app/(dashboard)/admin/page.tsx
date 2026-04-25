@@ -22,6 +22,7 @@ import {
   Loader2,
   Sparkles,
   Trophy,
+  Download,
   type LucideIcon,
 } from "lucide-react";
 import { adminApi, profileApi, tipsApi } from "@/lib/api";
@@ -110,6 +111,134 @@ function StatCard({
         {sub && <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>}
       </div>
     </GlowCard>
+  );
+}
+
+// ── Data Export panel ─────────────────────────────────────────────────────────
+
+type ExportKey = "users" | "quiz-attempts" | "feedback";
+
+const EXPORTS: { key: ExportKey; label: string; description: string }[] = [
+  { key: "users", label: "Users CSV", description: "All users with BPS level, quiz scores, vocab count, last active" },
+  { key: "quiz-attempts", label: "Quiz Attempts CSV", description: "Every module + adaptive quiz attempt with scores" },
+  { key: "feedback", label: "Feedback CSV", description: "All evaluation survey responses" },
+];
+
+function triggerBlobDownload(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  // Must be in DOM for Firefox and some Chromium builds to fire the download
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 100);
+}
+
+function DataExportPanel() {
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [downloading, setDownloading] = useState<ExportKey | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  async function handleDownload(key: ExportKey) {
+    setDownloading(key);
+    setError(null);
+    try {
+      const sd = startDate || undefined;
+      const ed = endDate || undefined;
+      let res;
+      if (key === "users") res = await adminApi.exportUsers(sd, ed);
+      else if (key === "quiz-attempts") res = await adminApi.exportQuizAttempts(sd, ed);
+      else res = await adminApi.exportFeedback(sd, ed);
+      triggerBlobDownload(res.data as Blob, `bahasabot_${key}_${today}.csv`);
+    } catch (err: unknown) {
+      const status = (err as any)?.response?.status;
+      const msg = status
+        ? `Export failed (HTTP ${status}). Ensure the backend is running and try again.`
+        : `Failed to download ${key} export. Check that the backend server is running.`;
+      console.error("CSV export error:", err);
+      setError(msg);
+    } finally {
+      setDownloading(null);
+    }
+  }
+
+  return (
+    <div>
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-9 h-9 rounded-lg bg-green-500/10 flex items-center justify-center shrink-0">
+          <Download size={18} className="text-green-500" />
+        </div>
+        <div>
+          <h2 className="font-heading text-base font-semibold text-foreground">Data Exports</h2>
+          <p className="text-xs text-muted-foreground">Download evaluation data as CSV for statistical analysis</p>
+        </div>
+      </div>
+
+      <GlowCard className="bg-card overflow-hidden">
+        {/* Date range filter */}
+        <div className="flex flex-wrap items-center gap-3 p-4 border-b border-border/50">
+          <span className="text-xs font-medium text-muted-foreground shrink-0">Filter by date:</span>
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="text-sm rounded-lg border border-border bg-background text-foreground px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+            <span className="text-xs text-muted-foreground">to</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="text-sm rounded-lg border border-border bg-background text-foreground px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+          </div>
+          {(startDate || endDate) && (
+            <button
+              onClick={() => { setStartDate(""); setEndDate(""); }}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+
+        {error && (
+          <div className="flex items-center gap-2 px-4 py-3 bg-destructive/10 border-b border-destructive/20">
+            <AlertTriangle size={14} className="text-destructive shrink-0" />
+            <p className="text-sm text-destructive">{error}</p>
+          </div>
+        )}
+
+        <div className="divide-y divide-border/40">
+          {EXPORTS.map(({ key, label, description }) => (
+            <div key={key} className="flex items-center justify-between gap-4 px-4 py-3.5">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-foreground">{label}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
+              </div>
+              <button
+                onClick={() => handleDownload(key)}
+                disabled={downloading !== null}
+                className="flex items-center gap-1.5 shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold border border-green-500/40 text-green-600 dark:text-green-400 hover:bg-green-500/10 disabled:opacity-50 transition-colors"
+              >
+                {downloading === key ? (
+                  <Loader2 size={13} className="animate-spin" />
+                ) : (
+                  <Download size={13} />
+                )}
+                {downloading === key ? "Downloading…" : "Download"}
+              </button>
+            </div>
+          ))}
+        </div>
+      </GlowCard>
+    </div>
   );
 }
 
@@ -640,6 +769,9 @@ export default function AdminPage() {
           ))}
         </GlowCard>
       </div>
+
+      {/* ── Data Exports ── */}
+      <DataExportPanel />
 
       {/* ── Language Tips ── */}
       <LanguageTipsPanel />
