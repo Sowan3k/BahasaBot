@@ -65,19 +65,19 @@ export default function StatsCards({ stats }: Props) {
       value: stats.streak_count,
       description: "days",
       Icon: Flame,
-      iconColor: "text-orange-500/25",
+      iconColor: "text-primary/20",
     },
     {
       label: "Total XP",
       value: stats.xp_total,
       description: "experience",
       Icon: Star,
-      iconColor: "text-yellow-500/25",
+      iconColor: "text-primary/20",
     },
   ];
 
   return (
-    <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+    <ul className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
       {cards.map((card) => (
         <li key={card.label} className="list-none">
           <div className="relative h-full rounded-[1.25rem] border-[0.75px] border-border p-1.5">
