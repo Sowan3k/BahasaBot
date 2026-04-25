@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-25 (Session 51 — Chatbot redesign + skeleton overhaul + wave background)
+## Last Updated: 2026-04-25 (Session 52 — UI polish pass: dark mode + mobile + chatbot UX)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -10,10 +10,10 @@ _Update this file at the end of every session_
 | AI Chatbot Tutor | ✅ Complete + App-awareness (Session 40) + Language rule (Session 51) | SSE streaming, LangChain, RAG — Malaysian Malay + IPA in prompt; markdown rendering; session persistence; native_language injected into system prompt; RAG context Redis-cached (5 min) saving ~1.3s on repeat queries; ping SSE event for early frontend feedback; typing dots UX while waiting for first token; user profile Redis-cached (5 min TTL, invalidated on PATCH /profile); history cache updated in-place after each message (no more DB re-read on next turn); gamification XP awarded as asyncio.create_task with own session (no longer blocks SSE startup); GET /api/chatbot/prewarm warms profile cache on page load; ChatMessage wrapped in React.memo (previous messages never re-render during streaming); token batching via requestAnimationFrame (cuts setState calls from ~100/s to ≤60/s during streaming); **language detection rule**: if student writes in English → full English response; if Malay → full Malay; if mixed → English (overrides all other rules); dialect rule demoted to secondary |
 | Course Generator | ✅ Complete + English-medium fix | Lesson content in English; Malay words taught inline; Malaysian BM only |
 | Quiz | ✅ Complete + English-medium fix | Question text explicitly English; Malay vocabulary uses Malaysian BM; IPA in explanations |
-| Dashboard | ✅ Complete + Wave background (Session 51) | All 6 endpoints verified; Overview tab completely redesigned: 3 SVG progress rings (Learning/Vocabulary/Quiz) with GlowCard hover, BPS slim strip, inline stats row (emoji), glowing pill Quick Actions, compact VocabPreview (no search bar, 5 rows, SpeakerButton), Weak Points + Quiz History in GlowCards; mobile-responsive (rings stay 3-col, wrap gracefully); StatsCards removed from overview; `DashboardWaveBackground` canvas component: slow sine-wave animation at ¼ resolution, dark-mode-only (#25221a→#38332a palette), faint olive tint at peaks, fixed full-screen z-0, content at z-10 |
+| Dashboard | ✅ Complete + Wave background + Mobile fix (Session 52) | All 6 endpoints verified; Overview tab completely redesigned: 3 SVG progress rings (Learning/Vocabulary/Quiz) with GlowCard hover, BPS slim strip, inline stats row (emoji), glowing pill Quick Actions, compact VocabPreview (no search bar, 5 rows, SpeakerButton), Weak Points + Quiz History in GlowCards; mobile-responsive (rings stay 3-col, wrap gracefully); StatsCards removed from overview; `DashboardWaveBackground` canvas component: slow sine-wave animation at ¼ resolution, dark-mode-only (#25221a→#38332a palette), faint olive tint at peaks, fixed full-screen z-0, content at z-10 |
 | Production Hardening | ✅ Complete + Rate Limiter Fix | Rate limiter falls back to in-memory on Redis timeout (no more 500s) |
 | IPA Pronunciation | ✅ Full stack verified | Courses: IPA in all vocab items. Chatbot: /ko.soŋ/, /tə.ri.ma ka.sɪh/. Quiz: IPA in explanations |
-| Chatbot UI | ✅ Complete + Full redesign (Session 51) | react-markdown rendering, VocabPill extraction, Malaysia flag avatar; header: backdrop-blur + live green status pulse dot + Plus icon on "New chat"; input footer: backdrop-blur + top shadow + decorative glow line + border-primary textarea + send button `bg-foreground text-background` with audio-visualizer bars while streaming; EmptyState: ambient logo glow + decorative side lines on title + starter buttons with `›` prefix arrow; error: styled bordered card; message bubbles: user → `bg-primary/25 backdrop-blur` with right gradient accent line; bot → `bg-card/60 backdrop-blur` with left gradient accent line; typing indicator → 5-bar audio visualizer (replaced 3 bouncing dots) |
+| Chatbot UI | ✅ Complete + Full redesign + UX polish (Session 52) | react-markdown rendering, VocabPill extraction, Malaysia flag avatar; header: backdrop-blur + live green status pulse dot + Plus icon on "New chat"; input footer: backdrop-blur + top shadow + decorative glow line + border-primary textarea + send button `bg-foreground text-background` with audio-visualizer bars while streaming; EmptyState: ambient logo glow + decorative side lines on title + starter buttons with `›` prefix arrow; error: styled bordered card; message bubbles: user → `bg-primary/25 backdrop-blur` with right gradient accent line; bot → `bg-card/60 backdrop-blur` with left gradient accent line; typing indicator → 5-bar audio visualizer (replaced 3 bouncing dots) |
 | Dark Mode | ✅ Complete + Repositioned | ThemeToggle moved to top-right of sidebar header row (industry standard); icon variant added for collapsed/mobile |
 | UI Polish | ✅ Complete | Space Grotesk font, botanical color palette, glowing dashboard cards, animated auth pages |
 | Local Dev Launcher | ✅ Complete | `start-bahasabot.bat` launches both frontend + backend; PM2 config removed from root |
@@ -72,7 +72,62 @@ _Update this file at the end of every session_
 
 ---
 
-## What Was Done This Session (2026-04-25 Session 51 — Chatbot redesign + skeleton overhaul + wave background)
+## What Was Done This Session (2026-04-25 Session 52 — UI polish pass: dark mode + mobile + chatbot UX)
+
+### Goal
+Six-issue UI polish pass: dark mode overhaul, background animation subtlety, chatbot asymmetric bubbles + inline vocab chips + header tagline removal, mobile top-bar overlap fix, mobile dashboard horizontal scroll fix, and stat tile layout redesign.
+
+### Changes
+
+**`frontend/app/globals.css`**
+- Dark mode variables completely rethought — "library night mode" palette:
+  - `--background`: #25221a (muddy olive) → **#111110** (near-black, barely warm)
+  - `--card`: #2e2b22 → **#1c1b1a** (one shade lighter than bg, neutral)
+  - `--border`: #3d3a2e → **#2e2c2a** (subtle, visible)
+  - `--input` / `--secondary` / `--muted`: all updated to neutral dark
+  - `--muted-foreground`: #a8a096 → **#888480** (neutral grey, not olive)
+  - `--sidebar`: #1c1a13 → **#0b0b0a** (deepest surface for sidebar)
+  - `--foreground`: #ede4d4 → **#e6e1d8** (warm off-white, unchanged feel)
+  - Primary (#8a9f7b) and accent (#a18f5c) kept — they appear on action elements only
+- Driver.js popover overrides updated to new neutral palette (#1c1b1a bg, #e6e1d8 title, #888480 desc)
+
+**`frontend/components/ui/dashboard-wave-background.tsx`**
+- Dark palette updated to match new bg: #111110 → #1e1d1b (13-unit range vs old 19-unit)
+- Sage tint threshold raised from 0.6 to 0.7, intensity halved — barely perceptible at peaks
+
+**`frontend/app/(dashboard)/chatbot/page.tsx`**
+- **Background animations fix**: Waves stroke in dark mode changed from `#8a9f7b` (fully visible) to `rgba(138,159,123,0.09)` — ambient texture only, not competing with content
+- Waves background color updated from `#25221a` → `#111110` to match new dark bg
+- **Header tagline removed**: "Bahasa Melayu" subtitle line removed; live green pulse dot moved inline with "AI Tutor" title
+
+**`frontend/components/chatbot/ChatMessage.tsx`**
+- **Asymmetric bubbles**: Assistant message container (`bg-card/60 backdrop-blur border`) replaced with plain unstyled div — no bubble, no border, text renders directly on page background (avatar remains as visual anchor)
+- **Inline vocab chips**: `VocabPill` import replaced with `InlineMalayWord` — chatbot-only component that renders vocab as `font-medium underline decoration-amber-600/50 decoration-dotted` + trailing `Volume2` speaker icon at 10px (no pill border, no background fill). The VocabPill component in VocabularyHighlight.tsx is unchanged — course/quiz/dashboard uses the full pill, only chatbot uses the inline style.
+- User bubble unchanged (tinted pill with right accent line)
+
+**`frontend/app/(dashboard)/layout.tsx`**
+- Added `overflow-x-hidden` to `<main>` — prevents any absolute/glow-effect child from causing a viewport-level horizontal scrollbar on any page
+
+**`frontend/components/dashboard/BPSProgressBar.tsx`**
+- Header row: `flex items-center justify-between` → `flex flex-col sm:flex-row ...` — "BahasaBot Proficiency Scale (BPS)" and level badge now stack vertically on mobile instead of overflowing
+- Title: `text-base` → `text-sm sm:text-base`, level badge: `text-sm` → `text-xs sm:text-sm`
+- Track div: added `min-w-0` on container and each segment to prevent flex overflow
+
+**`frontend/components/dashboard/StatsCards.tsx`**
+- **Stat tile redesign**: icon top-left small box → large faint watermark icon absolutely positioned top-right corner (`w-8 h-8 sm:w-10 sm:h-10`, opacity ~20–25% via Tailwind `/20`-`/30` text color utility)
+- Content now left-aligned without competing with a redundant icon box; label truncated at `text-[9px] sm:text-[10px]` with `tracking-widest`; value at `text-2xl sm:text-3xl`; description separated below
+- Tile labels shortened ("Courses Created" → "Courses", "Classes Completed" → "Classes Done", etc.) to prevent overflow at `tracking-widest` on mobile
+- `pr-8 sm:pr-10` on the text block ensures number doesn't overlap the watermark icon
+
+### Judgement calls
+- Dark mode background: chose #111110 (slight warmth, not cold pure-black) to avoid feeling completely disconnected from the light-mode parchment brand. Sidebar at #0b0b0a to give clear hierarchy depth.
+- Waves stroke opacity: 0.09 (9%) — verified this is visible if you look for it but doesn't distract while reading messages.
+- Stat tile icon: chose "large faint watermark top-right" over "icon on the left, value on the right" or "icon centered as background" because it fills the previously dead right space while keeping the hierarchy (number is the most important element, reads first top-left).
+- Vocab chips: `title` attribute holds the English meaning (native browser tooltip on hover). No explicit tooltip overlay needed — keeps the implementation minimal and accessible.
+
+---
+
+## What Was Done Previous Session (2026-04-25 Session 51 — Chatbot redesign + skeleton overhaul + wave background)
 
 ### Goal
 Polish the chatbot UI, fix the chatbot language detection bug, overhaul all loading skeletons to match real page layouts, and add an animated wave background to the dashboard.

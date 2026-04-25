@@ -54,37 +54,38 @@
   }
 
   .dark {
-    --background: #25221a;
-    --foreground: #ede4d4;
-    --card: #2e2b22;
-    --card-foreground: #ede4d4;
-    --popover: #2e2b22;
-    --popover-foreground: #ede4d4;
+    /* ── Library dark mode — near-black neutral reading surface ── */
+    --background: #111110;
+    --foreground: #e6e1d8;
+    --card: #1c1b1a;
+    --card-foreground: #e6e1d8;
+    --popover: #1c1b1a;
+    --popover-foreground: #e6e1d8;
     --primary: #8a9f7b;
-    --primary-foreground: #1a1c16;
-    --secondary: #3d3a2e;
-    --secondary-foreground: #ede4d4;
-    --muted: #363228;
-    --muted-foreground: #a8a096;
+    --primary-foreground: #0c1008;
+    --secondary: #252422;
+    --secondary-foreground: #e6e1d8;
+    --muted: #252422;
+    --muted-foreground: #888480;
     --accent: #a18f5c;
-    --accent-foreground: #1a1c16;
+    --accent-foreground: #0c1008;
     --destructive: #b5766a;
     --destructive-foreground: #f0e9db;
-    --border: #3d3a2e;
-    --input: #3d3a2e;
+    --border: #2e2c2a;
+    --input: #252422;
     --ring: #8a9f7b;
     --chart-1: #8a9f7b;
     --chart-2: #9db18c;
     --chart-3: #71856a;
     --chart-4: #a18f5c;
     --chart-5: #5e6e58;
-    --sidebar: #1c1a13;
-    --sidebar-foreground: #ede4d4;
+    --sidebar: #0b0b0a;
+    --sidebar-foreground: #e6e1d8;
     --sidebar-primary: #8a9f7b;
-    --sidebar-primary-foreground: #1a1c16;
+    --sidebar-primary-foreground: #0c1008;
     --sidebar-accent: #a18f5c;
-    --sidebar-accent-foreground: #1a1c16;
-    --sidebar-border: #2a2820;
+    --sidebar-accent-foreground: #0c1008;
+    --sidebar-border: #1c1b1a;
     --sidebar-ring: #8a9f7b;
   }
 }
@@ -152,8 +153,8 @@
 ─────────────────────────────────────────────────────────────────────────── */
 
 .driver-popover {
-  background-color: #2e2b22 !important;
-  border: 1px solid #4a4636 !important;
+  background-color: #1c1b1a !important;
+  border: 1px solid #363330 !important;
   border-radius: 12px !important;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(138, 159, 123, 0.12) !important;
   padding: 20px 22px 16px !important;
@@ -163,7 +164,7 @@
 }
 
 .driver-popover-title {
-  color: #ede4d4 !important;
+  color: #e6e1d8 !important;
   font-size: 15px !important;
   font-weight: 600 !important;
   letter-spacing: -0.01em !important;
@@ -172,7 +173,7 @@
 }
 
 .driver-popover-description {
-  color: #a8a096 !important;
+  color: #888480 !important;
   font-size: 13.5px !important;
   line-height: 1.55 !important;
   margin-bottom: 0 !important;
@@ -211,9 +212,9 @@
 
 .driver-popover-prev-btn:hover,
 .driver-popover-done-btn:hover {
-  background-color: #363228 !important;
-  border-color: #5e5a4a !important;
-  color: #ede4d4 !important;
+  background-color: #252422 !important;
+  border-color: #4a4844 !important;
+  color: #e6e1d8 !important;
 }
 
 /* Next button gets the primary olive green accent */
@@ -249,7 +250,7 @@
 /* Arrow that points at the highlighted element —
    override base border color; the side-specific classes still make 3 sides transparent */
 .driver-popover-arrow {
-  border-color: #2e2b22 !important;
+  border-color: #1c1b1a !important;
 }
 
 /* Darken the overlay slightly beyond driver.js default */

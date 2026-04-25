@@ -9,8 +9,8 @@ import { useEffect, useRef } from "react";
  * is a gentle "breathing" effect, not a distraction from the content.
  * Colors stay tightly within the BahasaBot design-system palette:
  *
- *   Dark  mode: base #25221a → peak ~#38332a  (≈20 RGB units of variation)
- *   Light mode: base #e4d7b0 → peak ~#d5c89e  (≈15 RGB units darker)
+ *   Dark  mode: base #111110 → peak ~#1e1d1b  (≈13 RGB units — very subtle)
+ *   Light mode: transparent (CSS bg-background shows through unchanged)
  *
  * Theme is re-read every frame so switching themes is instant.
  */
@@ -96,17 +96,17 @@ const DashboardWaveBackground = () => {
           // wave ∈ [−0.5, +0.5]  →  remapped to [0, 1] for colour mixing
           const w = (fastSin(a) + fastCos(d)) * 0.5 + 0.5; // 0 → 1
 
-          // Dark palette: interpolate #25221a → #38332a
-          // (37,34,26) → (56,51,42)  — 19 / 17 / 16 unit range
-          let r = 37 + 19 * w;
-          let g = 34 + 17 * w;
-          let b = 26 + 16 * w;
+          // Dark palette: interpolate #111110 → #1e1d1b
+          // (17,17,16) → (30,29,27) — 13/12/11 unit range (very subtle)
+          let r = 17 + 13 * w;
+          let g = 17 + 12 * w;
+          let b = 16 + 11 * w;
 
-          // Faint olive tint at bright peaks (w > 0.6) — matches primary #8a9f7b
-          if (w > 0.6) {
-            const peak = (w - 0.6) / 0.4; // 0 → 1
-            g += peak * 6;  // nudge green slightly
-            r -= peak * 2;  // cool the red fractionally
+          // Barely-perceptible sage tint at bright peaks (w > 0.7)
+          if (w > 0.7) {
+            const peak = (w - 0.7) / 0.3;
+            g += peak * 3;
+            r -= peak * 1;
           }
 
           const idx = (y * width + x) * 4;

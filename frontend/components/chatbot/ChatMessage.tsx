@@ -14,7 +14,8 @@
 import { Fragment, memo, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import type { Components } from "react-markdown";
-import { VocabPill } from "./VocabularyHighlight";
+import { Volume2 } from "lucide-react";
+import { usePronunciation } from "@/lib/hooks/usePronunciation";
 
 interface ChatMessageProps {
   role: "user" | "assistant";
@@ -41,6 +42,38 @@ function preprocessContent(text: string): string {
   );
 }
 
+/**
+ * Chatbot-only inline Malay word rendering.
+ * Renders as underlined text (no pill border/bg) + small trailing speaker icon.
+ * The tooltip for the English meaning is in the title attribute (hover to see).
+ */
+function InlineMalayWord({ malay, english }: { malay: string; english: string }) {
+  const { speak, isSupported } = usePronunciation();
+  return (
+    <span className="inline-flex items-baseline gap-0.5 mx-px">
+      <span
+        title={english}
+        className="font-medium underline decoration-amber-600/50 decoration-dotted
+                   underline-offset-2 cursor-help"
+      >
+        {malay}
+      </span>
+      {isSupported && (
+        <button
+          type="button"
+          title={`Pronounce "${malay}"`}
+          aria-label={`Pronounce ${malay}`}
+          onClick={(e) => { e.stopPropagation(); speak(malay); }}
+          className="inline-flex items-center text-muted-foreground/50 hover:text-primary
+                     transition-colors active:scale-95 p-px"
+        >
+          <Volume2 size={10} />
+        </button>
+      )}
+    </span>
+  );
+}
+
 /** Split a plain text string on §V§ placeholders → React nodes. */
 function parseVocabText(text: string): React.ReactNode[] {
   const parts = text.split(/§V§([^§]+)§([^§]+)§/);
@@ -51,7 +84,7 @@ function parseVocabText(text: string): React.ReactNode[] {
     if (parts[i]) result.push(parts[i]);
     if (i + 2 < parts.length) {
       result.push(
-        <VocabPill
+        <InlineMalayWord
           key={`vp-${i}-${parts[i + 1]}`}
           malay={parts[i + 1]}
           english={parts[i + 2]}
@@ -184,47 +217,35 @@ const ChatMessage = memo(function ChatMessage({
       )}
 
       {isUser ? (
-        /* ── User bubble — olive/primary tint so it's clearly distinct from bot ── */
+        /* ── User bubble — tinted pill, clearly distinct from assistant ── */
         <div className="flex items-stretch max-w-[78%] sm:max-w-sm">
           <div className="rounded-2xl rounded-br-sm px-4 py-3
-            bg-primary/25 backdrop-blur-sm
-            border border-primary/30
-            text-foreground shadow-[0_4px_16px_rgba(0,0,0,0.3)]">
+            bg-primary/20 backdrop-blur-sm
+            border border-primary/25
+            text-foreground shadow-[0_2px_12px_rgba(0,0,0,0.2)]">
             <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
               {content}
             </p>
           </div>
-
           {/* Right accent line */}
           <div className="w-0.5 flex-shrink-0 rounded-full ml-2 self-stretch
-            bg-gradient-to-b from-primary/70 via-primary/40 to-transparent" />
+            bg-gradient-to-b from-primary/60 via-primary/30 to-transparent" />
         </div>
       ) : (
-        /* ── Assistant bubble — neutral glass card, clearly different from user ── */
-        <div className="flex items-stretch max-w-[88%] sm:max-w-2xl">
-          {/* Left accent line */}
-          <div className="w-0.5 flex-shrink-0 rounded-full mr-2 self-stretch
-            bg-gradient-to-b from-border via-border/50 to-transparent" />
-
-          <div className="rounded-2xl rounded-bl-sm px-4 py-3
-            bg-card/60 backdrop-blur-sm
-            border border-white/8
-            text-card-foreground shadow-[0_8px_32px_rgba(0,0,0,0.45)]">
-            <div className="text-sm leading-relaxed">
-              {content === "" && isStreaming ? (
-                <TypingBars />
-              ) : (
-                <>
-                  <ReactMarkdown components={mdComponents}>
-                    {processedContent}
-                  </ReactMarkdown>
-                  {isStreaming && (
-                    <span className="inline-block w-1 h-4 bg-primary/70 ml-0.5 animate-pulse rounded-sm" />
-                  )}
-                </>
+        /* ── Assistant — plain text directly on page, no bubble container ── */
+        <div className="min-w-0 max-w-[92%] sm:max-w-2xl text-sm leading-relaxed">
+          {content === "" && isStreaming ? (
+            <TypingBars />
+          ) : (
+            <>
+              <ReactMarkdown components={mdComponents}>
+                {processedContent}
+              </ReactMarkdown>
+              {isStreaming && (
+                <span className="inline-block w-1 h-4 bg-primary/70 ml-0.5 animate-pulse rounded-sm" />
               )}
-            </div>
-          </div>
+            </>
+          )}
         </div>
       )}
     </div>

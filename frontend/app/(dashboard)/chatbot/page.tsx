@@ -302,17 +302,12 @@ export default function ChatbotPage() {
               className="object-contain"
             />
           </div>
-          <div>
+          <div className="flex items-center gap-2">
             <p className="text-sm font-semibold tracking-tight leading-tight">
               AI Tutor
             </p>
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"
-                style={{ boxShadow: "0 0 5px #4ade80" }} />
-              <p className="text-xs text-muted-foreground leading-tight">
-                Bahasa Melayu
-              </p>
-            </div>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse flex-shrink-0"
+              style={{ boxShadow: "0 0 5px #4ade80" }} />
           </div>
         </div>
 
@@ -341,10 +336,10 @@ export default function ChatbotPage() {
         </div>
       </header>
 
-      {/* ── Waves background — always visible ── */}
+      {/* ── Waves background — subtle ambient texture ── */}
       <Waves
-        strokeColor={theme === "dark" ? "#8a9f7b" : "#8d9d4f"}
-        backgroundColor={theme === "dark" ? "#25221a" : "#decea0"}
+        strokeColor={theme === "dark" ? "rgba(138,159,123,0.09)" : "#8d9d4f"}
+        backgroundColor={theme === "dark" ? "#111110" : "#decea0"}
         pointerSize={0.5}
       />
 
