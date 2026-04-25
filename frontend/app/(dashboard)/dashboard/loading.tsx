@@ -15,7 +15,7 @@ export default function DashboardLoading() {
       </div>
 
       {/* Stat cards — 8 cards matching StatsCards grid */}
-      <ul className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
+      <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
         {Array.from({ length: 8 }).map((_, i) => (
           <li key={i} className="list-none h-28 sm:h-40 rounded-[1.25rem] bg-muted" />
         ))}

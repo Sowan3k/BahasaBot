@@ -240,7 +240,7 @@ export default function DashboardPage() {
     <>
       <DashboardWaveBackground />
       <TipToast />
-    <div className="relative z-10 max-w-5xl mx-auto px-3 sm:px-4 py-4 sm:py-8 space-y-4 sm:space-y-6 overflow-x-hidden">
+    <div className="relative z-10 max-w-5xl mx-auto px-3 sm:px-4 py-4 sm:py-8 space-y-4 sm:space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
@@ -289,7 +289,7 @@ export default function DashboardPage() {
           {summaryLoading ? (
             <div className="space-y-6">
               {/* Stat cards — 8 cards matching StatsCards grid exactly */}
-              <ul className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
+              <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
                 {Array.from({ length: 8 }).map((_, i) => (
                   <li key={i} className="list-none">
                     <Skeleton className="h-28 sm:h-40 w-full rounded-[1.25rem]" />

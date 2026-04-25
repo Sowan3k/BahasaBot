@@ -77,7 +77,7 @@ export default function StatsCards({ stats }: Props) {
   ];
 
   return (
-    <ul className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
+    <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
       {cards.map((card) => (
         <li key={card.label} className="list-none">
           <div className="relative h-full rounded-[1.25rem] border-[0.75px] border-border p-1.5">

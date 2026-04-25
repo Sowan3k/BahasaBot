@@ -180,7 +180,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         {/* AppSidebar now includes the NotificationBell in the header */}
         <AppSidebar />
         {/* flex-col allows flex-1 children (chatbot) to fill height; overflow-y-auto scrolls regular pages */}
-        <main className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden flex flex-col pt-14 md:pt-0">
+        <main className="flex-1 min-w-0 overflow-y-auto flex flex-col pt-14 md:pt-0">
           {/* PageTransition: keyed by pathname so every navigation triggers fade-in + slide-up */}
           <PageTransition key={pathname} className="flex-1 flex flex-col">
             {children}
