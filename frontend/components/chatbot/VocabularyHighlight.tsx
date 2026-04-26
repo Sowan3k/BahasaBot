@@ -25,50 +25,54 @@ interface VocabPillProps {
 }
 
 // ── Smart tooltip placement ───────────────────────────────────────────────────
-// Approximate tooltip dimensions used to detect viewport overflow before render.
+// Tooltip is rendered with position:fixed so it escapes any overflow:auto/hidden
+// ancestor (e.g. the chatbot's overflow-y-auto scroll container on mobile).
 const TOOLTIP_W = 220;
 const TOOLTIP_H = 52;
 const SAFE_MARGIN = 10; // min px gap from viewport edge
+const TOOLTIP_GAP = 6;  // gap between pill edge and tooltip
 
-type TooltipPlacement = {
-  openBelow: boolean;  // true → render below pill (top-full), false → above (bottom-full)
-  alignRight: boolean; // true → right-align tooltip to pill right edge
-  alignLeft: boolean;  // true → left-align tooltip to pill left edge
+type TooltipCoords = {
+  top: number;    // viewport-relative top for position:fixed
+  left: number;   // viewport-relative left for position:fixed
+  openBelow: boolean;
 };
 
-function computePlacement(rect: DOMRect): TooltipPlacement {
+function computeTooltipCoords(rect: DOMRect): TooltipCoords {
   const vw = window.innerWidth;
 
-  // Horizontal: center of pill, check if tooltip would overflow either side
-  const cx = rect.left + rect.width / 2;
-  const alignRight = cx + TOOLTIP_W / 2 > vw - SAFE_MARGIN;
-  const alignLeft = !alignRight && cx - TOOLTIP_W / 2 < SAFE_MARGIN;
-
-  // Vertical: default is above (bottom-full). Flip below if not enough room above.
+  // Vertical: default above the pill; flip below if not enough room above
   const openBelow = rect.top < TOOLTIP_H + SAFE_MARGIN;
+  // When openBelow the CSS translateY(-100%) trick is not needed; use raw bottom
+  const top = openBelow ? rect.bottom + TOOLTIP_GAP : rect.top - TOOLTIP_GAP;
 
-  return { openBelow, alignRight, alignLeft };
+  // Horizontal: center on pill, clamped to viewport bounds
+  const cx = rect.left + rect.width / 2;
+  const rawLeft = cx - TOOLTIP_W / 2;
+  const left = Math.max(SAFE_MARGIN, Math.min(rawLeft, vw - TOOLTIP_W - SAFE_MARGIN));
+
+  return { top, left, openBelow };
 }
 
 // ── VocabPill ─────────────────────────────────────────────────────────────────
 
 export function VocabPill({ malay, english }: VocabPillProps) {
   const [showTooltip, setShowTooltip] = useState(false);
-  const [placement, setPlacement] = useState<TooltipPlacement>({
-    openBelow: false,
-    alignRight: false,
-    alignLeft: false,
-  });
+  const [coords, setCoords] = useState<TooltipCoords | null>(null);
 
   const pillRef = useRef<HTMLButtonElement>(null);
   const wrapperRef = useRef<HTMLSpanElement>(null);
   // Delayed hide: gives the mouse time to travel from pill → tooltip without blinking
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Guards scheduleClose against synthetic mouseleave fired by mobile browsers after a tap
+  const lastTouchRef = useRef(0);
 
   // Single hook instance covers both the outside speaker and the one inside the tooltip
   const { speak, isSupported } = usePronunciation();
 
-  // Close tooltip when user taps/clicks outside the pill wrapper (mobile support)
+  // Close tooltip when user taps/clicks outside the pill wrapper (mobile support).
+  // The tooltip DOM node is still a child of wrapperRef even though it's position:fixed,
+  // so contains() correctly excludes taps on the open tooltip itself.
   useEffect(() => {
     if (!showTooltip) return;
     function handleOutside(e: MouseEvent | TouchEvent) {
@@ -97,12 +101,14 @@ export function VocabPill({ malay, english }: VocabPillProps) {
       hideTimer.current = null;
     }
     if (pillRef.current) {
-      setPlacement(computePlacement(pillRef.current.getBoundingClientRect()));
+      setCoords(computeTooltipCoords(pillRef.current.getBoundingClientRect()));
     }
     setShowTooltip(true);
   }
 
   function scheduleClose() {
+    // Mobile browsers fire a synthetic mouseleave ~300ms after a tap — ignore it
+    if (Date.now() - lastTouchRef.current < 500) return;
     hideTimer.current = setTimeout(() => setShowTooltip(false), 120);
   }
 
@@ -120,30 +126,10 @@ export function VocabPill({ malay, english }: VocabPillProps) {
     }
   }
 
-  // ── Tooltip CSS classes (derived from placement) ─────────────────────────
-
-  // Vertical position
-  const yClass = placement.openBelow
-    ? "top-full mt-1.5"     // below the pill
-    : "bottom-full mb-1.5"; // above the pill (default)
-
-  // Horizontal alignment
-  const xClass = placement.alignRight
-    ? "right-0"                     // right edge of tooltip aligns with right edge of wrapper
-    : placement.alignLeft
-    ? "left-0"                      // left edge of tooltip aligns with left edge of wrapper
-    : "left-1/2 -translate-x-1/2"; // centered on pill (default)
-
-  // Arrow: always centered in the tooltip — close enough visually, avoids
-  // complex dynamic offset calculations when the tooltip is shifted.
-  const arrowX = "left-1/2 -translate-x-1/2";
-
-  // Arrow edge: points back toward the pill
-  // Tooltip above → arrow at tooltip bottom, pointing down  → border-t colored
-  // Tooltip below → arrow at tooltip top,    pointing up    → border-b colored
-  const arrowEdge = placement.openBelow
-    ? "bottom-full border-b-gray-900"
-    : "top-full border-t-gray-900";
+  // Arrow direction based on whether tooltip is above or below the pill
+  const arrowEdge = coords?.openBelow
+    ? "bottom-full border-b-gray-900"   // tooltip below → arrow at top pointing up
+    : "top-full border-t-gray-900";     // tooltip above → arrow at bottom pointing down
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -159,6 +145,7 @@ export function VocabPill({ malay, english }: VocabPillProps) {
         onMouseLeave={scheduleClose}
         onFocus={openTooltip}
         onBlur={scheduleClose}
+        onTouchStart={() => { lastTouchRef.current = Date.now(); }}
         className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-sm font-medium
                    bg-accent/20 text-amber-800 border border-accent/40
                    hover:bg-accent/30 dark:text-amber-300 dark:border-accent/30
@@ -189,15 +176,23 @@ export function VocabPill({ malay, english }: VocabPillProps) {
         </button>
       )}
 
-      {/* Smart tooltip */}
-      {showTooltip && (
+      {/* Tooltip — rendered position:fixed so it escapes overflow:auto ancestors.
+          On mobile, the chatbot's overflow-y-auto container would clip a position:absolute
+          tooltip; fixed positioning uses viewport coordinates instead. */}
+      {showTooltip && coords && (
         <span
           role="tooltip"
           onMouseEnter={openTooltip}
           onMouseLeave={scheduleClose}
-          className={`absolute ${yClass} ${xClass} z-30
-                     w-max max-w-[220px] rounded-md px-3 py-2 text-xs
-                     bg-gray-900 text-white shadow-lg`}
+          style={{
+            position: "fixed",
+            top: coords.top,
+            left: coords.left,
+            width: TOOLTIP_W,
+            // When above the pill, shift the box up by its own height
+            transform: coords.openBelow ? undefined : "translateY(-100%)",
+          }}
+          className="z-50 rounded-md px-3 py-2 text-xs bg-gray-900 text-white shadow-lg"
         >
           {/* Content row: meaning text + speaker button */}
           <span className="flex items-center gap-2 leading-snug">
@@ -218,9 +213,9 @@ export function VocabPill({ malay, english }: VocabPillProps) {
             )}
           </span>
 
-          {/* Directional arrow */}
+          {/* Directional arrow — always centered horizontally */}
           <span
-            className={`absolute ${arrowEdge} ${arrowX} border-4 border-transparent`}
+            className={`absolute left-1/2 -translate-x-1/2 ${arrowEdge} border-4 border-transparent`}
           />
         </span>
       )}

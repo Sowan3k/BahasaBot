@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-26 (Session 57 — Admin panel bug fixes: weak-points SQL crash fixed, score/weak-points error state differentiation, token usage logging wired into quiz + course generation)
+## Last Updated: 2026-04-27 (Session 58 — VocabPill mobile tooltip fix: position:fixed to escape overflow clipping + synthetic mouseleave guard)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -25,7 +25,7 @@ _Update this file at the end of every session_
 | Onboarding Flow (Phase 14) | ✅ Complete + Enhanced (Session 26) | 8-step questionnaire (Welcome → Gender/Age → NativeLang → WhyLearning → CurrentLevel → Goal → Timeline → DailyStudy); gender + age_range collected for personalised roadmap banner; roadmap auto-generated on finish; loading screen during generation; sonner toast on roadmap_ready; skip at any step saves partial data |
 | First-Login UI Tour | ✅ Complete + Race-fix + Dark theme (Session 30) | driver.js spotlight tour; 8 steps covering sidebar + all nav sections; triggers once after onboarding; has_seen_tour flag on users table; PATCH saves flag on tour done/skip. Race condition fixed: `active={showTour && !showOnboarding}`. Popover fully re-themed: dark card #2e2b22, warm text, olive-green Next button, ghost Back button, matching arrow — replaces default white popover |
 | Admin Control Panel (Phase 15) | ✅ Complete + Evaluation enhancements (Session 54) + Phase 2 (Session 55) + Bug fixes (Session 57) | /api/admin/* fully tested; stats, users (search + detail + delete + reset + analytics), feedback; password guards verified; recharts LineChart + BarChart confirmed working; analytics bug fixed (NullType → timedelta); CSV export endpoints (users/quiz-attempts/feedback with optional date range); last_active column on user list; date range filter; avg quiz score pills + score trajectory LineChart; feedback label fix. Session 55: total_time_spent (with coverage caveat), total_chat_messages, avg_msgs_per_session on user detail; GET /api/admin/users/{id}/quiz-attempts (raw Q&A with correct/incorrect indicators, collapsible section); GET /api/admin/analytics/score-distribution (cohort histogram + mean/median, date filter); GET /api/admin/analytics/weak-points (top 20 topics by user count, sortable table, date filter). Session 57 bugs fixed: weak-points endpoint crashed with SQL error (func.Float is not a valid SQLAlchemy type; replaced with Python-side round()); score distribution + weak points panels now show distinct red error message vs italic "no data" empty state; token_usage_logs was always empty because log_tokens() was never called — now wired: generate_json_with_usage() added to gemini_service; module_quiz + standalone_quiz + course skeleton generation all call log_tokens() so per-user token charts in admin/users/{id} populate correctly |
-| Pronunciation Audio (Phase 16) | ✅ Complete + Debugged + Mobile tap fix (Session 56) | usePronunciation hook (ms-MY → ms → default fallback); SpeakerButton component; wired into VocabPills (chatbot), course class vocab cards, quiz results breakdown, dashboard vocabulary table; 3 post-implementation bugs fixed; VocabPill now opens on tap (mobile) and closes on outside-tap — previously hover-only, broken on touchscreens |
+| Pronunciation Audio (Phase 16) | ✅ Complete + Debugged + Mobile tap fix (Session 56) + Overflow fix (Session 58) | usePronunciation hook (ms-MY → ms → default fallback); SpeakerButton component; wired into VocabPills (chatbot), course class vocab cards, quiz results breakdown, dashboard vocabulary table; 3 post-implementation bugs fixed; VocabPill now opens on tap (mobile) and closes on outside-tap — previously hover-only, broken on touchscreens; Session 58: tooltip now position:fixed (was position:absolute — clipped by overflow-y-auto on chatbot main container); synthetic mouseleave guard added (onTouchStart records timestamp; scheduleClose skipped within 500ms of a touch) |
 | Notification System (Phase 17) | ✅ Complete | GET /api/notifications/ (last 20 + unread_count), POST mark-read, POST read-all; NotificationBell (60s polling, unread badge) + NotificationPanel; floating global icon in layout.tsx |
 | Gamification — Streak + XP (Phase 18) | ✅ Complete | record_learning_activity() in gamification_service.py; Redis-keyed daily streak; XP awards: class=10, quiz pass=25, chatbot session=5; milestone notifications (streak 3/7/14/30, every 100 XP); wired into 4 routers (courses, quiz, chatbot); StreakBadge + XPBar components; dashboard +2 stat cards; sidebar footer shows streak+XP |
 | Sidebar Polish | ✅ Complete | Double divider removed (no border-b on logo area); ThemeToggle repositioned to header row; footer items centered except XP bar; collapsed tooltips use theme-aware bg-popover |
@@ -72,7 +72,26 @@ _Update this file at the end of every session_
 
 ---
 
-## What Was Done This Session (2026-04-26 Session 57 — Admin panel bug fixes)
+## What Was Done This Session (2026-04-27 Session 58 — VocabPill mobile tooltip fix)
+
+### Goal
+VocabPill tooltips were not appearing on mobile despite Session 56 adding the onClick toggle. Two root causes found and fixed.
+
+### Bug 1 — `position:absolute` tooltip clipped by `overflow-y:auto` ancestor
+- The chatbot `<main>` has `overflow-y-auto`. CSS spec: when one overflow axis is non-`visible`, the other computed value can't be `visible` either — so `overflow-x` was also `auto`, clipping any absolutely-positioned child that overflowed the container.
+- **Fix (`VocabularyHighlight.tsx`):** Replaced `position: absolute` + Tailwind class-based layout with `position: fixed` + inline `style` using pixel coords computed from `getBoundingClientRect()`. Renamed `TooltipPlacement` → `TooltipCoords` (stores `top`, `left`, `openBelow`); `computePlacement()` → `computeTooltipCoords()` returns pixel values. Horizontal position is clamped to viewport width with `SAFE_MARGIN`. `translateY(-100%)` applied when tooltip opens above the pill. `z-index` raised from `z-30` → `z-50`.
+
+### Bug 2 — Synthetic `mouseleave` after tap fired `scheduleClose`
+- After a mobile tap, browsers fire a synthetic `mouseleave` event ~300 ms later as part of the touch→mouse compatibility shim. This called `scheduleClose()`, starting a 120 ms timer that closed the tooltip immediately after `onClick` opened it — making it appear as if nothing happened.
+- **Fix (`VocabularyHighlight.tsx`):** Added `lastTouchRef = useRef(0)`. `onTouchStart` on the pill button sets `lastTouchRef.current = Date.now()`. `scheduleClose()` returns early if called within 500 ms of a touch event.
+
+### Checks
+- `tsc --noEmit`: 0 errors
+- Desktop hover + delayed-close behavior unchanged
+
+---
+
+## What Was Done Previous Session (2026-04-26 Session 57 — Admin panel bug fixes)
 
 ### Goal
 Fix three bugs in the admin panel: (1) Common Weak Points panel always returned 500 due to invalid SQL, (2) both panels silently swallowed API errors and showed the same empty state as "no data", (3) per-user token usage charts were always zero because `log_tokens()` was never called anywhere.
