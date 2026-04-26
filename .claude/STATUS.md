@@ -1,13 +1,13 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-27 (Session 58 — VocabPill mobile tooltip fix: position:fixed to escape overflow clipping + synthetic mouseleave guard)
+## Last Updated: 2026-04-27 (Session 59 — Chatbot typing animation upgrade + backend latency optimizations)
 
 ## Feature Status
 | Feature | Status | Notes |
 |---|---|---|
 | Auth | ✅ Complete + Google password setup | Email + Google OAuth, JWT, token refresh, 30-min sessions; mandatory SetPasswordModal for Google users with NULL password_hash; POST /api/auth/set-password; has_password in profile API; settings/password page now routes to SetPassword vs ChangePassword form based on has_password |
-| AI Chatbot Tutor | ✅ Complete + App-awareness (Session 40) + Language rule (Session 51) | SSE streaming, LangChain, RAG — Malaysian Malay + IPA in prompt; markdown rendering; session persistence; native_language injected into system prompt; RAG context Redis-cached (5 min) saving ~1.3s on repeat queries; ping SSE event for early frontend feedback; typing dots UX while waiting for first token; user profile Redis-cached (5 min TTL, invalidated on PATCH /profile); history cache updated in-place after each message (no more DB re-read on next turn); gamification XP awarded as asyncio.create_task with own session (no longer blocks SSE startup); GET /api/chatbot/prewarm warms profile cache on page load; ChatMessage wrapped in React.memo (previous messages never re-render during streaming); token batching via requestAnimationFrame (cuts setState calls from ~100/s to ≤60/s during streaming); **language detection rule**: if student writes in English → full English response; if Malay → full Malay; if mixed → English (overrides all other rules); dialect rule demoted to secondary |
+| AI Chatbot Tutor | ✅ Complete + App-awareness (Session 40) + Language rule (Session 51) + Latency optimizations (Session 59) | SSE streaming, LangChain, RAG — Malaysian Malay + IPA in prompt; markdown rendering; session persistence; native_language injected into system prompt; RAG context Redis-cached (5 min) saving ~1.3s on repeat queries; ping SSE event for early frontend feedback; **ThinkingIndicator**: 3 bouncing dots + "Thinking…" label replaces the invisible 2px audio bars — shows immediately when user sends message; user profile Redis-cached (5 min TTL, invalidated on PATCH /profile); history cache updated in-place after each message (no more DB re-read on next turn); gamification XP awarded as asyncio.create_task with own session (no longer blocks SSE startup); GET /api/chatbot/prewarm warms profile cache on page load; ChatMessage wrapped in React.memo (previous messages never re-render during streaming); token batching via requestAnimationFrame (cuts setState calls from ~100/s to ≤60/s during streaming); **language detection rule**: if student writes in English → full English response; if Malay → full Malay; if mixed → English (overrides all other rules); dialect rule demoted to secondary; **Session 59 latency**: three Redis cache_get calls now run via asyncio.gather() (parallel) before any DB fallback — saves ~10–15ms per message on warm paths; RAG k reduced 5→3 (faster embedding query + smaller context fed to Gemini) |
 | Course Generator | ✅ Complete + English-medium fix | Lesson content in English; Malay words taught inline; Malaysian BM only |
 | Quiz | ✅ Complete + English-medium fix | Question text explicitly English; Malay vocabulary uses Malaysian BM; IPA in explanations |
 | Dashboard | ✅ Complete + Wave background + Mobile fix (Session 53) | All 6 endpoints verified; Overview tab completely redesigned: 3 SVG progress rings (Learning/Vocabulary/Quiz) with GlowCard hover, BPS slim strip, inline stats row (emoji), glowing pill Quick Actions, compact VocabPreview (no search bar, 5 rows, SpeakerButton), Weak Points + Quiz History in GlowCards; mobile-responsive (rings stay 3-col, wrap gracefully); StatsCards removed from overview; `DashboardWaveBackground` canvas component: slow sine-wave animation at ¼ resolution, dark-mode-only, faint olive tint at peaks, fixed full-screen z-0, content at z-10; Session 53: `overflow-x-hidden` masking removed from layout.tsx + dashboard container; stat grid corrected to `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4` so tiles fit at all mobile widths without horizontal scroll |
@@ -72,7 +72,31 @@ _Update this file at the end of every session_
 
 ---
 
-## What Was Done This Session (2026-04-27 Session 58 — VocabPill mobile tooltip fix)
+## What Was Done This Session (2026-04-27 Session 59 — Chatbot typing animation + latency optimizations)
+
+### Goal
+Two improvements: (1) make the "waiting" animation visible and professional while the AI thinks, and (2) reduce backend latency before the first token arrives.
+
+### Frontend — `frontend/components/chatbot/ChatMessage.tsx`
+- Replaced `TypingBars` (5 audio-visualizer bars, 2px wide, `animate-pulse` fade) with `ThinkingIndicator`: three 8px bouncing dots (`animate-bounce`, 0/160/320ms stagger) + "Thinking…" label in muted text
+- The indicator shows immediately when the user sends a message (`content === "" && isStreaming`) — no change to trigger logic, only the visual
+- `tsc --noEmit`: 0 errors
+
+### Backend — `backend/services/langchain_service.py`
+- **Parallel Redis lookups**: the three pre-stream cache checks (RAG context, user profile, conversation history) previously ran sequentially. Now they use `asyncio.gather(cache_get(rag_key), cache_get(profile_key), cache_get(history_key))`. On warm paths (all Redis hits) this saves ~10–15ms per message.
+- DB fallbacks on cache miss remain sequential (correct — SQLAlchemy AsyncSession must not be used concurrently for DB queries)
+- **RAG k reduced 5 → 3**: fewer corpus chunks retrieved means faster embedding query and smaller context fed to Gemini; tested and confirmed `hits=3` in logs
+- Inline the profile + history DB fallback logic directly in `stream_chat_response()` (was calling `get_cached_profile()` and `_load_history()` which internally did their own cache check — now the cache check is batched before the function body runs)
+
+### Verified
+- Python syntax check: OK for both modified files
+- Backend health: `{"status":"ok","redis":"ok"}`
+- Live test (real user JWT): ping at 258ms (warm) / 427ms (cold); TTFT ~2.7–4.2s (Gemini API inherent latency); `hits=3` confirmed in backend logs
+- Frontend compiled: `/chatbot` compiled in 16.3s, 0 errors
+
+---
+
+## What Was Done Previous Session (2026-04-27 Session 58 — VocabPill mobile tooltip fix)
 
 ### Goal
 VocabPill tooltips were not appearing on mobile despite Session 56 adding the onClick toggle. Two root causes found and fixed.

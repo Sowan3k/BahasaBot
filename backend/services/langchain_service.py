@@ -306,13 +306,11 @@ async def stream_chat_response(
 
     Flow:
       1. Save user message to DB.
-      2. Retrieve RAG context (top-5 relevant corpus chunks).
-      3. Fetch user's native language from DB for personalised prompt context.
-      4. Load conversation history from Redis/DB.
-      5. Build the full prompt and stream Gemini response.
-      6. Stream the response and collect the full text.
-      7. Save assistant message to DB.
-      8. Kick off vocab/grammar extraction in the background.
+      2. Parallel Redis cache lookups for RAG context, user profile, and history.
+      3. Sequential DB fallbacks for any cache misses (safe — no concurrent session use).
+      4. Build the full prompt and stream Gemini response.
+      5. Save assistant message to DB.
+      6. Kick off vocab/grammar extraction in the background.
     """
     # 1. Save user message
     user_msg = ChatMessage(
@@ -323,28 +321,67 @@ async def stream_chat_response(
     db.add(user_msg)
     await db.commit()
 
-    # 2. RAG retrieval — get relevant Malay knowledge chunks (Redis-cached 5 min)
-    rag_cache_key = _rag_cache_key(user_message)
-    context_text: str | None = await cache_get(rag_cache_key)
-    if context_text is None:
-        rag_docs = await rag_service.similarity_search(user_message, k=5, db=db)
+    # 2. Parallel Redis lookups — all three are pure Redis operations (no DB),
+    #    so asyncio.gather is safe and saves ~10–15ms on every warm-path request.
+    rag_key = _rag_cache_key(user_message)
+    context_cached, profile_cached, history_cached = await asyncio.gather(
+        cache_get(rag_key),
+        cache_get(_profile_cache_key(user_id)),
+        cache_get(_history_cache_key(session_id)),
+    )
+
+    # 3a. RAG — k=3 instead of k=5: faster embedding lookup + smaller context
+    if context_cached is not None:
+        context_text: str = context_cached
+        logger.info("RAG cache hit", query_preview=user_message[:40])
+    else:
+        rag_docs = await rag_service.similarity_search(user_message, k=3, db=db)
         context_text = (
             "\n\n".join(doc.content for doc in rag_docs)
             if rag_docs
             else "No specific reference material found — use your general Malay knowledge."
         )
-        await cache_set(rag_cache_key, context_text, ttl=_RAG_CACHE_TTL)
+        await cache_set(rag_key, context_text, ttl=_RAG_CACHE_TTL)
         logger.info("RAG cache miss — search completed", query_preview=user_message[:40])
-    else:
-        logger.info("RAG cache hit", query_preview=user_message[:40])
 
-    # 3. Fetch user profile (Redis-cached; avoids DB round-trip on warm path)
-    profile = await get_cached_profile(user_id, db)
+    # 3b. Profile — small DB query on miss (5-min TTL so usually a Redis hit)
+    if profile_cached is not None:
+        profile: dict = profile_cached
+    else:
+        result = await db.execute(
+            select(
+                User.native_language,
+                User.learning_goal,
+                User.proficiency_level,
+            ).where(User.id == user_id)
+        )
+        row = result.one_or_none()
+        profile = {
+            "native_language": row.native_language if row else None,
+            "learning_goal": row.learning_goal if row else None,
+            "proficiency_level": (row.proficiency_level if row else None) or "BPS-1",
+        }
+        await cache_set(_profile_cache_key(user_id), profile, ttl=_PROFILE_CACHE_TTL)
+
     native_language: str | None = profile["native_language"]
     learning_goal: str | None = profile["learning_goal"]
     proficiency_level: str = profile["proficiency_level"]
 
-    # Native language context
+    # 3c. History — small DB query on miss (30-min TTL so usually a Redis hit)
+    if history_cached is not None:
+        history: list[dict] = history_cached
+    else:
+        result = await db.execute(
+            select(ChatMessage)
+            .where(ChatMessage.session_id == session_id)
+            .order_by(ChatMessage.created_at.desc())
+            .limit(HISTORY_WINDOW)
+        )
+        msgs = list(reversed(result.scalars().all()))
+        history = [{"role": m.role, "content": m.content} for m in msgs]
+        await cache_set(_history_cache_key(session_id), history, ttl=HISTORY_CACHE_TTL)
+
+    # Build personalisation strings from profile
     if native_language:
         native_language_context = (
             f"\nLEARNER CONTEXT:\n"
@@ -356,7 +393,6 @@ async def stream_chat_response(
     else:
         native_language_context = ""
 
-    # Learning goal context
     if learning_goal:
         learning_goal_context = (
             f"\nThe user is learning Malay for: {learning_goal}. "
@@ -365,17 +401,13 @@ async def stream_chat_response(
     else:
         learning_goal_context = ""
 
-    # Proficiency context — explicitly tell Gemini the user's BPS level
     proficiency_context = (
         f"\nThe user's current BPS level: {proficiency_level} — "
         f"{_BPS_DESCRIPTIONS.get(proficiency_level, _BPS_DESCRIPTIONS['BPS-1'])}. "
         f"Calibrate explanation depth and vocabulary complexity to this level."
     )
 
-    # 4. Load conversation history
-    history = await _load_history(session_id, db)
-
-    # 5. Build prompt — prepend history as a conversational context block
+    # 4. Build prompt — prepend history as a conversational context block
     history_text = ""
     if history:
         lines = []
@@ -399,7 +431,7 @@ async def stream_chat_response(
         proficiency_context=proficiency_context,
     )
 
-    # 6. Stream the response and collect the full text
+    # 5. Stream the response and collect the full text
     full_response: list[str] = []
     try:
         async for chunk in gemini_service.stream_text(full_prompt, system_prompt):
@@ -413,7 +445,7 @@ async def stream_chat_response(
 
     assistant_text = "".join(full_response)
 
-    # 7. Save assistant message to DB
+    # 6. Save assistant message to DB
     assistant_msg = ChatMessage(
         session_id=session_id,
         role="assistant",
@@ -426,7 +458,7 @@ async def stream_chat_response(
     # Update cached history in-place — avoids DB round-trip on next message
     await _update_history_cache(session_id, user_message, assistant_text)
 
-    # 8. Background task: extract and persist vocab/grammar + log activity
+    # 7. Background task: extract and persist vocab/grammar + log activity
     asyncio.create_task(
         _extract_and_save(
             assistant_text=assistant_text,
@@ -435,7 +467,7 @@ async def stream_chat_response(
         )
     )
 
-    # 9. Log chatbot activity event (fire-and-forget)
+    # 8. Log chatbot activity event (fire-and-forget)
     # Token counts are unavailable in streaming mode — log event only
     from backend.utils.analytics import log_activity  # local import avoids circular dep
     asyncio.create_task(

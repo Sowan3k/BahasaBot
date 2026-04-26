@@ -168,24 +168,25 @@ const mdComponents: Components = {
   },
 };
 
-// ── Typing indicator — audio-visualizer style ────────────────────────────────
+// ── Typing / thinking indicator ───────────────────────────────────────────────
 
-function TypingBars() {
-  const heights = [10, 14, 8, 13, 7];
+function ThinkingIndicator() {
   return (
-    <span className="flex gap-0.5 items-end py-0.5 h-5">
-      {heights.map((h, i) => (
-        <span
-          key={i}
-          className="w-0.5 bg-primary/50 rounded-sm animate-pulse"
-          style={{
-            height: `${h}px`,
-            animationDelay: `${i * 110}ms`,
-            animationDuration: "750ms",
-          }}
-        />
-      ))}
-    </span>
+    <div className="flex items-center gap-2.5 py-1">
+      {/* Three bouncing dots */}
+      <span className="flex items-end gap-1">
+        {[0, 160, 320].map((delay, i) => (
+          <span
+            key={i}
+            className="block w-2 h-2 rounded-full bg-primary/70 animate-bounce"
+            style={{ animationDelay: `${delay}ms`, animationDuration: "1.1s" }}
+          />
+        ))}
+      </span>
+      <span className="text-xs text-muted-foreground/60 select-none tracking-wide">
+        Thinking…
+      </span>
+    </div>
   );
 }
 
@@ -235,7 +236,7 @@ const ChatMessage = memo(function ChatMessage({
         /* ── Assistant — plain text directly on page, no bubble container ── */
         <div className="min-w-0 max-w-[92%] sm:max-w-2xl text-sm leading-relaxed">
           {content === "" && isStreaming ? (
-            <TypingBars />
+            <ThinkingIndicator />
           ) : (
             <>
               <ReactMarkdown components={mdComponents}>
