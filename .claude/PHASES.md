@@ -937,7 +937,7 @@ _Status: 🔄 In progress_
 - [ ] Document how to run: python backend/data/seed_demo.py
 
 ### Admin Accounts — Seeded (2026-04-27)
-- [x] backend/scripts/create_supervisor_admin.py — idempotent script to seed DrTan@gmail.testadmin as role='admin' (Dr. Tan, FYP supervisor); run: `backend/venv/Scripts/python.exe -m backend.scripts.create_supervisor_admin`
+- [x] backend/scripts/create_supervisor_admin.py — idempotent script to seed drtan@supervisor.com as role='admin' (Dr. Tan, FYP supervisor); run: `backend/venv/Scripts/python.exe -m backend.scripts.create_supervisor_admin`
 
 ### Mobile Responsiveness Check
 - [x] Audited all 13 target pages for mobile viewport (<768px) issues

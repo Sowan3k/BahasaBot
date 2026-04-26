@@ -43,7 +43,7 @@ from backend.db.database import AsyncSessionLocal
 from backend.models.user import User
 
 # ── Credentials ───────────────────────────────────────────────────────────────
-_EMAIL = "DrTan@gmail.testadmin"
+_EMAIL = "drtan@supervisor.com"
 _PASSWORD = "CAT404SE"
 _NAME = "Dr. Tan"
 # ─────────────────────────────────────────────────────────────────────────────

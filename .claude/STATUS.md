@@ -82,8 +82,8 @@ Add supervisor admin account for Dr. Tan directly into the DB.
 - Uses `_hash_password` / `_verify_password` imported from `backend/routers/auth.py` (same as login endpoint)
 - Run from project root: `backend/venv/Scripts/python.exe -m backend.scripts.create_supervisor_admin`
 - Safe to re-run: updates password + forces role='admin' if account already exists
-- Account in DB: email=DrTan@gmail.testadmin, name="Dr. Tan", role=admin, ID=a099fed5-6889-47de-8a23-633a10aa102d
-- Stale account `drtan@testadmin.com` deleted from DB and `create_admin.py` removed
+- Account in DB: email=drtan@supervisor.com, name="Dr. Tan", role=admin, ID=708510b9-bb95-4349-ae86-d7a630b55bf2
+- Previous invalid-TLD account (DrTan@gmail.testadmin) deleted; drtan@testadmin.com also cleaned up
 
 ---
 

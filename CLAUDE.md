@@ -766,7 +766,7 @@ The `ADMIN_EMAIL` env var supports only a single auto-promoted admin on first re
 | Name | Email | Notes |
 |---|---|---|
 | Noor Mohammad Sowan | *(set via ADMIN_EMAIL in .env)* | Primary developer admin |
-| Dr. Tan | DrTan@gmail.testadmin | FYP supervisor; seeded via create_supervisor_admin.py |
+| Dr. Tan | drtan@supervisor.com | FYP supervisor; seeded via create_supervisor_admin.py |
 
 To add more admins: edit `create_supervisor_admin.py` and re-run it, or `UPDATE users SET role='admin' WHERE email='...'` via Neon console.
 
