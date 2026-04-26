@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-27 (Session 66 — Revert Google auth regression)
+## Last Updated: 2026-04-27 (Session 68 — Mobile nav UX: scroll-aware bar + tour + TipToast fix)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -23,7 +23,7 @@ _Update this file at the end of every session_
 | Forgot Password (Phase 12) | ✅ Rebuilt — 6-digit code flow | 3-endpoint backend (forgot/verify/reset); 4-step frontend (email→code→password→success); OTP boxes + resend cooldown; old link page deprecated; full E2E verified |
 | User Profile + Settings (Phase 13) | ✅ Complete | GET + PATCH /api/profile/, change-password endpoint; /settings hub + /profile + /password + /about pages; Settings in sidebar |
 | Onboarding Flow (Phase 14) | ✅ Complete + Enhanced (Session 26) | 8-step questionnaire (Welcome → Gender/Age → NativeLang → WhyLearning → CurrentLevel → Goal → Timeline → DailyStudy); gender + age_range collected for personalised roadmap banner; roadmap auto-generated on finish; loading screen during generation; sonner toast on roadmap_ready; skip at any step saves partial data |
-| First-Login UI Tour | ✅ Complete + Race-fix + Dark theme (Session 30) | driver.js spotlight tour; 8 steps covering sidebar + all nav sections; triggers once after onboarding; has_seen_tour flag on users table; PATCH saves flag on tour done/skip. Race condition fixed: `active={showTour && !showOnboarding}`. Popover fully re-themed: dark card #2e2b22, warm text, olive-green Next button, ghost Back button, matching arrow — replaces default white popover |
+| First-Login UI Tour | ✅ Complete + Mobile tour (Session 68) | driver.js spotlight tour (desktop); **new mobile card-slide tour** (<768px): driver.js targets `[data-tour="sidebar"]` which is `hidden md:flex` — completely invisible on mobile, causing the tour to break. Mobile now gets a full-screen card-slide flow (industry-standard: Duolingo/Slack pattern): framer-motion directional slide animations, 8 feature cards (Menu nav, Dashboard, AI Tutor, Courses, Quiz, Journey, Spelling Game, Settings), botanical-palette icon circles, pill progress dots (active dot widens), Skip top-right, Back/Next footer. `useEffect` with `resize` listener detects mobile/desktop at runtime; desktop driver.js tour unchanged. Tour triggered after onboarding completes (same `blocked={showOnboarding}` guard). |
 | Admin Control Panel (Phase 15) | ✅ Complete + Evaluation enhancements (Session 54) + Phase 2 (Session 55) + Bug fixes (Session 57) | /api/admin/* fully tested; stats, users (search + detail + delete + reset + analytics), feedback; password guards verified; recharts LineChart + BarChart confirmed working; analytics bug fixed (NullType → timedelta); CSV export endpoints (users/quiz-attempts/feedback with optional date range); last_active column on user list; date range filter; avg quiz score pills + score trajectory LineChart; feedback label fix. Session 55: total_time_spent (with coverage caveat), total_chat_messages, avg_msgs_per_session on user detail; GET /api/admin/users/{id}/quiz-attempts (raw Q&A with correct/incorrect indicators, collapsible section); GET /api/admin/analytics/score-distribution (cohort histogram + mean/median, date filter); GET /api/admin/analytics/weak-points (top 20 topics by user count, sortable table, date filter). Session 57 bugs fixed: weak-points endpoint crashed with SQL error (func.Float is not a valid SQLAlchemy type; replaced with Python-side round()); score distribution + weak points panels now show distinct red error message vs italic "no data" empty state; token_usage_logs was always empty because log_tokens() was never called — now wired: generate_json_with_usage() added to gemini_service; module_quiz + standalone_quiz + course skeleton generation all call log_tokens() so per-user token charts in admin/users/{id} populate correctly |
 | Pronunciation Audio (Phase 16) | ✅ Complete + Debugged + Mobile tap fix (Session 56) + Overflow fix (Session 58) | usePronunciation hook (ms-MY → ms → default fallback); SpeakerButton component; wired into VocabPills (chatbot), course class vocab cards, quiz results breakdown, dashboard vocabulary table; 3 post-implementation bugs fixed; VocabPill now opens on tap (mobile) and closes on outside-tap — previously hover-only, broken on touchscreens; Session 58: tooltip now position:fixed (was position:absolute — clipped by overflow-y-auto on chatbot main container); synthetic mouseleave guard added (onTouchStart records timestamp; scheduleClose skipped within 500ms of a touch) |
 | Notification System (Phase 17) | ✅ Complete | GET /api/notifications/ (last 20 + unread_count), POST mark-read, POST read-all; NotificationBell (60s polling, unread badge) + NotificationPanel; floating global icon in layout.tsx |
@@ -44,11 +44,12 @@ _Update this file at the end of every session_
 | User Feedback — Settings (Session 18) | ✅ Complete | /settings/feedback page (star rating + relevance + textarea → POST /api/evaluation/feedback quiz_type="general"); backend schema extended to accept "general"; admin feedback page shows "General" badge; admin main page label updated to "User Feedback" |
 | Notification Bell UX (Session 18) | ✅ Relocated + Clear-all | Bell moved from floating fixed overlay into AppSidebar: mobile header (opens left/downward), desktop expanded footer next to username (opens right/upward), desktop collapsed footer (opens right/upward); DELETE /api/notifications/ backend endpoint; "Clear all" button in panel header; panelSide + panelDirection props added to NotificationPopover |
 | Mobile Layout Fixes (Session 24) | ✅ Complete | Dashboard: StatsCards grid gap-2→sm:gap-4, reduced card padding/icon/font sizes on mobile (no overflow at 375px); h1 text-2xl on mobile; subtitle breaks correctly; tabs px tightened. Journey: outer container px-3 pt-4; ObstacleNode always flex-row on mobile (zigzag only on sm+); topic title line-clamp-2 instead of truncate; card min-w-0; progress card p-3 on mobile; deadline row flex-wrap + break-words; header min-w-0 + flex-1. Both pages verified zero horizontal overflow at 375px. |
+| Mobile Nav Auto-Hide (Session 68) | ✅ Complete | Fixed: the fixed top header bar (56px, z-50) blocked page content as users scrolled — content at the top of any page would slide behind the bar after any downward scroll. **Industry-standard scroll-aware auto-hide**: `AppSidebar` now queries `document.querySelector("main")` and attaches a `passive` scroll listener using `requestAnimationFrame` throttling. Hides on scroll-down (>6px threshold), shows on scroll-up (>6px threshold), always shows at `scrollTop ≤ 8`. Animated with `transition-transform duration-300 ease-in-out` + `-translate-y-full` / `translate-y-0`. Two guards: (1) pathname effect resets nav to visible on every page navigation; (2) `navHidden && !mobileOpen` — nav is NEVER hidden while the slide-in drawer is open so the ☰/X button remains reachable. `useRef` for `lastScrollY` (avoids stale closure). |
 | Mandatory Google password setup (Session 33) | ✅ Complete | POST /api/auth/set-password; SetPasswordRequest + SetPasswordResponse schemas; requires_password_setup in TokenResponse; has_password property on User model + ProfileResponse; SetPasswordModal (non-dismissible, z-[90]); login + register pages show modal when flag true; settings/password page routes to SetPasswordForm vs ChangePasswordForm based on has_password; change-password guard updated to check password_hash IS NULL only |
 | Adaptive Quiz Results Page | ✅ Complete | Dedicated /quiz/adaptive/results page; sessionStorage data-passing (quiz page stores result then router.push); score ring (green/amber/red by score); BPS level update banner with TrendingUp; per-question breakdown with SpeakerButton on wrong answers; FeedbackModal after 3s delay; Take Another Quiz invalidates cache + navigates to lobby; inline results block removed from quiz page |
 
 | User Profile + Settings (Phase 13) | ✅ Complete + Debugged (Session 45) | native_language fixed: switched from `<select>` to free-text `<input list="...">` with datalist — now shows any DB value regardless of format; learning_goal fixed: switched from `<select>` (predefined options that don't match Journey free-text goal) to `<textarea>` with 500-char counter; form rewritten with controlled inputs + useRef origin tracking (no react-hook-form/reset timing issues); Delete Account: POST /api/profile/delete-account (bcrypt verify for email accounts, email match for Google); frontend DeleteAccountModal with danger zone card; signs user out + redirects to /login after deletion; About page: Developer name updated to "Noor Mohammad Sowan" |
-| Daily Language Tips | ✅ Complete + Random-per-login + visibility fix (Session 50) | tips table + Alembic migration; GET /api/tips/random (public, no cache - returns a fresh random tip on every call so each login sees a different tip); POST /api/tips/generate (admin, Gemini, 4 categories); GET /api/tips/all (admin, paginated+filterable); PATCH /api/tips/{id} (toggle active); TipToast component (framer-motion slide-in, 8s auto-dismiss, shrinking progress bar, pretty dark+light); wired into dashboard; login/register now clear `tip_dismissed` so a fresh sign-in can show a tip again; TipToast z-index raised above onboarding; Language Tips panel in admin (All Tips tab + Generate New tab with category tiles + range slider) |
+| Daily Language Tips | ✅ Complete + New-user suppression (Session 68) | tips table + Alembic migration; GET /api/tips/random; POST /api/tips/generate (admin); TipToast component (framer-motion slide-in, 8s auto-dismiss, shrinking progress bar); **Session 68 fix**: TipToast now reads `["profile"]` query cache (no extra request) and suppresses itself entirely when `onboarding_completed === false` OR `has_seen_tour === false` — prevents tip from appearing over onboarding modal, UI tour, or journey roadmap form during new-user first-login flow. Uses `hasFetched` ref so the effect (keyed on `profile`) only fires the fetch once per mount. |
 | Weekly XP Leaderboard | ✅ Complete + Visual Redesign (Session 48) | New xp_logs table (Alembic migration c1d2e3f4a5b6); XPLog ORM model; record_learning_activity() now inserts into xp_logs on every XP award; GET /api/dashboard/leaderboard (top-10 by weekly XP, current-user rank, Redis-cached 5 min, week resets Monday); LeaderboardCard fully redesigned: animated framer-motion podium (2nd–1st–3rd) for top 3; animated XP progress bars for ranks 4–10 (relative to leader's XP); days-until-Monday-reset countdown chip; empty/loading/outside-top-10 states; tsc --noEmit: 0 errors |
 | Page-refresh Bug Fix | ✅ Fixed (Session 48) | Global React Query staleTime reduced from 5 min → 0 (stale-while-revalidate: data shown instantly from cache while background refetch runs); after class completion now also invalidates ["courses"] and ["dashboard"] queries (previously only ["course", courseId] was invalidated); after module quiz submission also invalidates ["courses"] and ["dashboard"]; AppSidebar profile staleTime lowered 5 min → 60s to match layout (keeps XP/streak display fresh) |
 
@@ -72,7 +73,44 @@ _Update this file at the end of every session_
 
 ---
 
-## What Was Done This Session (2026-04-27 Session 67 — Admin seed: Dr. Tan account)
+## What Was Done This Session (2026-04-27 Session 68 — Mobile nav UX: scroll-aware bar + tour + TipToast fix)
+
+### Goals
+Three mobile UX fixes triggered by a new-account test run:
+1. TipToast blocking onboarding/tour/roadmap flow for new users
+2. Driver.js UI tour completely broken on mobile (targeted hidden desktop sidebar elements)
+3. Fixed mobile nav bar blocking page content as users scroll
+
+### File changed — `frontend/components/TipToast.tsx`
+- Added `useQuery(["profile"])` (shared cache — no extra network request) and `useSession` imports
+- Replaced fire-on-mount `useEffect([])` with `useEffect([profile])` that waits for profile to load before deciding
+- Gate: if `!profile.onboarding_completed || !profile.has_seen_tour` → return without fetching or showing tip
+- Added `hasFetched` ref so the effect (re-runs when profile is invalidated/re-fetched) only triggers the fetch once per mount
+- Separated cleanup into own `useEffect(() => () => clearAll(), [])` for unmount safety
+- **Result**: tip is fully suppressed during the entire new-user first-login flow (onboarding → tour → journey roadmap creation); shows normally for returning users
+
+### File changed — `frontend/components/onboarding/UITour.tsx`
+- **Root cause**: driver.js targeted `[data-tour="sidebar"]` and `[data-tour="nav-*"]` on the `<aside>` which is `hidden md:flex` — completely invisible on mobile; driver.js either errored or spotlighted nothing
+- Added `useIsMobile` state (checks `window.innerWidth < 768`, updates on resize)
+- **Desktop (md+)**: driver.js spotlight tour unchanged — 8 DESKTOP_STEPS const, same visual theme
+- **Mobile (<768px)**: new `MobileTour` component — full-screen dark overlay (`z-[75]`), centered 340px card, framer-motion directional slide animations (`custom` direction variant: forward=right-to-left, back=left-to-right, 0.22s easeOut), 8 TOUR_STEPS with botanical-palette icon circles (72px rounded-2xl), animated pill progress dots (active dot widens to 20px, visited dim to 66% opacity), Skip (top-right X), Back/Next/Done footer navigation
+- Tour timing: same `active` prop from layout.tsx — still gated by `!showOnboarding` and fires after the onboarding modal closes
+
+### File changed — `frontend/components/nav/AppSidebar.tsx`
+- Added `navHidden` state and `lastScrollY` ref
+- **Scroll listener effect**: queries `document.querySelector("main")` (the layout.tsx scroll container), attaches `passive` scroll listener with `requestAnimationFrame` throttle to avoid layout thrash
+  - `scrollTop ≤ 8` → show (always visible at top of page)
+  - `scrollTop > lastScrollY + 6` → hide (scrolling down)
+  - `scrollTop < lastScrollY - 6` → show (scrolling up)
+  - 6px dead-zone prevents flickering on micro-jitter scrolls
+- **Pathname reset effect**: `setNavHidden(false)` on every route change — new pages always start with nav visible
+- **Drawer guard**: condition is `navHidden && !mobileOpen` — nav cannot hide while drawer is open
+- CSS: `transition-transform duration-300 ease-in-out`, `-translate-y-full` when hidden / `translate-y-0` when visible
+- `tsc --noEmit`: 0 errors
+
+---
+
+## What Was Done (2026-04-27 Session 67 — Admin seed: Dr. Tan account)
 
 ### Goal
 Add supervisor admin account for Dr. Tan directly into the DB.

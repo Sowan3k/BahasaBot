@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { X, Sparkles } from "lucide-react";
-import { tipsApi } from "@/lib/api";
+import { useQuery } from "@tanstack/react-query";
+import { useSession } from "next-auth/react";
+import { tipsApi, profileApi } from "@/lib/api";
 import type { Tip, TipCategory } from "@/lib/types";
 
 // ── Category display metadata ─────────────────────────────────────────────────
@@ -27,30 +29,44 @@ const SESSION_KEY = "tip_dismissed";
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function TipToast() {
+  const { status } = useSession();
   const [tip, setTip] = useState<Tip | null>(null);
   const [visible, setVisible] = useState(false);
   const [progress, setProgress] = useState(100); // shrinks 100→0 over DISPLAY_DURATION_MS
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const progressTimer = useRef<ReturnType<typeof setInterval> | null>(null);
-  const mounted = useRef(false);
+  const hasFetched = useRef(false); // ensure we only trigger the tip once per mount
 
-  // ── Fetch tip on mount ────────────────────────────────────────────────────
+  // Read profile from the shared cache (layout.tsx already fetched it — no extra request).
+  // Tip is suppressed during the new-user flow so it never overlaps onboarding or the UI tour.
+  const { data: profile } = useQuery({
+    queryKey: ["profile"],
+    queryFn: () => profileApi.getProfile().then((r) => r.data),
+    enabled: status === "authenticated",
+    staleTime: 60_000,
+  });
+
+  // ── Fetch tip once profile is known ─────────────────────────────────────
 
   useEffect(() => {
-    mounted.current = true;
-
-    // Skip if already dismissed this session
+    // Wait until profile has loaded before deciding whether to show
+    if (profile === undefined) return;
+    // Only trigger once (profile may be invalidated/re-fetched in the same session)
+    if (hasFetched.current) return;
+    // New user: onboarding not yet done OR tour not yet seen — suppress tip entirely
+    if (!profile.onboarding_completed || !profile.has_seen_tour) return;
+    // Already dismissed this session
     if (sessionStorage.getItem(SESSION_KEY)) return;
+
+    hasFetched.current = true;
 
     const fetchTip = async () => {
       try {
         const res = await tipsApi.getRandom();
-        if (!mounted.current) return;
         setTip(res.data);
 
-        // Wait 2 s before showing
+        // Wait 2 s before showing so the page has settled
         const showTimer = setTimeout(() => {
-          if (!mounted.current) return;
           setVisible(true);
           startTimers();
         }, MOUNT_DELAY_MS);
@@ -62,12 +78,11 @@ export default function TipToast() {
     };
 
     fetchTip();
+  }, [profile]); // re-runs each time profile loads or is invalidated
 
-    return () => {
-      mounted.current = false;
-      clearAll();
-    };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    return () => clearAll();
+  }, []); // cleanup timers on unmount
 
   // ── Auto-dismiss timers ───────────────────────────────────────────────────
 

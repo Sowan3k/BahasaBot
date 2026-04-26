@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   ChevronLeft,
@@ -42,8 +42,50 @@ export function AppSidebar() {
     typeof window !== "undefined" && localStorage.getItem("sidebar-collapsed") === "true"
   );
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [navHidden, setNavHidden] = useState(false);
   const pathname = usePathname();
   const { data: session, status } = useSession();
+  const lastScrollY = useRef(0);
+
+  // ── Scroll-aware mobile nav: hide on scroll-down, show on scroll-up ─────────
+  // Follows industry-standard auto-hide pattern (Twitter, Instagram, LinkedIn).
+  // Reads scroll events from the shared <main> scroll container in layout.tsx.
+  useEffect(() => {
+    // Reset nav to visible on every page navigation
+    setNavHidden(false);
+    lastScrollY.current = 0;
+  }, [pathname]);
+
+  useEffect(() => {
+    const mainEl = document.querySelector("main") as HTMLElement | null;
+    if (!mainEl) return;
+
+    let ticking = false;
+
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const currentY = mainEl.scrollTop;
+        if (currentY <= 8) {
+          // At / near top — always show
+          setNavHidden(false);
+        } else if (currentY > lastScrollY.current + 6) {
+          // Scrolled down enough — hide
+          setNavHidden(true);
+        } else if (currentY < lastScrollY.current - 6) {
+          // Scrolled up enough — show
+          setNavHidden(false);
+        }
+        lastScrollY.current = currentY;
+        ticking = false;
+      });
+    };
+
+    mainEl.addEventListener("scroll", onScroll, { passive: true });
+    return () => mainEl.removeEventListener("scroll", onScroll);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleCollapse = (value: boolean) => {
     setCollapsed(value);
@@ -80,7 +122,16 @@ export function AppSidebar() {
   return (
     <>
       {/* ── MOBILE: fixed top header (hidden on md+) ── */}
-      <header className="md:hidden fixed top-0 inset-x-0 z-50 flex items-center justify-between px-4 h-14 bg-card border-b">
+      {/* Auto-hides on scroll-down, reappears on scroll-up — industry-standard pattern */}
+      <header
+        className={[
+          "md:hidden fixed top-0 inset-x-0 z-50",
+          "flex items-center justify-between px-4 h-14 bg-card border-b",
+          "transition-transform duration-300 ease-in-out",
+          // Always show when the drawer is open so the X button is reachable
+          (navHidden && !mobileOpen) ? "-translate-y-full" : "translate-y-0",
+        ].join(" ")}
+      >
         <button
           onClick={() => setMobileOpen(true)}
           className="p-2.5 rounded-md text-foreground hover:bg-muted transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
