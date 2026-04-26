@@ -1025,6 +1025,27 @@ No changes required. `generate_course()` returns an identical `Course` object wh
 
 ---
 
+## Session 55 — Admin Panel Phase 2 — Evaluation Data Quality (2026-04-26)
+
+**Goal:** Five additions that meaningfully improve the quality and depth of evaluation data visible to the admin: time-spent stat, chatbot engagement metrics, raw quiz attempt inspector, cohort score distribution histogram, cohort weak-points table.
+
+### Backend (modified)
+- [x] `backend/services/admin_service.py` — `get_user_detail()` extended with `total_time_spent_seconds` (SUM activity_logs duration), `total_chat_messages` (COUNT through chat_sessions join), `avg_messages_per_session` (1dp float)
+- [x] `backend/services/admin_service.py` — new `get_quiz_attempts(user_id)` — merged ModuleQuizAttempt + StandaloneQuizAttempt, newest-first; module attempts have `questions: null` (column not stored there)
+- [x] `backend/services/admin_service.py` — new `get_score_distribution(start_date?, end_date?)` — 10-point buckets, scores ×100, mean+median in Python
+- [x] `backend/services/admin_service.py` — new `get_weak_points_distribution(start_date?, end_date?)` — GROUP BY (type, topic), distinct user_count, avg strength, top 20
+- [x] `backend/routers/admin.py` — `GET /api/admin/users/{user_id}/quiz-attempts` (admin-gated)
+- [x] `backend/routers/admin.py` — `GET /api/admin/analytics/score-distribution` (admin-gated, date params)
+- [x] `backend/routers/admin.py` — `GET /api/admin/analytics/weak-points` (admin-gated, date params)
+
+### Frontend
+- [x] `frontend/lib/types.ts` — `AdminUserDetail.stats` + 3 new fields; `AdminQuizAttempt`, `ScoreDistribution`, `WeakPointDistribution` interfaces
+- [x] `frontend/lib/api.ts` — `adminApi.getQuizAttempts`, `getScoreDistribution`, `getWeakPointsDistribution`
+- [x] `frontend/app/(dashboard)/admin/users/[userId]/page.tsx` — `TextStatPill`; "Time on App" pill with coverage footnote; chat message + avg pills; `QuizAttemptsSection` (collapsible, lazy-fetch, Q/A with ✓/✗)
+- [x] `frontend/app/(dashboard)/admin/page.tsx` — `ScoreDistributionPanel` (Recharts BarChart, date pickers, mean/median); `WeakPointsPanel` (sortable table, date pickers, category badges)
+
+---
+
 ## Session 54 — Admin Panel Evaluation Enhancements (2026-04-26)
 
 **Goal:** Prepare the admin panel for the 30-user evaluation study with CSV export, additional user metrics, and bug fixes.

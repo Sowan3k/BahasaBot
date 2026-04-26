@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-26 (Session 54 — Admin panel evaluation enhancements: CSV export, last_active column, date filters, score trajectory chart, feedback label fix)
+## Last Updated: 2026-04-26 (Session 55 — Admin Panel Phase 2: time spent, chat metrics, quiz raw data, score distribution chart, cohort weak-points table)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -24,7 +24,7 @@ _Update this file at the end of every session_
 | User Profile + Settings (Phase 13) | ✅ Complete | GET + PATCH /api/profile/, change-password endpoint; /settings hub + /profile + /password + /about pages; Settings in sidebar |
 | Onboarding Flow (Phase 14) | ✅ Complete + Enhanced (Session 26) | 8-step questionnaire (Welcome → Gender/Age → NativeLang → WhyLearning → CurrentLevel → Goal → Timeline → DailyStudy); gender + age_range collected for personalised roadmap banner; roadmap auto-generated on finish; loading screen during generation; sonner toast on roadmap_ready; skip at any step saves partial data |
 | First-Login UI Tour | ✅ Complete + Race-fix + Dark theme (Session 30) | driver.js spotlight tour; 8 steps covering sidebar + all nav sections; triggers once after onboarding; has_seen_tour flag on users table; PATCH saves flag on tour done/skip. Race condition fixed: `active={showTour && !showOnboarding}`. Popover fully re-themed: dark card #2e2b22, warm text, olive-green Next button, ghost Back button, matching arrow — replaces default white popover |
-| Admin Control Panel (Phase 15) | ✅ Complete + Evaluation enhancements (Session 54) | /api/admin/* fully tested; stats, users (search + detail + delete + reset + analytics), feedback; password guards verified; recharts LineChart + BarChart confirmed working; analytics bug fixed (NullType → timedelta); CSV export endpoints (users/quiz-attempts/feedback with optional date range); last_active column on user list (from activity_logs MAX); date range filter on user list; avg quiz score pills + score trajectory LineChart on user detail; feedback label fix (general vs quiz context) |
+| Admin Control Panel (Phase 15) | ✅ Complete + Evaluation enhancements (Session 54) + Phase 2 (Session 55) | /api/admin/* fully tested; stats, users (search + detail + delete + reset + analytics), feedback; password guards verified; recharts LineChart + BarChart confirmed working; analytics bug fixed (NullType → timedelta); CSV export endpoints (users/quiz-attempts/feedback with optional date range); last_active column on user list; date range filter; avg quiz score pills + score trajectory LineChart; feedback label fix. Session 55: total_time_spent (with coverage caveat), total_chat_messages, avg_msgs_per_session on user detail; GET /api/admin/users/{id}/quiz-attempts (raw Q&A with correct/incorrect indicators, collapsible section); GET /api/admin/analytics/score-distribution (cohort histogram + mean/median, date filter); GET /api/admin/analytics/weak-points (top 20 topics by user count, sortable table, date filter) |
 | Pronunciation Audio (Phase 16) | ✅ Complete + Debugged | usePronunciation hook (ms-MY → ms → default fallback); SpeakerButton component; wired into VocabPills (chatbot), course class vocab cards, quiz results breakdown, dashboard vocabulary table; 3 post-implementation bugs fixed |
 | Notification System (Phase 17) | ✅ Complete | GET /api/notifications/ (last 20 + unread_count), POST mark-read, POST read-all; NotificationBell (60s polling, unread badge) + NotificationPanel; floating global icon in layout.tsx |
 | Gamification — Streak + XP (Phase 18) | ✅ Complete | record_learning_activity() in gamification_service.py; Redis-keyed daily streak; XP awards: class=10, quiz pass=25, chatbot session=5; milestone notifications (streak 3/7/14/30, every 100 XP); wired into 4 routers (courses, quiz, chatbot); StreakBadge + XPBar components; dashboard +2 stat cards; sidebar footer shows streak+XP |
@@ -72,7 +72,61 @@ _Update this file at the end of every session_
 
 ---
 
-## What Was Done This Session (2026-04-26 Session 54 — Admin panel evaluation enhancements)
+## What Was Done This Session (2026-04-26 Session 55 — Admin Panel Phase 2: evaluation data quality)
+
+### Goal
+Five evaluation-quality additions to the admin panel: surface time-spent with a coverage caveat, chatbot engagement metrics, a raw quiz attempt inspector, a cohort score distribution histogram, and a cohort weak-points table.
+
+### Backend — `admin_service.py`
+- `get_user_detail()` extended:
+  - `total_time_spent_seconds` = SUM(activity_logs.duration_seconds) for user (0 if none)
+  - `total_chat_messages` = COUNT(chat_messages) JOINed through chat_sessions.user_id
+  - `avg_messages_per_session` = messages / sessions, 1dp, 0 if no sessions
+- New `get_quiz_attempts(user_id)` — merges ModuleQuizAttempt + StandaloneQuizAttempt, sorted newest first; module attempts return `questions: null` (not stored in that table)
+- New `get_score_distribution(start_date, end_date)` — 10-point buckets across both tables; scores×100; mean+median computed in Python; optional date filter on taken_at
+- New `get_weak_points_distribution(start_date, end_date)` — GROUP BY (type, topic); distinct user_count; avg strength_score; date filter on updated_at; top 20 by user_count; `type` column renamed to `category` in API response
+
+### Backend — `admin.py`
+- `GET /api/admin/users/{user_id}/quiz-attempts` (new, admin-gated)
+- `GET /api/admin/analytics/score-distribution` (new, admin-gated, optional date params)
+- `GET /api/admin/analytics/weak-points` (new, admin-gated, optional date params)
+
+### Frontend — `types.ts`
+- `AdminUserDetail.stats` extended: `total_time_spent_seconds`, `total_chat_messages`, `avg_messages_per_session`
+- New interfaces: `AdminQuizAttempt`, `ScoreDistribution`, `WeakPointDistribution`
+
+### Frontend — `api.ts`
+- `adminApi.getQuizAttempts(userId)`, `getScoreDistribution(sd?, ed?)`, `getWeakPointsDistribution(sd?, ed?)`
+
+### Frontend — `admin/users/[userId]/page.tsx`
+- `fmtDuration(seconds)` helper → "2h 15m" / "45m" / "0m"
+- `TextStatPill` component for non-integer display values
+- "Time on App" pill with coverage footnote ("Quizzes & spelling only — chatbot/browsing not tracked")
+- "Chat Messages" (count) + "Msgs / Session" (avg) stat pills
+- `QuizAttemptsSection` — collapsible, lazy-fetches on first open; `AttemptCard` shows type badge, score%, timestamp, Q/A pairs with CheckCircle/XCircle indicators
+
+### Frontend — `admin/page.tsx`
+- `ScoreDistributionPanel` — Recharts BarChart, date pickers (re-fetch on change), mean+median text labels above chart
+- `WeakPointsPanel` — sortable table (click header to sort by user_count or avg_strength_score), date pickers, category badge (vocab/grammar), strength score coloured by threshold (red/amber/green)
+
+### Data shape decisions (divergences from spec)
+- `attempt_id` is UUID string (not int) — IDs are UUIDs throughout the DB
+- Module quiz `questions` = null (questions_json column does not exist on module_quiz_attempts — only answers_json is stored)
+- Weak-point `category` maps to the DB column `type` ("vocab"/"grammar") — renamed for API clarity
+- Weak-point date filter uses `updated_at` (only timestamp on the weak_points table; no `created_at`)
+
+### Methodological caveats (for evaluation methodology doc)
+- **Time on app** undercounts: activity_logs only records quiz and spelling game duration. Chatbot browsing time and course reading time are event-counted (not timed), so `total_time_spent_seconds` is a lower bound.
+- **Score distribution** mixes module quizzes (pass threshold ≥70%) and standalone adaptive quizzes (no gate) — a learner can retake module quizzes until passing, biasing module scores upward.
+- **Weak point strength_score** is a rolling value (updated on each quiz miss/hit), not a creation-time score — the date filter on `updated_at` reflects when a weak point was last touched, not when it was first identified.
+
+### Smoke test results
+- `tsc --noEmit`: 0 errors
+- Python import check: all 4 new service functions exist + are async; all 3 new routes registered at correct paths
+
+---
+
+## What Was Done Previous Session (2026-04-26 Session 54 — Admin panel evaluation enhancements)
 
 ### Goal
 Harden the admin panel for the 30-user evaluation study: add CSV export for all three datasets, surface last_active on the user list, add date range filters to user list and exports, show avg quiz score + score trajectory on user detail, and fix the feedback label bug (general feedback showed "Quiz matched weak areas" instead of "Content is relevant").
