@@ -75,14 +75,15 @@ _Update this file at the end of every session_
 ## What Was Done This Session (2026-04-27 Session 67 — Admin seed: Dr. Tan account)
 
 ### Goal
-Add a second admin account for Dr. Tan Tien Ping (supervisor) directly into the DB.
+Add supervisor admin account for Dr. Tan directly into the DB.
 
-### File created — `backend/data/create_admin.py`
-- Idempotent seed script: inserts `drtan@testadmin.com` with role='admin', onboarding_completed=true
-- Uses bcrypt.hashpw directly (consistent with auth.py — no passlib)
-- Run from project root: `backend/venv/Scripts/python.exe -m backend.data.create_admin`
-- Safe to re-run: skips if email already exists; upgrades role if account exists as 'user'
-- Account created: email=drtan@testadmin.com, name="Dr. Tan Tien Ping", role=admin, ID=a5590361-fea5-4d4b-af51-87f000b7dd47
+### File created — `backend/scripts/create_supervisor_admin.py`
+- Idempotent seed script: inserts `DrTan@gmail.testadmin` with role='admin', onboarding_completed=true
+- Uses `_hash_password` / `_verify_password` imported from `backend/routers/auth.py` (same as login endpoint)
+- Run from project root: `backend/venv/Scripts/python.exe -m backend.scripts.create_supervisor_admin`
+- Safe to re-run: updates password + forces role='admin' if account already exists
+- Account in DB: email=DrTan@gmail.testadmin, name="Dr. Tan", role=admin, ID=a099fed5-6889-47de-8a23-633a10aa102d
+- Stale account `drtan@testadmin.com` deleted from DB and `create_admin.py` removed
 
 ---
 
