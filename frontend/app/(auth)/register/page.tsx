@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -18,6 +18,7 @@ import { SetPasswordModal } from "@/components/auth/SetPasswordModal";
 import type { TokenResponse } from "@/lib/types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const GOOGLE_CLIENT_ID_PRESENT = Boolean(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID);
 
 // ── Zod schema ──────────────────────────────────────────────────────────────
 
@@ -67,6 +68,8 @@ export default function RegisterPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
   const [showSetPassword, setShowSetPassword] = useState(false);
+  const googleButtonRef = useRef<HTMLDivElement | null>(null);
+  const [googleButtonWidth, setGoogleButtonWidth] = useState(340);
 
   const {
     register,
@@ -131,6 +134,21 @@ export default function RegisterPage() {
   }
 
   const isLoading = isSubmitting || googleLoading;
+
+  useEffect(() => {
+    const node = googleButtonRef.current;
+    if (!node) return;
+
+    const updateWidth = () => {
+      const width = Math.floor(node.getBoundingClientRect().width);
+      if (width > 0) setGoogleButtonWidth(width);
+    };
+
+    updateWidth();
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
 
   // ── Render ───────────────────────────────────────────────────────────────
 
@@ -313,14 +331,15 @@ export default function RegisterPage() {
         </div>
 
         {/* Google sign-up */}
-        <div className="relative h-10">
+        <div ref={googleButtonRef} className="relative h-10">
           <button
             type="button"
-            disabled={isLoading}
+            disabled={isLoading || !GOOGLE_CLIENT_ID_PRESENT}
+            title={!GOOGLE_CLIENT_ID_PRESENT ? "Google sign-in is not configured" : undefined}
             className="w-full flex items-center justify-center gap-3 h-10 rounded-lg
                        border border-white/15 bg-white/[0.06] hover:bg-white/10
                        text-white/75 hover:text-white text-sm font-medium
-                       transition-all duration-200 disabled:opacity-40"
+                       transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -332,11 +351,12 @@ export default function RegisterPage() {
           </button>
 
           {/* Transparent GIS overlay — same pattern as login page */}
-          {!isLoading && (
+          {GOOGLE_CLIENT_ID_PRESENT && !isLoading && (
             <div
               style={{
                 position: "absolute",
                 inset: 0,
+                zIndex: 2,
                 opacity: 0.001,
                 overflow: "hidden",
                 borderRadius: "8px",
@@ -351,7 +371,7 @@ export default function RegisterPage() {
                 shape="rectangular"
                 theme="filled_black"
                 size="large"
-                width="460"
+                width={String(googleButtonWidth)}
               />
             </div>
           )}
