@@ -1028,6 +1028,24 @@ No changes required. `generate_course()` returns an identical `Course` object wh
 
 ---
 
+## Session 57 — Admin Panel Bug Fixes (2026-04-26)
+
+**Goal:** Fix three broken features in the admin panel that were silently failing.
+
+### Bug 1 — Common Weak Points: SQL crash on every call
+- [x] `backend/services/admin_service.py` — `get_weak_points_distribution()`: `func.round(func.cast(func.avg(...), type_=func.Float), 2)` used `func.Float` as a type (wrong — it's a SQLAlchemy Function object, generates invalid SQL `cast(avg(x))` with no AS clause → 500 on every call). Fixed: use `func.avg(...).label("avg_strength")` + `round(float(r.avg_strength), 2)` in Python dict comprehension
+
+### Bug 2 — Score Distribution + Weak Points: silent error = same UI as empty data
+- [x] `frontend/app/(dashboard)/admin/page.tsx` — `ScoreDistributionPanel`: added `error: string | null` state; catch block sets `error`; render shows red error message when error is set (vs muted italic "no data" empty state)
+- [x] `frontend/app/(dashboard)/admin/page.tsx` — `WeakPointsPanel`: same pattern
+
+### Bug 3 — Token usage always zero (log_tokens never called)
+- [x] `backend/services/gemini_service.py` — added `generate_json_with_usage(prompt, ...) → (dict, int, int)`; refactored `generate_json()` to delegate to it
+- [x] `backend/services/quiz_service.py` — imported `Course`, `generate_json_with_usage`; `generate_module_quiz()` now calls `log_tokens(feature="module_quiz")`; `generate_standalone_quiz()` calls `log_tokens(feature="standalone_quiz")`
+- [x] `backend/services/course_service.py` — `generate_course_skeleton()` returns `(dict, int, int)`; `generate_course()` logs tokens via `log_tokens(feature="course_gen")`
+
+---
+
 ## Session 55 — Admin Panel Phase 2 — Evaluation Data Quality (2026-04-26)
 
 **Goal:** Five additions that meaningfully improve the quality and depth of evaluation data visible to the admin: time-spent stat, chatbot engagement metrics, raw quiz attempt inspector, cohort score distribution histogram, cohort weak-points table.

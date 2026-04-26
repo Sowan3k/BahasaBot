@@ -26,11 +26,11 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.models.course import Class, Module
+from backend.models.course import Class, Course, Module
 from backend.models.progress import UserProgress, VocabularyLearned, GrammarLearned, WeakPoint
 from backend.models.quiz import ModuleQuizAttempt, StandaloneQuizAttempt
 from backend.models.user import User
-from backend.services.gemini_service import generate_json
+from backend.services.gemini_service import generate_json, generate_json_with_usage
 from backend.utils.cache import cache_delete, cache_get, cache_set
 from backend.utils.logger import get_logger
 
@@ -146,7 +146,18 @@ Return ONLY valid JSON — no markdown, no prose:
 
 Generate all 10 questions now. Assign IDs q1 through q10."""
 
-    data = await generate_json(prompt)
+    data, input_tok, output_tok = await generate_json_with_usage(prompt)
+
+    # Log token usage — look up the user_id through the module's course
+    try:
+        from backend.utils.analytics import log_tokens
+        course_result = await db.execute(select(Course).where(Course.id == module.course_id))
+        course = course_result.scalar_one_or_none()
+        if course:
+            await log_tokens(db, user_id=course.user_id, feature="module_quiz", input_tokens=input_tok, output_tokens=output_tok)
+    except Exception:
+        pass
+
     questions = data.get("questions", [])
 
     if len(questions) < 5:
@@ -712,7 +723,15 @@ Return ONLY valid JSON — no markdown, no prose:
 
 Generate all 15 questions now. Assign IDs q1 through q15."""
 
-    data = await generate_json(prompt)
+    data, input_tok, output_tok = await generate_json_with_usage(prompt)
+
+    # Log token usage for standalone quiz generation
+    try:
+        from backend.utils.analytics import log_tokens
+        await log_tokens(db, user_id=user_id, feature="standalone_quiz", input_tokens=input_tok, output_tokens=output_tok)
+    except Exception:
+        pass
+
     questions = data.get("questions", [])
 
     if len(questions) < 8:

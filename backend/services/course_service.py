@@ -27,7 +27,7 @@ from sqlalchemy.orm import selectinload
 
 from backend.models.course import Class, Course, Module
 from backend.models.progress import UserProgress, VocabularyLearned
-from backend.services.gemini_service import FALLBACK_MESSAGE, generate_json, generate_text
+from backend.services.gemini_service import FALLBACK_MESSAGE, generate_json, generate_json_with_usage, generate_text
 from backend.utils.cache import cache_delete, cache_set
 from backend.utils.logger import get_logger
 
@@ -189,26 +189,12 @@ async def _clone_course(template: "Course", user_id: UUID, db: AsyncSession) -> 
 # ── Step 1: Course skeleton ────────────────────────────────────────────────────
 
 
-async def generate_course_skeleton(topic: str, level: str = "A1") -> dict:
+async def generate_course_skeleton(topic: str, level: str = "A1") -> tuple[dict, int, int]:
     """
     Generate a course structure (title, modules, class titles) from a topic using Gemini.
 
-    Returns a dict matching:
-    {
-        "title": str,
-        "description": str,
-        "objectives": [str, ...],
-        "modules": [
-            {
-                "title": str,
-                "description": str,
-                "classes": [{"title": str}, ...]
-            },
-            ...
-        ]
-    }
-
-    Falls back to a minimal skeleton if Gemini fails.
+    Returns (skeleton_dict, input_tokens, output_tokens).
+    Falls back to a minimal skeleton if Gemini fails (tokens will be 0 in that case).
     """
     prompt = f"""You are an expert language curriculum designer for an English-medium Malay language learning platform.
 
@@ -260,7 +246,7 @@ Return ONLY valid JSON — no markdown, no prose:
   ]
 }}"""
 
-    skeleton = await generate_json(prompt)
+    skeleton, input_tokens, output_tokens = await generate_json_with_usage(prompt)
 
     if not skeleton or "modules" not in skeleton or not skeleton["modules"]:
         logger.warning("Skeleton generation returned empty/invalid JSON — using fallback", topic=topic)
@@ -294,7 +280,7 @@ Return ONLY valid JSON — no markdown, no prose:
             ],
         }
 
-    return skeleton
+    return skeleton, input_tokens, output_tokens
 
 
 # ── Step 2: Class content ──────────────────────────────────────────────────────
@@ -643,8 +629,15 @@ async def generate_course(
         await _update_job(job_id, "running", 5, "Validating topic and designing course structure…")
 
     # Step 1 — skeleton
-    skeleton = await generate_course_skeleton(topic, level)
+    skeleton, skel_input_tok, skel_output_tok = await generate_course_skeleton(topic, level)
     skeleton["topic"] = topic  # Store original user topic verbatim
+
+    # Log token usage for course skeleton generation
+    try:
+        from backend.utils.analytics import log_tokens
+        await log_tokens(db, user_id=user_id, feature="course_gen", input_tokens=skel_input_tok, output_tokens=skel_output_tok)
+    except Exception:
+        pass
 
     if job_id:
         await _update_job(job_id, "running", 15, "Course outline ready — generating lesson content…")

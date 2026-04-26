@@ -609,16 +609,19 @@ function LanguageTipsPanel() {
 function ScoreDistributionPanel() {
   const [data, setData] = useState<ScoreDistribution | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
   const fetchData = async (sd?: string, ed?: string) => {
     setLoading(true);
+    setError(null);
     try {
       const res = await adminApi.getScoreDistribution(sd || undefined, ed || undefined);
       setData(res.data);
     } catch {
       setData(null);
+      setError("Failed to load score distribution data.");
     } finally {
       setLoading(false);
     }
@@ -668,6 +671,8 @@ function ScoreDistributionPanel() {
         <div className="p-5">
           {loading ? (
             <div className="h-48 rounded-xl bg-muted animate-pulse" />
+          ) : error ? (
+            <p className="text-sm text-red-500 text-center py-10 italic">{error}</p>
           ) : !data || data.total_attempts === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-10 italic">No quiz attempts in this period.</p>
           ) : (
@@ -718,6 +723,7 @@ function ScoreDistributionPanel() {
 function WeakPointsPanel() {
   const [data, setData] = useState<WeakPointDistribution | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [sortField, setSortField] = useState<"user_count" | "avg_strength_score">("user_count");
@@ -725,11 +731,13 @@ function WeakPointsPanel() {
 
   const fetchData = async (sd?: string, ed?: string) => {
     setLoading(true);
+    setError(null);
     try {
       const res = await adminApi.getWeakPointsDistribution(sd || undefined, ed || undefined);
       setData(res.data);
     } catch {
       setData(null);
+      setError("Failed to load weak points data.");
     } finally {
       setLoading(false);
     }
@@ -797,6 +805,8 @@ function WeakPointsPanel() {
           <div className="space-y-2 p-4">
             {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-10 rounded-lg" />)}
           </div>
+        ) : error ? (
+          <p className="text-sm text-red-500 text-center py-10 italic">{error}</p>
         ) : !rows.length ? (
           <p className="text-sm text-muted-foreground text-center py-10 italic">No weak point data found.</p>
         ) : (

@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-26 (Session 56 — VocabPill mobile tap fix: chatbot vocabulary pills now open on tap, close on outside tap)
+## Last Updated: 2026-04-26 (Session 57 — Admin panel bug fixes: weak-points SQL crash fixed, score/weak-points error state differentiation, token usage logging wired into quiz + course generation)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -24,7 +24,7 @@ _Update this file at the end of every session_
 | User Profile + Settings (Phase 13) | ✅ Complete | GET + PATCH /api/profile/, change-password endpoint; /settings hub + /profile + /password + /about pages; Settings in sidebar |
 | Onboarding Flow (Phase 14) | ✅ Complete + Enhanced (Session 26) | 8-step questionnaire (Welcome → Gender/Age → NativeLang → WhyLearning → CurrentLevel → Goal → Timeline → DailyStudy); gender + age_range collected for personalised roadmap banner; roadmap auto-generated on finish; loading screen during generation; sonner toast on roadmap_ready; skip at any step saves partial data |
 | First-Login UI Tour | ✅ Complete + Race-fix + Dark theme (Session 30) | driver.js spotlight tour; 8 steps covering sidebar + all nav sections; triggers once after onboarding; has_seen_tour flag on users table; PATCH saves flag on tour done/skip. Race condition fixed: `active={showTour && !showOnboarding}`. Popover fully re-themed: dark card #2e2b22, warm text, olive-green Next button, ghost Back button, matching arrow — replaces default white popover |
-| Admin Control Panel (Phase 15) | ✅ Complete + Evaluation enhancements (Session 54) + Phase 2 (Session 55) | /api/admin/* fully tested; stats, users (search + detail + delete + reset + analytics), feedback; password guards verified; recharts LineChart + BarChart confirmed working; analytics bug fixed (NullType → timedelta); CSV export endpoints (users/quiz-attempts/feedback with optional date range); last_active column on user list; date range filter; avg quiz score pills + score trajectory LineChart; feedback label fix. Session 55: total_time_spent (with coverage caveat), total_chat_messages, avg_msgs_per_session on user detail; GET /api/admin/users/{id}/quiz-attempts (raw Q&A with correct/incorrect indicators, collapsible section); GET /api/admin/analytics/score-distribution (cohort histogram + mean/median, date filter); GET /api/admin/analytics/weak-points (top 20 topics by user count, sortable table, date filter) |
+| Admin Control Panel (Phase 15) | ✅ Complete + Evaluation enhancements (Session 54) + Phase 2 (Session 55) + Bug fixes (Session 57) | /api/admin/* fully tested; stats, users (search + detail + delete + reset + analytics), feedback; password guards verified; recharts LineChart + BarChart confirmed working; analytics bug fixed (NullType → timedelta); CSV export endpoints (users/quiz-attempts/feedback with optional date range); last_active column on user list; date range filter; avg quiz score pills + score trajectory LineChart; feedback label fix. Session 55: total_time_spent (with coverage caveat), total_chat_messages, avg_msgs_per_session on user detail; GET /api/admin/users/{id}/quiz-attempts (raw Q&A with correct/incorrect indicators, collapsible section); GET /api/admin/analytics/score-distribution (cohort histogram + mean/median, date filter); GET /api/admin/analytics/weak-points (top 20 topics by user count, sortable table, date filter). Session 57 bugs fixed: weak-points endpoint crashed with SQL error (func.Float is not a valid SQLAlchemy type; replaced with Python-side round()); score distribution + weak points panels now show distinct red error message vs italic "no data" empty state; token_usage_logs was always empty because log_tokens() was never called — now wired: generate_json_with_usage() added to gemini_service; module_quiz + standalone_quiz + course skeleton generation all call log_tokens() so per-user token charts in admin/users/{id} populate correctly |
 | Pronunciation Audio (Phase 16) | ✅ Complete + Debugged + Mobile tap fix (Session 56) | usePronunciation hook (ms-MY → ms → default fallback); SpeakerButton component; wired into VocabPills (chatbot), course class vocab cards, quiz results breakdown, dashboard vocabulary table; 3 post-implementation bugs fixed; VocabPill now opens on tap (mobile) and closes on outside-tap — previously hover-only, broken on touchscreens |
 | Notification System (Phase 17) | ✅ Complete | GET /api/notifications/ (last 20 + unread_count), POST mark-read, POST read-all; NotificationBell (60s polling, unread badge) + NotificationPanel; floating global icon in layout.tsx |
 | Gamification — Streak + XP (Phase 18) | ✅ Complete | record_learning_activity() in gamification_service.py; Redis-keyed daily streak; XP awards: class=10, quiz pass=25, chatbot session=5; milestone notifications (streak 3/7/14/30, every 100 XP); wired into 4 routers (courses, quiz, chatbot); StreakBadge + XPBar components; dashboard +2 stat cards; sidebar footer shows streak+XP |
@@ -72,7 +72,39 @@ _Update this file at the end of every session_
 
 ---
 
-## What Was Done This Session (2026-04-26 Session 56 — VocabPill mobile tap fix)
+## What Was Done This Session (2026-04-26 Session 57 — Admin panel bug fixes)
+
+### Goal
+Fix three bugs in the admin panel: (1) Common Weak Points panel always returned 500 due to invalid SQL, (2) both panels silently swallowed API errors and showed the same empty state as "no data", (3) per-user token usage charts were always zero because `log_tokens()` was never called anywhere.
+
+### Backend — `backend/services/gemini_service.py`
+- Added `generate_json_with_usage(prompt, system_prompt?, max_retries?) → (dict, int, int)` — like `generate_json` but returns `(result, input_tokens, output_tokens)`; accumulates tokens across JSON parse retries
+- Refactored `generate_json()` to delegate to `generate_json_with_usage()` (single implementation, no duplication)
+
+### Backend — `backend/services/admin_service.py`
+- `get_weak_points_distribution()`: removed `func.round(func.cast(func.avg(...), type_=func.Float), 2)` — `func.Float` is a SQLAlchemy Function object, not a type; it generated invalid SQL (`cast(avg(x))` with no AS clause), causing a 500 error on every call. Fixed by removing the SQL cast and using `func.avg(...).label("avg_strength")` + Python-side `round(float(r.avg_strength), 2)` in the dict comprehension
+
+### Backend — `backend/services/quiz_service.py`
+- Imported `Course` from `backend.models.course` and `generate_json_with_usage` from `gemini_service`
+- `generate_module_quiz()`: switched from `generate_json()` to `generate_json_with_usage()`; looks up `user_id` from `module.course_id → Course.user_id`; calls `log_tokens(db, user_id, feature="module_quiz", ...)`
+- `generate_standalone_quiz()`: switched to `generate_json_with_usage()`; calls `log_tokens(db, user_id, feature="standalone_quiz", ...)`
+
+### Backend — `backend/services/course_service.py`
+- Imported `generate_json_with_usage`
+- `generate_course_skeleton()`: return type changed from `dict` to `tuple[dict, int, int]`; uses `generate_json_with_usage()` and returns `(skeleton, input_tokens, output_tokens)`
+- `generate_course()`: unpacks the new tuple; calls `log_tokens(db, user_id, feature="course_gen", ...)` after skeleton generation
+
+### Frontend — `frontend/app/(dashboard)/admin/page.tsx`
+- `ScoreDistributionPanel`: added `error: string | null` state; catch block now sets `error` instead of leaving `data=null`; render shows a red error message when `error` is set (distinct from the italic muted "no attempts" empty state)
+- `WeakPointsPanel`: same pattern — `error` state + red error message on failure
+
+### Syntax/type checks
+- Python AST: all 4 modified `.py` files parse clean
+- `tsc --noEmit`: 0 errors
+
+---
+
+## What Was Done Previous Session (2026-04-26 Session 56 — VocabPill mobile tap fix)
 
 ### Goal
 VocabularyHighlight VocabPills in the chatbot were hover-only. On mobile (touch screens), hover events never fire, so the translation + pronunciation tooltip was completely inaccessible.
@@ -88,7 +120,7 @@ VocabularyHighlight VocabPills in the chatbot were hover-only. On mobile (touch 
 
 ---
 
-## What Was Done Previous Session (2026-04-26 Session 55 — Admin Panel Phase 2: evaluation data quality)
+## What Was Done Two Sessions Ago (2026-04-26 Session 55 — Admin Panel Phase 2: evaluation data quality)
 
 ### Goal
 Five evaluation-quality additions to the admin panel: surface time-spent with a coverage caveat, chatbot engagement metrics, a raw quiz attempt inspector, a cohort score distribution histogram, and a cohort weak-points table.

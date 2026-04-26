@@ -791,7 +791,7 @@ async def get_weak_points_distribution(
             WeakPoint.type.label("category"),
             WeakPoint.topic,
             func.count(distinct(WeakPoint.user_id)).label("user_count"),
-            func.round(func.cast(func.avg(WeakPoint.strength_score), type_=func.Float), 2).label("avg_strength"),
+            func.avg(WeakPoint.strength_score).label("avg_strength"),
         )
         .group_by(WeakPoint.type, WeakPoint.topic)
         .order_by(func.count(distinct(WeakPoint.user_id)).desc())
@@ -811,7 +811,7 @@ async def get_weak_points_distribution(
             "category": r.category,
             "topic": r.topic,
             "user_count": r.user_count,
-            "avg_strength_score": float(r.avg_strength) if r.avg_strength is not None else 0.0,
+            "avg_strength_score": round(float(r.avg_strength), 2) if r.avg_strength is not None else 0.0,
         }
         for r in rows
     ]

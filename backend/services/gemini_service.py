@@ -218,27 +218,47 @@ async def generate_json(
     Instructs the model to return only valid JSON. Retries parsing up to
     max_retries times. Returns {} if all attempts fail.
     """
+    result, _, _ = await generate_json_with_usage(prompt, system_prompt, max_retries)
+    return result
+
+
+async def generate_json_with_usage(
+    prompt: str,
+    system_prompt: str | None = None,
+    max_retries: int = 3,
+) -> tuple[dict, int, int]:
+    """
+    Like generate_json but also returns (input_tokens, output_tokens).
+
+    Returns ({}, 0, 0) if all attempts fail.
+    Used by callers that need to log token consumption.
+    """
     json_system = (
         (system_prompt.strip() + "\n\n" if system_prompt else "")
         + "IMPORTANT: Respond with valid JSON only. No markdown fences, no prose."
     )
     messages = _build_messages(prompt, json_system)
 
+    total_input = 0
+    total_output = 0
+
     for attempt in range(max_retries):
         try:
-            raw, _, _ = await _invoke_with_retry(messages, max_retries=1)
+            raw, input_tokens, output_tokens = await _invoke_with_retry(messages, max_retries=1)
+            total_input += input_tokens
+            total_output += output_tokens
             # Strip markdown code fences if the model adds them
             cleaned = raw.strip()
             if cleaned.startswith("```"):
                 cleaned = cleaned.split("\n", 1)[-1]
                 cleaned = cleaned.rsplit("```", 1)[0].strip()
-            return json.loads(cleaned)
+            return json.loads(cleaned), total_input, total_output
         except (json.JSONDecodeError, RuntimeError) as exc:
             # If this looks like a 429, use the API-suggested delay instead of exponential backoff
             retry_delay = _parse_retry_delay(exc)
             wait = (retry_delay + 2) if retry_delay is not None else 2**attempt
             logger.warning(
-                "generate_json failed",
+                "generate_json_with_usage failed",
                 attempt=attempt + 1,
                 error=str(exc)[:200],
                 retry_in_seconds=wait,
@@ -246,8 +266,8 @@ async def generate_json(
             if attempt < max_retries - 1:
                 await asyncio.sleep(wait)
 
-    logger.error("generate_json failed after all retries")
-    return {}
+    logger.error("generate_json_with_usage failed after all retries")
+    return {}, total_input, total_output
 
 
 async def stream_text(
