@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-27 (Session 59 — Chatbot typing animation upgrade + backend latency optimizations)
+## Last Updated: 2026-04-27 (Session 60 — Course generation popup animation upgrade)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -17,7 +17,7 @@ _Update this file at the end of every session_
 | Dark Mode | ✅ Complete + Repositioned | ThemeToggle moved to top-right of sidebar header row (industry standard); icon variant added for collapsed/mobile |
 | UI Polish | ✅ Complete | Space Grotesk font, botanical color palette, glowing dashboard cards, animated auth pages |
 | Local Dev Launcher | ✅ Complete | `start-bahasabot.bat` launches both frontend + backend; PM2 config removed from root |
-| Background Course Generation | ✅ Complete | Non-blocking modal; floating progress card; BackgroundTasks + Redis job state; React Query polling |
+| Background Course Generation | ✅ Complete + Animation upgrade (Session 60) | Non-blocking modal; floating progress card; BackgroundTasks + Redis job state; React Query polling; Desktop: spinning pinwheel (botanical palette, overflow-clipped flower, no stick); Mobile: compact 220px bottom-center pill with domino-falling bars — non-blocking |
 | BPS Migration | ✅ Complete | CEFR labels fully retired; BPS-1/2/3/4 across DB, backend, frontend; Alembic migration written |
 | DB Schema (Phase 11) | ✅ Complete + Applied | 6 new tables + 8 new columns; ORM models written; migration applied successfully |
 | Forgot Password (Phase 12) | ✅ Rebuilt — 6-digit code flow | 3-endpoint backend (forgot/verify/reset); 4-step frontend (email→code→password→success); OTP boxes + resend cooldown; old link page deprecated; full E2E verified |
@@ -72,27 +72,52 @@ _Update this file at the end of every session_
 
 ---
 
-## What Was Done This Session (2026-04-27 Session 59 — Chatbot typing animation + latency optimizations)
+## What Was Done This Session (2026-04-27 Session 60 — Course generation popup animation upgrade)
+
+### Goal
+Replace the plain emoji+progress bar popup with two purpose-built CSS animations that match the project's botanical color palette. Desktop gets a spinning pinwheel; mobile gets a compact non-blocking pill with falling domino bars.
+
+### File changed — `frontend/components/courses/CourseGenerationProgress.tsx`
+
+**Desktop card (md+) — pinwheel animation:**
+- Adapted the m1her/hungry-kangaroo-29 pinwheel from UIverse: four petal-leaf arms rotating on a 3s linear loop
+- Colours remapped to botanical palette: rust `#c85a3c`, gold `#d4a843`, olive `#8d9d4f`, sage `#7d8f6b` — work on both light (`#e4d7b0`) and dark (`#111110`) card backgrounds
+- Stick omitted (card context; floating flower is cleaner); overflow-clipped wrapper (100px height, scale 0.6) so the flower is centred without layout overflow
+- Card layout: [animation zone] → "Generating your course…" label + step text (visually attached below animation) → slim progress bar + `%` counter → "View Course →" / "Dismiss" when done
+
+**Mobile pill (<md) — domino bars animation:**
+- Adapted the shadowfax29/silly-octopus-9 domino animation: five coloured bars falling in staggered sequence (same botanical colours)
+- Compact `220px` wide bottom-centre pill — occupies only the bottom-centre strip, page content visible on both sides
+- Expands to `260px` when done/failed to accommodate action buttons
+- `safe-area-inset-bottom` so it clears the iPhone home bar
+- "Generating course…" + current step text shown inline next to the animation
+
+**All states handled:**
+- Active: animation + step text + progress %
+- Done: `CheckCircle2` icon + "Course ready!" + "View Course →" + "Dismiss"
+- Failed: `XCircle` icon + error message + "Dismiss"
+
+**Technical notes:**
+- All CSS embedded via `<style dangerouslySetInnerHTML>` with `bb-` prefix to avoid global class collisions
+- `scale: 1.5` CSS property used on petal wrappers (Chrome 107+, Firefox 110+, Safari 15.4+ — all supported)
+- `tsc --noEmit`: 0 errors
+
+---
+
+## What Was Done Previous Session (2026-04-27 Session 59 — Chatbot typing animation + latency optimizations)
 
 ### Goal
 Two improvements: (1) make the "waiting" animation visible and professional while the AI thinks, and (2) reduce backend latency before the first token arrives.
 
 ### Frontend — `frontend/components/chatbot/ChatMessage.tsx`
 - Replaced `TypingBars` (5 audio-visualizer bars, 2px wide, `animate-pulse` fade) with `ThinkingIndicator`: three 8px bouncing dots (`animate-bounce`, 0/160/320ms stagger) + "Thinking…" label in muted text
-- The indicator shows immediately when the user sends a message (`content === "" && isStreaming`) — no change to trigger logic, only the visual
-- `tsc --noEmit`: 0 errors
 
 ### Backend — `backend/services/langchain_service.py`
-- **Parallel Redis lookups**: the three pre-stream cache checks (RAG context, user profile, conversation history) previously ran sequentially. Now they use `asyncio.gather(cache_get(rag_key), cache_get(profile_key), cache_get(history_key))`. On warm paths (all Redis hits) this saves ~10–15ms per message.
-- DB fallbacks on cache miss remain sequential (correct — SQLAlchemy AsyncSession must not be used concurrently for DB queries)
-- **RAG k reduced 5 → 3**: fewer corpus chunks retrieved means faster embedding query and smaller context fed to Gemini; tested and confirmed `hits=3` in logs
-- Inline the profile + history DB fallback logic directly in `stream_chat_response()` (was calling `get_cached_profile()` and `_load_history()` which internally did their own cache check — now the cache check is batched before the function body runs)
+- **Parallel Redis lookups**: three pre-stream cache checks now use `asyncio.gather()` — saves ~10–15ms per message on warm paths
+- **RAG k reduced 5 → 3**: faster embedding query + smaller context fed to Gemini
 
 ### Verified
-- Python syntax check: OK for both modified files
-- Backend health: `{"status":"ok","redis":"ok"}`
-- Live test (real user JWT): ping at 258ms (warm) / 427ms (cold); TTFT ~2.7–4.2s (Gemini API inherent latency); `hits=3` confirmed in backend logs
-- Frontend compiled: `/chatbot` compiled in 16.3s, 0 errors
+- Python syntax check: OK; Backend health: OK; TTFT ~2.7–4.2s; `hits=3` confirmed in logs
 
 ---
 
