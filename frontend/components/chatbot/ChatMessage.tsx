@@ -11,7 +11,7 @@
  *     replaced with interactive VocabPill components (hover to see translation).
  */
 
-import { Fragment, memo, useMemo } from "react";
+import { Fragment, memo, useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import type { Components } from "react-markdown";
 import { Volume2 } from "lucide-react";
@@ -42,33 +42,165 @@ function preprocessContent(text: string): string {
   );
 }
 
+const INLINE_TOOLTIP_W = 220;
+const INLINE_TOOLTIP_H = 64;
+const INLINE_TOOLTIP_MARGIN = 10;
+const INLINE_TOOLTIP_GAP = 8;
+
+type InlineTooltipCoords = {
+  top: number;
+  left: number;
+  openBelow: boolean;
+};
+
+function computeInlineTooltipCoords(rect: DOMRect): InlineTooltipCoords {
+  const vw = window.innerWidth;
+  const openBelow = rect.top < INLINE_TOOLTIP_H + INLINE_TOOLTIP_MARGIN;
+  const top = openBelow
+    ? rect.bottom + INLINE_TOOLTIP_GAP
+    : rect.top - INLINE_TOOLTIP_GAP;
+  const centeredLeft = rect.left + rect.width / 2 - INLINE_TOOLTIP_W / 2;
+  const left = Math.max(
+    INLINE_TOOLTIP_MARGIN,
+    Math.min(centeredLeft, vw - INLINE_TOOLTIP_W - INLINE_TOOLTIP_MARGIN),
+  );
+
+  return { top, left, openBelow };
+}
+
 /**
  * Chatbot-only inline Malay word rendering.
- * Renders as underlined text (no pill border/bg) + small trailing speaker icon.
- * The tooltip for the English meaning is in the title attribute (hover to see).
+ * Desktop users can hover/focus; touch users can tap to open the same tooltip.
  */
 function InlineMalayWord({ malay, english }: { malay: string; english: string }) {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [coords, setCoords] = useState<InlineTooltipCoords | null>(null);
+  const wrapperRef = useRef<HTMLSpanElement>(null);
+  const wordRef = useRef<HTMLButtonElement>(null);
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastTouchRef = useRef(0);
   const { speak, isSupported } = usePronunciation();
+
+  useEffect(() => {
+    if (!showTooltip) return;
+
+    function handleOutside(e: MouseEvent | TouchEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setShowTooltip(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("touchstart", handleOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("touchstart", handleOutside);
+    };
+  }, [showTooltip]);
+
+  useEffect(() => {
+    return () => {
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+    };
+  }, []);
+
+  function openTooltip() {
+    if (hideTimer.current) {
+      clearTimeout(hideTimer.current);
+      hideTimer.current = null;
+    }
+    if (wordRef.current) {
+      setCoords(computeInlineTooltipCoords(wordRef.current.getBoundingClientRect()));
+    }
+    setShowTooltip(true);
+  }
+
+  function scheduleClose() {
+    if (Date.now() - lastTouchRef.current < 500) return;
+    hideTimer.current = setTimeout(() => setShowTooltip(false), 120);
+  }
+
+  function toggleTooltip(e: React.MouseEvent<HTMLButtonElement>) {
+    e.stopPropagation();
+    if (showTooltip) {
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+      setShowTooltip(false);
+      return;
+    }
+    openTooltip();
+  }
+
+  const arrowClass = coords?.openBelow
+    ? "bottom-full border-b-gray-900"
+    : "top-full border-t-gray-900";
+
   return (
-    <span className="inline-flex items-baseline gap-0.5 mx-px">
-      <span
-        title={english}
-        className="font-medium underline decoration-amber-600/50 decoration-dotted
-                   underline-offset-2 cursor-help"
+    <span ref={wrapperRef} className="relative inline align-baseline mx-px">
+      <button
+        ref={wordRef}
+        type="button"
+        onClick={toggleTooltip}
+        onMouseEnter={openTooltip}
+        onMouseLeave={scheduleClose}
+        onFocus={openTooltip}
+        onBlur={scheduleClose}
+        onTouchStart={() => { lastTouchRef.current = Date.now(); }}
+        className="inline border-0 bg-transparent p-0 align-baseline font-medium leading-normal
+                   text-foreground underline decoration-amber-600/60 decoration-dotted
+                   underline-offset-2 cursor-help transition-colors
+                   hover:text-primary focus-visible:outline-none focus-visible:text-primary"
+        aria-label={`${malay} means ${english}`}
       >
         {malay}
-      </span>
+      </button>
       {isSupported && (
         <button
           type="button"
           title={`Pronounce "${malay}"`}
           aria-label={`Pronounce ${malay}`}
           onClick={(e) => { e.stopPropagation(); speak(malay); }}
-          className="inline-flex items-center text-muted-foreground/50 hover:text-primary
+          className="mx-0.5 inline-flex translate-y-[1px] items-center align-baseline
+                     text-muted-foreground/55 hover:text-primary
                      transition-colors active:scale-95 p-px"
         >
           <Volume2 size={10} />
         </button>
+      )}
+
+      {showTooltip && coords && (
+        <span
+          role="tooltip"
+          onMouseEnter={openTooltip}
+          onMouseLeave={scheduleClose}
+          style={{
+            position: "fixed",
+            top: coords.top,
+            left: coords.left,
+            width: INLINE_TOOLTIP_W,
+            transform: coords.openBelow ? undefined : "translateY(-100%)",
+          }}
+          className="z-50 rounded-md bg-gray-900 px-3 py-2 text-xs text-white shadow-lg"
+        >
+          <span className="flex items-center gap-2 leading-snug">
+            <span className="min-w-0 break-words">{english}</span>
+            {isSupported && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); speak(malay); }}
+                className="flex-shrink-0 rounded p-0.5 text-white/70
+                           hover:text-white hover:bg-white/20
+                           transition-colors active:scale-95"
+                aria-label={`Pronounce ${malay}`}
+                title={`Pronounce ${malay}`}
+              >
+                <Volume2 size={12} />
+              </button>
+            )}
+          </span>
+          <span
+            className={`absolute left-1/2 -translate-x-1/2 ${arrowClass} border-4 border-transparent`}
+          />
+        </span>
       )}
     </span>
   );
@@ -233,20 +365,25 @@ const ChatMessage = memo(function ChatMessage({
             bg-gradient-to-b from-primary/60 via-primary/30 to-transparent" />
         </div>
       ) : (
-        /* ── Assistant — plain text directly on page, no bubble container ── */
-        <div className="min-w-0 max-w-[92%] sm:max-w-2xl text-sm leading-relaxed">
-          {content === "" && isStreaming ? (
-            <ThinkingIndicator />
-          ) : (
-            <>
-              <ReactMarkdown components={mdComponents}>
-                {processedContent}
-              </ReactMarkdown>
-              {isStreaming && (
-                <span className="inline-block w-1 h-4 bg-primary/70 ml-0.5 animate-pulse rounded-sm" />
-              )}
-            </>
-          )}
+        <div className="flex items-stretch min-w-0 max-w-[92%] sm:max-w-2xl">
+          <div className="w-0.5 flex-shrink-0 rounded-full mr-2 self-stretch
+            bg-gradient-to-b from-primary/50 via-primary/25 to-transparent" />
+          <div className="min-w-0 rounded-2xl rounded-bl-sm px-4 py-3 text-sm leading-relaxed
+            bg-card/55 backdrop-blur-md border border-border/70
+            shadow-[0_2px_14px_rgba(0,0,0,0.18)]">
+            {content === "" && isStreaming ? (
+              <ThinkingIndicator />
+            ) : (
+              <>
+                <ReactMarkdown components={mdComponents}>
+                  {processedContent}
+                </ReactMarkdown>
+                {isStreaming && (
+                  <span className="inline-block w-1 h-4 bg-primary/70 ml-0.5 animate-pulse rounded-sm" />
+                )}
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>
