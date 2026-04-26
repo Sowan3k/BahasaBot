@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-27 (Session 65 — Desktop Google sign-in hitbox fix)
+## Last Updated: 2026-04-27 (Session 64 — Desktop course loader visual fix)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -2338,16 +2338,6 @@ All three Gemini prompts in `course_service.py` said "Use Malaysian Bahasa Melay
 1. **Phase 20 — My Journey (Learning Roadmap)** — next major unbuilt feature.
 2. **Module Quiz Results Page** — `quiz/module/[moduleId]/results/page.tsx` still a TODO stub.
 3. **Deploy** — push backend to Railway, frontend to Vercel, set all env vars, final smoke test.
-
-## What Was Done This Session (2026-04-27 — Desktop Google sign-in hitbox fix)
-
-### Auth Google button
-- **`frontend/app/(auth)/login/page.tsx`** — Google Identity Services iframe width is now measured from the actual visible button container instead of being hardcoded to `460`, and the transparent overlay has an explicit top z-index. This keeps the real Google click target aligned with the themed button on desktop and mobile.
-- **`frontend/app/(auth)/register/page.tsx`** — applied the same measured-width overlay fix and added the same missing-client-id disabled guard used by the login page.
-
-### Verification
-- `npx tsc --noEmit` passed.
-- A clean temporary Next dev server on port `3010` started but did not finish serving `/login`; the existing port `3000` process was already stale and returning a plain Next 404. `npm run build` also timed out after 4 minutes in this workspace, so full browser verification was blocked by local Next process state.
 
 ## What Was Done This Session (2026-04-27 — Desktop course loader visual fix)
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -69,8 +69,6 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
   const [showSetPassword, setShowSetPassword] = useState(false);
-  const googleButtonRef = useRef<HTMLDivElement | null>(null);
-  const [googleButtonWidth, setGoogleButtonWidth] = useState(340);
 
   const {
     register,
@@ -151,21 +149,6 @@ export default function LoginPage() {
 
 
   const isLoading = isSubmitting || googleLoading;
-
-  useEffect(() => {
-    const node = googleButtonRef.current;
-    if (!node) return;
-
-    const updateWidth = () => {
-      const width = Math.floor(node.getBoundingClientRect().width);
-      if (width > 0) setGoogleButtonWidth(width);
-    };
-
-    updateWidth();
-    const observer = new ResizeObserver(updateWidth);
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, []);
 
   // ── Render ───────────────────────────────────────────────────────────────
 
@@ -332,7 +315,7 @@ export default function LoginPage() {
         </div>
 
         {/* Google sign-in */}
-        <div ref={googleButtonRef} className="relative h-10">
+        <div className="relative h-10">
           {/* Visible themed button (visual only — pointer events are captured by the
               transparent GIS overlay above it, so no onClick needed here) */}
           <button
@@ -363,7 +346,6 @@ export default function LoginPage() {
               style={{
                 position: "absolute",
                 inset: 0,
-                zIndex: 2,
                 opacity: 0.001,
                 overflow: "hidden",
                 borderRadius: "8px",
@@ -378,7 +360,7 @@ export default function LoginPage() {
                 shape="rectangular"
                 theme="filled_black"
                 size="large"
-                width={String(googleButtonWidth)}
+                width="460"
               />
             </div>
           )}
