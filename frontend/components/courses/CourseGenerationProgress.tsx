@@ -8,6 +8,7 @@
 import Link from "next/link";
 import { CheckCircle2, XCircle } from "lucide-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { useRef, useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { coursesApi } from "@/lib/api";
 import { useCourseGeneration } from "@/lib/course-generation-context";
@@ -124,17 +125,31 @@ const ANIM_CSS = `
 `;
 
 // ── Pinwheel sub-component (desktop) ─────────────────────────────────────────
-// The flower extends ~48 px above and ~20 px below the spin container center.
-// We clip the outer div (overflow:hidden, h=100px) and position the inner scale
-// wrapper so the flower center lands near 60 px from the clip-container top.
-//   marginTop=50 → scale-origin at y=60 (50+10 center of 20px loader)
-//   flower-top  ≈ 60 − 48×0.6 = 31 px  ✓ visible
-//   flower-bot  ≈ 60 + 20×0.6 = 72 px  ✓ within 100 px
-// Stick is intentionally omitted — the floating flower fits the card context.
+// Root cause of previous broken rendering: `display:flex` on the clip container
+// uses `alignItems:stretch` by default, which stretched the scale wrapper to fill
+// the full 100 px height. That moved the `transformOrigin:"center"` point to
+// (10px, 50px) inside the scale wrapper (not 10px) — completely wrong origin.
+//
+// Fix: use `position:absolute; top:50%; left:50%; transform:translate(-50%,-50%)`
+// to centre the 20×20 px loader inside a `position:relative` container, then
+// apply scale(0.55). The scale-origin defaults to the loader's own centre, which
+// is already at the container centre — no flex-stretch ambiguity.
+//
+// Max petal radius from spin-centre (all scales combined):
+//   69.5 px × spin-scale(0.77) × external-scale(0.55) ≈ 29 px
+// Container is 120 px → centre at 60 px → petals span 31–89 px  ✓
+// Stick is intentionally omitted for the card context.
 function Pinwheel() {
   return (
-    <div style={{ height: 100, overflow: "hidden", display: "flex", justifyContent: "center" }}>
-      <div style={{ transform: "scale(0.6)", transformOrigin: "center", marginTop: 50 }}>
+    <div style={{ position: "relative", height: 120, width: "100%" }}>
+      <div
+        style={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%) scale(0.55)",
+        }}
+      >
         <div className="bb-pw-loader">
           <div className="bb-pw-spin">
             <div className="bb-pw-pin" />
@@ -178,6 +193,23 @@ function Dominos() {
 export function CourseGenerationProgress() {
   const { activeJobId, setActiveJobId } = useCourseGeneration();
   const queryClient = useQueryClient();
+
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const dragStart = useRef({ touchX: 0, touchY: 0, startX: 0, startY: 0 });
+
+  useEffect(() => { setDragOffset({ x: 0, y: 0 }); }, [activeJobId]);
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    dragStart.current = { touchX: t.clientX, touchY: t.clientY, startX: dragOffset.x, startY: dragOffset.y };
+  };
+  const onTouchMove = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    setDragOffset({
+      x: dragStart.current.startX + (t.clientX - dragStart.current.touchX),
+      y: dragStart.current.startY + (t.clientY - dragStart.current.touchY),
+    });
+  };
 
   const { data, failureCount } = useQuery<JobStatusResponse>({
     queryKey: ["courseJob", activeJobId],
@@ -296,14 +328,20 @@ export function CourseGenerationProgress() {
       <div
         className={cn(
           "flex md:hidden items-center gap-3",
-          "fixed bottom-5 left-1/2 -translate-x-1/2 z-50",
+          "fixed bottom-5 left-1/2 z-50",
           "px-4 py-2.5 rounded-2xl",
           "border bg-card/95 backdrop-blur-md",
           "shadow-[0_4px_24px_rgba(0,0,0,0.18)]",
-          "transition-all duration-300",
+          "transition-[width] duration-300",
           isActive ? "w-[220px]" : "w-[260px]",
         )}
-        style={{ paddingBottom: "max(10px, env(safe-area-inset-bottom))" }}
+        style={{
+          touchAction: "none",
+          transform: `translateX(calc(-50% + ${dragOffset.x}px)) translateY(${dragOffset.y}px)`,
+          paddingBottom: "max(10px, env(safe-area-inset-bottom))",
+        }}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
       >
         {/* Left: animation or result icon */}
         <div className="shrink-0">

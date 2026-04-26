@@ -102,6 +102,10 @@ Replace the plain emoji+progress bar popup with two purpose-built CSS animations
 - `scale: 1.5` CSS property used on petal wrappers (Chrome 107+, Firefox 110+, Safari 15.4+ — all supported)
 - `tsc --noEmit`: 0 errors
 
+**Post-session bug fixes (continuation):**
+- Fixed "narrow space" desktop rendering: Pinwheel container was a flex child with all-absolute content → collapsed to 0px width. Fix: `width: "100%"` added to the container div.
+- Added touch-drag to mobile pill: `useState` drag offset + `useRef` for start coords; `onTouchStart`/`onTouchMove` handlers; `touchAction: none` to prevent scroll interference; `transition-[width]` (not `transition-all`) so drag is instant while width animates; offset resets to origin when `activeJobId` changes.
+
 ---
 
 ## What Was Done Previous Session (2026-04-27 Session 59 — Chatbot typing animation + latency optimizations)
