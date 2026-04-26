@@ -12,6 +12,7 @@
  */
 
 import { Fragment, memo, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import ReactMarkdown from "react-markdown";
 import type { Components } from "react-markdown";
 import { Volume2 } from "lucide-react";
@@ -77,6 +78,7 @@ function InlineMalayWord({ malay, english }: { malay: string; english: string })
   const [coords, setCoords] = useState<InlineTooltipCoords | null>(null);
   const wrapperRef = useRef<HTMLSpanElement>(null);
   const wordRef = useRef<HTMLButtonElement>(null);
+  const tooltipRef = useRef<HTMLSpanElement>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTouchRef = useRef(0);
   const { speak, isSupported } = usePronunciation();
@@ -85,7 +87,10 @@ function InlineMalayWord({ malay, english }: { malay: string; english: string })
     if (!showTooltip) return;
 
     function handleOutside(e: MouseEvent | TouchEvent) {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      const insideWord = wrapperRef.current?.contains(target);
+      const insideTooltip = tooltipRef.current?.contains(target);
+      if (!insideWord && !insideTooltip) {
         setShowTooltip(false);
       }
     }
@@ -103,6 +108,23 @@ function InlineMalayWord({ malay, english }: { malay: string; english: string })
       if (hideTimer.current) clearTimeout(hideTimer.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (!showTooltip) return;
+
+    function updatePosition() {
+      if (wordRef.current) {
+        setCoords(computeInlineTooltipCoords(wordRef.current.getBoundingClientRect()));
+      }
+    }
+
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [showTooltip]);
 
   function openTooltip() {
     if (hideTimer.current) {
@@ -167,8 +189,9 @@ function InlineMalayWord({ malay, english }: { malay: string; english: string })
         </button>
       )}
 
-      {showTooltip && coords && (
+      {showTooltip && coords && typeof document !== "undefined" && createPortal(
         <span
+          ref={tooltipRef}
           role="tooltip"
           onMouseEnter={openTooltip}
           onMouseLeave={scheduleClose}
@@ -200,7 +223,8 @@ function InlineMalayWord({ malay, english }: { malay: string; english: string })
           <span
             className={`absolute left-1/2 -translate-x-1/2 ${arrowClass} border-4 border-transparent`}
           />
-        </span>
+        </span>,
+        document.body,
       )}
     </span>
   );

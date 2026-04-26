@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-27 (Session 61 — Chatbot mobile vocab tooltip + assistant bubble fix)
+## Last Updated: 2026-04-27 (Session 62 — Chatbot vocab tooltip portal positioning fix)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -13,7 +13,7 @@ _Update this file at the end of every session_
 | Dashboard | ✅ Complete + Wave background + Mobile fix (Session 53) | All 6 endpoints verified; Overview tab completely redesigned: 3 SVG progress rings (Learning/Vocabulary/Quiz) with GlowCard hover, BPS slim strip, inline stats row (emoji), glowing pill Quick Actions, compact VocabPreview (no search bar, 5 rows, SpeakerButton), Weak Points + Quiz History in GlowCards; mobile-responsive (rings stay 3-col, wrap gracefully); StatsCards removed from overview; `DashboardWaveBackground` canvas component: slow sine-wave animation at ¼ resolution, dark-mode-only, faint olive tint at peaks, fixed full-screen z-0, content at z-10; Session 53: `overflow-x-hidden` masking removed from layout.tsx + dashboard container; stat grid corrected to `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4` so tiles fit at all mobile widths without horizontal scroll |
 | Production Hardening | ✅ Complete + Rate Limiter Fix | Rate limiter falls back to in-memory on Redis timeout (no more 500s) |
 | IPA Pronunciation | ✅ Full stack verified | Courses: IPA in all vocab items. Chatbot: /ko.soŋ/, /tə.ri.ma ka.sɪh/. Quiz: IPA in explanations |
-| Chatbot UI | ✅ Complete + Full redesign + UX polish (Session 52) + Mobile vocab fix (Session 61) | react-markdown rendering, VocabPill extraction, Malaysia flag avatar; header: backdrop-blur + live green status pulse dot + Plus icon on "New chat"; input footer: backdrop-blur + top shadow + decorative glow line + border-primary textarea + send button `bg-foreground text-background` with audio-visualizer bars while streaming; EmptyState: ambient logo glow + decorative side lines on title + starter buttons with `›` prefix arrow; error: styled bordered card; message bubbles: user → `bg-primary/25 backdrop-blur` with right gradient accent line; bot → `bg-card/55 backdrop-blur-md` with left gradient accent line; chatbot markdown inline Malay words now use a real tap/hover tooltip instead of browser `title`, fixing mobile translation visibility and preserving inline alignment |
+| Chatbot UI | ✅ Complete + Full redesign + UX polish (Session 52) + Mobile vocab fix (Session 61/62) | react-markdown rendering, VocabPill extraction, Malaysia flag avatar; header: backdrop-blur + live green status pulse dot + Plus icon on "New chat"; input footer: backdrop-blur + top shadow + decorative glow line + border-primary textarea + send button `bg-foreground text-background` with audio-visualizer bars while streaming; EmptyState: ambient logo glow + decorative side lines on title + starter buttons with `›` prefix arrow; error: styled bordered card; message bubbles: user → `bg-primary/25 backdrop-blur` with right gradient accent line; bot → `bg-card/55 backdrop-blur-md` with left gradient accent line; chatbot markdown inline Malay words now use a real tap/hover tooltip instead of browser `title`; Session 62 renders that tooltip through `document.body` with scroll/resize repositioning so the popup appears next to the tapped word on mobile |
 | Dark Mode | ✅ Complete + Repositioned | ThemeToggle moved to top-right of sidebar header row (industry standard); icon variant added for collapsed/mobile |
 | UI Polish | ✅ Complete | Space Grotesk font, botanical color palette, glowing dashboard cards, animated auth pages |
 | Local Dev Launcher | ✅ Complete | `start-bahasabot.bat` launches both frontend + backend; PM2 config removed from root |
@@ -2338,6 +2338,16 @@ All three Gemini prompts in `course_service.py` said "Use Malaysian Bahasa Melay
 1. **Phase 20 — My Journey (Learning Roadmap)** — next major unbuilt feature.
 2. **Module Quiz Results Page** — `quiz/module/[moduleId]/results/page.tsx` still a TODO stub.
 3. **Deploy** — push backend to Railway, frontend to Vercel, set all env vars, final smoke test.
+
+## What Was Done This Session (2026-04-27 — Chatbot vocab tooltip portal positioning fix)
+
+### Chatbot inline Malay tooltip positioning
+- **`frontend/components/chatbot/ChatMessage.tsx`** — renders inline Malay word tooltips through a React portal into `document.body` so `position: fixed` uses true viewport coordinates instead of being affected by chat message/container layout.
+- Added a tooltip ref to keep inside-tooltip taps/clicks from closing it immediately after portaling.
+- Added scroll and resize listeners while the tooltip is open so the popup tracks the tapped word if the chat viewport shifts.
+
+### Verification
+- `npx tsc --noEmit` passed.
 
 ## What Was Done This Session (2026-04-27 — Chatbot mobile vocab tooltip + assistant bubble fix)
 
