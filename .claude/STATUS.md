@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-27 (Session 64 — Desktop course loader visual fix)
+## Last Updated: 2026-04-27 (Session 66 — Revert Google auth regression)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -2338,6 +2338,17 @@ All three Gemini prompts in `course_service.py` said "Use Malaysian Bahasa Melay
 1. **Phase 20 — My Journey (Learning Roadmap)** — next major unbuilt feature.
 2. **Module Quiz Results Page** — `quiz/module/[moduleId]/results/page.tsx` still a TODO stub.
 3. **Deploy** — push backend to Railway, frontend to Vercel, set all env vars, final smoke test.
+
+## What Was Done This Session (2026-04-27 — Revert Google auth regression)
+
+### Auth Google button
+- Reverted the two recent Google auth button commits (`91875b4` and `cfd80f5`) because the deployed desktop button stopped responding after those changes.
+- **`frontend/app/(auth)/login/page.tsx`** and **`frontend/app/(auth)/register/page.tsx`** now match the pre-regression working baseline from `30b5c4d`: visible themed button with the real Google Identity Services button mounted as a transparent overlay using fixed `width="460"`.
+- Left the existing Google credential exchange, session storage, redirects, and mandatory Google set-password flow untouched.
+
+### Verification
+- Auth files have no diff from the pre-regression `30b5c4d` baseline.
+- `npx tsc --noEmit` passed.
 
 ## What Was Done This Session (2026-04-27 — Desktop course loader visual fix)
 
