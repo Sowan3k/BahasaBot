@@ -65,9 +65,10 @@ REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
 
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 
-# If a registering user's email matches ADMIN_EMAIL, they receive role='admin' automatically.
-# Set this in backend/.env — leave blank to disable automatic admin seeding.
-ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "").strip().lower()
+# Comma-separated list of emails that receive role='admin' on registration.
+# e.g. ADMIN_EMAILS=sowangemini@gmail.com,drtan@supervisor.com
+_raw = os.getenv("ADMIN_EMAILS") or os.getenv("ADMIN_EMAIL", "")
+ADMIN_EMAILS: set[str] = {e.strip().lower() for e in _raw.split(",") if e.strip()}
 
 # ── Password hashing ──────────────────────────────────────────────────────────
 # Using bcrypt directly — passlib has a compatibility bug with bcrypt >= 4.x
@@ -113,8 +114,7 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)) ->
             detail="Email already registered",
         )
 
-    # Grant admin role if the registering email matches ADMIN_EMAIL env var
-    role = "admin" if ADMIN_EMAIL and body.email.strip().lower() == ADMIN_EMAIL else "user"
+    role = "admin" if body.email.strip().lower() in ADMIN_EMAILS else "user"
 
     user = User(
         email=body.email,

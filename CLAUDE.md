@@ -638,7 +638,7 @@ FRONTEND_URL=                 # Next.js frontend URL (for CORS)
 ENVIRONMENT=                  # development / production
 RESEND_API_KEY=               # Resend email service API key
 GEMINI_IMAGE_MODEL=gemini-3.1-flash-image-preview
-ADMIN_EMAIL=                  # Email address that gets admin role on first registration (single email only — for a second admin use backend/scripts/create_supervisor_admin.py)
+ADMIN_EMAILS=                 # Comma-separated emails that get role='admin' on registration (e.g. dev@example.com,supervisor@example.com). Falls back to ADMIN_EMAIL if not set.
 ```
 
 ---
@@ -759,16 +759,15 @@ ADMIN_EMAIL=                  # Email address that gets admin role on first regi
 
 ## 14. Known Issues & Compatibility Notes
 
-### Admin Accounts — Seeded Users
-The `ADMIN_EMAIL` env var supports only a single auto-promoted admin on first registration. Additional admin accounts are seeded via `backend/scripts/create_supervisor_admin.py`.
+### Admin Accounts
+`ADMIN_EMAILS` (comma-separated) in `.env` grants `role='admin'` automatically to any listed email on registration. Current value: `sowangemini@gmail.com,drtan@supervisor.com`.
 
-**Seeded admin accounts:**
-| Name | Email | Notes |
-|---|---|---|
-| Noor Mohammad Sowan | *(set via ADMIN_EMAIL in .env)* | Primary developer admin |
-| Dr. Tan | drtan@supervisor.com | FYP supervisor; seeded via create_supervisor_admin.py |
+| Name | Email |
+|---|---|
+| Noor Mohammad Sowan | sowangemini@gmail.com |
+| Dr. Tan (FYP supervisor) | drtan@supervisor.com |
 
-To add more admins: edit `create_supervisor_admin.py` and re-run it, or `UPDATE users SET role='admin' WHERE email='...'` via Neon console.
+To add more admins: append to `ADMIN_EMAILS` in `.env` and redeploy, then register with that email.
 
 ### Node.js Version
 shadcn/ui (`validate-npm-package-name@7.0.2`) requires Node.js `^20.17.0` or `>=22.9.0`. Node.js `20.10.0` will show an `EBADENGINE` warning during `npx shadcn init` but the command still succeeds. To eliminate the warning, upgrade to Node.js `20.17.0+` or `22.x`.
