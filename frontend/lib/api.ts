@@ -7,10 +7,13 @@ import { getSession, signOut } from "next-auth/react";
 
 import type {
   AdminFeedbackResponse,
+  AdminQuizAttempt,
   AdminStats,
   AdminUser,
   AdminUserAnalytics,
   AdminUserDetail,
+  ScoreDistribution,
+  WeakPointDistribution,
   ChangePasswordPayload,
   ChangePasswordResponse,
   ChatHistoryResponse,
@@ -357,6 +360,22 @@ export const adminApi = {
     apiClient.get<Blob>("/api/admin/export/feedback", {
       params: { start_date, end_date },
       responseType: "blob",
+    }),
+
+  /** Raw quiz attempts (questions + answers) for a single user. */
+  getQuizAttempts: (userId: string) =>
+    apiClient.get<AdminQuizAttempt[]>(`/api/admin/users/${userId}/quiz-attempts`),
+
+  /** Cohort-wide score distribution with optional date range. */
+  getScoreDistribution: (start_date?: string, end_date?: string) =>
+    apiClient.get<ScoreDistribution>("/api/admin/analytics/score-distribution", {
+      params: { start_date, end_date },
+    }),
+
+  /** Top 20 weak-point topics aggregated across all users. */
+  getWeakPointsDistribution: (start_date?: string, end_date?: string) =>
+    apiClient.get<WeakPointDistribution>("/api/admin/analytics/weak-points", {
+      params: { start_date, end_date },
     }),
 };
 

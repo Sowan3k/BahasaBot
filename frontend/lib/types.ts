@@ -542,6 +542,10 @@ export interface AdminUserDetail {
     avg_quiz_score_module: number | null;
     /** Average standalone quiz score 0.0–1.0, null if no attempts */
     avg_quiz_score_standalone: number | null;
+    /** Sum of activity_logs.duration_seconds (quiz + spelling only — chatbot/browsing not tracked) */
+    total_time_spent_seconds: number;
+    total_chat_messages: number;
+    avg_messages_per_session: number;
   };
   /** Chronological quiz score history, newest 50 attempts across both types */
   score_trajectory: {
@@ -550,6 +554,36 @@ export interface AdminUserDetail {
     quiz_type: "module" | "standalone";
   }[];
   recent_courses: { id: string; title: string; topic: string; created_at: string }[];
+}
+
+/** GET /api/admin/users/{userId}/quiz-attempts — one entry per attempt */
+export interface AdminQuizAttempt {
+  attempt_id: string;
+  quiz_type: "module" | "standalone";
+  module_id: string | null;
+  score: number;               // 0.0–1.0
+  attempted_at: string;
+  /** null for module quizzes (questions_json not stored there) */
+  questions: Record<string, unknown>[] | null;
+  answers: Record<string, unknown>[] | null;
+}
+
+/** GET /api/admin/analytics/score-distribution */
+export interface ScoreDistribution {
+  buckets: { range: string; count: number }[];
+  total_attempts: number;
+  mean_score: number;          // 0–100
+  median_score: number;        // 0–100
+}
+
+/** GET /api/admin/analytics/weak-points */
+export interface WeakPointDistribution {
+  weak_points: {
+    category: string;          // "vocab" | "grammar"
+    topic: string;
+    user_count: number;
+    avg_strength_score: number; // 0.0–1.0
+  }[];
 }
 
 // ── Notifications (Phase 17) ───────────────────────────────────────────────────

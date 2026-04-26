@@ -22,6 +22,9 @@ import {
   Globe,
   Zap,
   BarChart2,
+  Clock,
+  ChevronDown,
+  ChevronUp,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -37,7 +40,7 @@ import {
   Legend,
 } from "recharts";
 import { adminApi, profileApi } from "@/lib/api";
-import type { AdminUserDetail, AdminUserAnalytics } from "@/lib/types";
+import type { AdminUserDetail, AdminUserAnalytics, AdminQuizAttempt } from "@/lib/types";
 import { GlowCard } from "@/components/ui/glow-card";
 
 const BPS_COLORS: Record<string, string> = {
@@ -132,6 +135,16 @@ function ConfirmModal({ action, userName, onConfirm, onCancel, loading, error }:
   );
 }
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function fmtDuration(seconds: number): string {
+  if (seconds <= 0) return "0m";
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  if (h > 0) return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  return `${m}m`;
+}
+
 // ── Small stat pill ───────────────────────────────────────────────────────────
 
 function StatPill({ icon: Icon, label, value, color }: {
@@ -144,6 +157,167 @@ function StatPill({ icon: Icon, label, value, color }: {
       <p className="font-heading text-xl font-bold text-foreground">{value}</p>
       <p className="text-xs text-muted-foreground">{label}</p>
     </GlowCard>
+  );
+}
+
+// ── Text stat pill (for non-integer display values) ───────────────────────────
+
+function TextStatPill({ icon: Icon, label, display, color, footnote }: {
+  icon: LucideIcon;
+  label: string;
+  display: string;
+  color: string;
+  footnote?: string;
+}) {
+  return (
+    <GlowCard className="bg-card p-4 flex flex-col items-center gap-1 text-center">
+      <Icon size={18} className={color} />
+      <p className="font-heading text-xl font-bold text-foreground">{display}</p>
+      <p className="text-xs text-muted-foreground">{label}</p>
+      {footnote && (
+        <p className="text-[10px] text-muted-foreground/60 italic leading-tight mt-0.5 max-w-[120px]">
+          {footnote}
+        </p>
+      )}
+    </GlowCard>
+  );
+}
+
+// ── Quiz Attempts collapsible section ─────────────────────────────────────────
+
+function QuizAttemptsSection({ userId }: { userId: string }) {
+  const [open, setOpen] = useState(false);
+  const [attempts, setAttempts] = useState<AdminQuizAttempt[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function handleToggle() {
+    if (!open && attempts === null) {
+      setLoading(true);
+      adminApi.getQuizAttempts(userId)
+        .then((res) => setAttempts(res.data))
+        .catch(() => setError("Failed to load quiz attempts"))
+        .finally(() => setLoading(false));
+    }
+    setOpen((v) => !v);
+  }
+
+  return (
+    <div className="rounded-2xl border border-border bg-card overflow-hidden">
+      <button
+        onClick={handleToggle}
+        className="w-full flex items-center justify-between px-5 py-4 hover:bg-muted/40 transition-colors"
+      >
+        <span className="font-heading text-sm font-semibold text-foreground">
+          Quiz Attempts (raw)
+        </span>
+        {open ? <ChevronUp size={16} className="text-muted-foreground" /> : <ChevronDown size={16} className="text-muted-foreground" />}
+      </button>
+
+      {open && (
+        <div className="border-t border-border">
+          {loading && (
+            <div className="space-y-2 p-4">
+              {[...Array(3)].map((_, i) => <div key={i} className="h-24 rounded-xl bg-muted animate-pulse" />)}
+            </div>
+          )}
+          {error && (
+            <div className="flex items-center gap-2 px-5 py-4 text-sm text-destructive">
+              <AlertTriangle size={14} /> {error}
+            </div>
+          )}
+          {attempts && attempts.length === 0 && (
+            <p className="px-5 py-6 text-sm text-muted-foreground text-center italic">No quiz attempts found.</p>
+          )}
+          {attempts && attempts.length > 0 && (
+            <div className="divide-y divide-border/50">
+              {attempts.map((attempt) => (
+                <AttemptCard key={attempt.attempt_id} attempt={attempt} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AttemptCard({ attempt }: { attempt: AdminQuizAttempt }) {
+  const scorePct = Math.round(attempt.score * 100);
+  const passed = scorePct >= 70;
+  const fmtDate = new Date(attempt.attempted_at).toLocaleString("en-MY", {
+    day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+  });
+
+  const answers: Record<string, unknown>[] = attempt.answers ?? [];
+  const questions: Record<string, unknown>[] = attempt.questions ?? [];
+
+  return (
+    <div className="px-5 py-4 space-y-3">
+      {/* Header row */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${
+          attempt.quiz_type === "module"
+            ? "bg-violet-500/10 text-violet-500"
+            : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+        }`}>
+          {attempt.quiz_type === "module" ? "Module" : "Adaptive"}
+        </span>
+        <span className={`text-sm font-bold ${passed ? "text-green-600 dark:text-green-400" : "text-red-500"}`}>
+          {scorePct}%
+        </span>
+        <span className="text-xs text-muted-foreground">{fmtDate}</span>
+      </div>
+
+      {/* Q&A list — standalone has full questions; module only has answers_json */}
+      {attempt.quiz_type === "standalone" && questions.length > 0 ? (
+        <div className="space-y-1.5 pl-2">
+          {questions.map((q, i) => {
+            const ans = answers.find((a) => a.question_id === q.question_id || a.question_id === (q as any).id) as any;
+            const correct = ans?.correct ?? false;
+            return (
+              <div key={i} className="flex items-start gap-2 text-xs">
+                {correct
+                  ? <CheckCircle size={13} className="text-green-500 mt-0.5 shrink-0" />
+                  : <XCircle size={13} className="text-red-400 mt-0.5 shrink-0" />}
+                <div className="min-w-0">
+                  <p className="text-foreground/80 leading-snug">{String((q as any).question ?? "(no question text)")}</p>
+                  {ans && (
+                    <p className="text-muted-foreground mt-0.5">
+                      Answer: <span className={correct ? "text-green-600 dark:text-green-400 font-medium" : "text-red-500 font-medium"}>
+                        {String(ans.answer ?? "—")}
+                      </span>
+                      {!correct && (q as any).correct_answer && (
+                        <span className="ml-1 text-muted-foreground"> (correct: {String((q as any).correct_answer)})</span>
+                      )}
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : answers.length > 0 ? (
+        <div className="space-y-1 pl-2">
+          {answers.map((ans: any, i: number) => {
+            const correct = ans.correct ?? false;
+            return (
+              <div key={i} className="flex items-center gap-2 text-xs">
+                {correct
+                  ? <CheckCircle size={13} className="text-green-500 shrink-0" />
+                  : <XCircle size={13} className="text-red-400 shrink-0" />}
+                <span className="text-muted-foreground">Q{i + 1}:</span>
+                <span className={`font-medium ${correct ? "text-green-600 dark:text-green-400" : "text-red-500"}`}>
+                  {String(ans.answer ?? "—")}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground italic pl-2">No answer data recorded.</p>
+      )}
+    </div>
   );
 }
 
@@ -390,6 +564,20 @@ export default function AdminUserDetailPage() {
             <StatPill icon={Brain} label="Adaptive Quizzes" value={user.stats.standalone_quiz_attempts} color="text-orange-500" />
             <StatPill icon={MessageSquare} label="Chat Sessions" value={user.stats.chat_sessions} color="text-cyan-500" />
             <StatPill icon={AlertTriangle} label="Weak Points" value={user.stats.weak_points} color="text-red-400" />
+            <TextStatPill
+              icon={Clock}
+              label="Time on App"
+              display={fmtDuration(user.stats.total_time_spent_seconds ?? 0)}
+              color="text-sky-500"
+              footnote="Quizzes & spelling only — chatbot/browsing not tracked"
+            />
+            <StatPill icon={MessageSquare} label="Chat Messages" value={user.stats.total_chat_messages ?? 0} color="text-indigo-500" />
+            <TextStatPill
+              icon={MessageSquare}
+              label="Msgs / Session"
+              display={(user.stats.avg_messages_per_session ?? 0).toFixed(1)}
+              color="text-indigo-400"
+            />
             {/* Avg quiz score pills */}
             <GlowCard className="bg-card p-4 flex flex-col items-center gap-1 text-center">
               <Brain size={18} className="text-violet-500" />
@@ -575,6 +763,9 @@ export default function AdminUserDetailPage() {
             </div>
           )}
         </div>
+
+        {/* ── Quiz Attempts (raw) ── */}
+        <QuizAttemptsSection userId={userId} />
 
         {/* ── Recent courses ── */}
         {user.recent_courses.length > 0 && (

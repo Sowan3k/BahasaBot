@@ -22,7 +22,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.models.analytics import ActivityLog, TokenUsageLog
-from backend.models.chatbot import ChatSession
+from backend.models.chatbot import ChatMessage, ChatSession
 from backend.models.course import Course
 from backend.models.evaluation import EvaluationFeedback
 from backend.models.journey import UserRoadmap
@@ -322,6 +322,22 @@ async def get_user_detail(db: AsyncSession, user_id: uuid.UUID) -> dict:
         for r in courses_result.all()
     ]
 
+    # Total time spent — sum of duration_seconds from activity_logs (quiz + spelling only)
+    time_spent = await db.scalar(
+        select(func.coalesce(func.sum(ActivityLog.duration_seconds), 0))
+        .where(ActivityLog.user_id == user_id)
+    )
+
+    # Chatbot engagement — count messages through chat_sessions join
+    total_chat_messages = await db.scalar(
+        select(func.count(ChatMessage.id))
+        .join(ChatSession, ChatMessage.session_id == ChatSession.id)
+        .where(ChatSession.user_id == user_id)
+    )
+    session_count = chat_session_count or 0
+    msg_count = total_chat_messages or 0
+    avg_msgs_per_session = round(msg_count / session_count, 1) if session_count > 0 else 0.0
+
     # Average quiz scores (module vs standalone separately)
     avg_module = await db.scalar(
         select(func.avg(ModuleQuizAttempt.score))
@@ -379,6 +395,9 @@ async def get_user_detail(db: AsyncSession, user_id: uuid.UUID) -> dict:
             "weak_points": weak_points_count or 0,
             "avg_quiz_score_module": round(float(avg_module), 4) if avg_module is not None else None,
             "avg_quiz_score_standalone": round(float(avg_standalone), 4) if avg_standalone is not None else None,
+            "total_time_spent_seconds": int(time_spent or 0),
+            "total_chat_messages": msg_count,
+            "avg_messages_per_session": avg_msgs_per_session,
         },
         "score_trajectory": trajectory,
         "recent_courses": recent_courses,
@@ -627,3 +646,173 @@ async def get_user_analytics(db: AsyncSession, user_id: uuid.UUID, days: int = 3
             "daily": daily_activity,
         },
     }
+
+
+# ── Quiz attempts (raw) ───────────────────────────────────────────────────────
+
+
+async def get_quiz_attempts(db: AsyncSession, user_id: uuid.UUID) -> list[dict]:
+    """
+    Return every quiz attempt for a user, merged across both attempt tables.
+
+    Ordered by attempted_at descending (most recent first).
+
+    ModuleQuizAttempt has no questions_json — only answers_json is stored there.
+    StandaloneQuizAttempt has both questions_json and answers_json.
+    """
+    result = await db.execute(select(User.id).where(User.id == user_id))
+    if result.scalar_one_or_none() is None:
+        raise ValueError(f"User {user_id} not found")
+
+    mod_result = await db.execute(
+        select(ModuleQuizAttempt)
+        .where(ModuleQuizAttempt.user_id == user_id)
+        .order_by(ModuleQuizAttempt.taken_at.desc())
+    )
+    standalone_result = await db.execute(
+        select(StandaloneQuizAttempt)
+        .where(StandaloneQuizAttempt.user_id == user_id)
+        .order_by(StandaloneQuizAttempt.taken_at.desc())
+    )
+
+    attempts: list[dict] = []
+    for row in mod_result.scalars().all():
+        attempts.append({
+            "attempt_id": str(row.id),
+            "quiz_type": "module",
+            "module_id": str(row.module_id),
+            "score": round(row.score, 4),
+            "attempted_at": row.taken_at.isoformat(),
+            "questions": None,  # not stored for module quizzes
+            "answers": row.answers_json,
+        })
+    for row in standalone_result.scalars().all():
+        attempts.append({
+            "attempt_id": str(row.id),
+            "quiz_type": "standalone",
+            "module_id": None,
+            "score": round(row.score, 4),
+            "attempted_at": row.taken_at.isoformat(),
+            "questions": row.questions_json,
+            "answers": row.answers_json,
+        })
+
+    attempts.sort(key=lambda x: x["attempted_at"], reverse=True)
+    return attempts
+
+
+# ── Score distribution ────────────────────────────────────────────────────────
+
+
+async def get_score_distribution(
+    db: AsyncSession,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> dict:
+    """
+    Aggregate quiz scores across both attempt tables into 10-point buckets (0-10 … 91-100).
+
+    Scores are stored as 0.0–1.0 floats; converted to percentages here.
+    Accepts optional start_date / end_date ISO strings filtering by taken_at.
+    Median is computed in Python (feasible for the ~30-user evaluation cohort).
+    """
+    def _parse_date(s: str, end: bool = False) -> datetime:
+        dt = datetime.fromisoformat(s).replace(tzinfo=timezone.utc)
+        if end:
+            dt = dt + timedelta(days=1) - timedelta(microseconds=1)
+        return dt
+
+    mod_q = select(ModuleQuizAttempt.score)
+    std_q = select(StandaloneQuizAttempt.score)
+
+    if start_date:
+        sd = _parse_date(start_date)
+        mod_q = mod_q.where(ModuleQuizAttempt.taken_at >= sd)
+        std_q = std_q.where(StandaloneQuizAttempt.taken_at >= sd)
+    if end_date:
+        ed = _parse_date(end_date, end=True)
+        mod_q = mod_q.where(ModuleQuizAttempt.taken_at <= ed)
+        std_q = std_q.where(StandaloneQuizAttempt.taken_at <= ed)
+
+    mod_scores = (await db.execute(mod_q)).scalars().all()
+    std_scores = (await db.execute(std_q)).scalars().all()
+    all_scores = [float(s) * 100 for s in list(mod_scores) + list(std_scores)]
+
+    # Build 10-point buckets: "0-10", "11-20", … "91-100"
+    BUCKET_LABELS = [
+        "0-10", "11-20", "21-30", "31-40", "41-50",
+        "51-60", "61-70", "71-80", "81-90", "91-100",
+    ]
+    counts = [0] * 10
+    for pct in all_scores:
+        idx = min(int(pct // 10), 9)  # score=100 → bucket 9 ("91-100")
+        counts[idx] += 1
+
+    buckets = [{"range": label, "count": counts[i]} for i, label in enumerate(BUCKET_LABELS)]
+
+    total = len(all_scores)
+    mean_score = round(sum(all_scores) / total, 2) if total > 0 else 0.0
+
+    sorted_scores = sorted(all_scores)
+    if total == 0:
+        median_score = 0.0
+    elif total % 2 == 1:
+        median_score = round(sorted_scores[total // 2], 2)
+    else:
+        median_score = round((sorted_scores[total // 2 - 1] + sorted_scores[total // 2]) / 2, 2)
+
+    return {
+        "buckets": buckets,
+        "total_attempts": total,
+        "mean_score": mean_score,
+        "median_score": median_score,
+    }
+
+
+# ── Weak-point distribution ───────────────────────────────────────────────────
+
+
+async def get_weak_points_distribution(
+    db: AsyncSession,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> dict:
+    """
+    Aggregate weak_points table across all users.
+
+    Groups by (type, topic) — type is returned as 'category' for API clarity.
+    Date filter applies to updated_at (the only timestamp on the weak_points table).
+    Returns top 20 groups ordered by user_count descending.
+    """
+    from sqlalchemy import distinct
+
+    q = (
+        select(
+            WeakPoint.type.label("category"),
+            WeakPoint.topic,
+            func.count(distinct(WeakPoint.user_id)).label("user_count"),
+            func.round(func.cast(func.avg(WeakPoint.strength_score), type_=func.Float), 2).label("avg_strength"),
+        )
+        .group_by(WeakPoint.type, WeakPoint.topic)
+        .order_by(func.count(distinct(WeakPoint.user_id)).desc())
+        .limit(20)
+    )
+
+    if start_date:
+        sd = datetime.fromisoformat(start_date).replace(tzinfo=timezone.utc)
+        q = q.where(WeakPoint.updated_at >= sd)
+    if end_date:
+        ed = datetime.fromisoformat(end_date).replace(tzinfo=timezone.utc) + timedelta(days=1) - timedelta(microseconds=1)
+        q = q.where(WeakPoint.updated_at <= ed)
+
+    rows = (await db.execute(q)).all()
+    weak_points = [
+        {
+            "category": r.category,
+            "topic": r.topic,
+            "user_count": r.user_count,
+            "avg_strength_score": float(r.avg_strength) if r.avg_strength is not None else 0.0,
+        }
+        for r in rows
+    ]
+    return {"weak_points": weak_points}

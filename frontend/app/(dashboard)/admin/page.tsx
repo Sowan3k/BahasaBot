@@ -25,8 +25,17 @@ import {
   Download,
   type LucideIcon,
 } from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 import { adminApi, profileApi, tipsApi } from "@/lib/api";
-import type { AdminStats, Tip, TipCategory } from "@/lib/types";
+import type { AdminStats, ScoreDistribution, Tip, TipCategory, WeakPointDistribution } from "@/lib/types";
 import { GlowCard } from "@/components/ui/glow-card";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -595,6 +604,252 @@ function LanguageTipsPanel() {
   );
 }
 
+// ── Score Distribution Panel ──────────────────────────────────────────────────
+
+function ScoreDistributionPanel() {
+  const [data, setData] = useState<ScoreDistribution | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  const fetchData = async (sd?: string, ed?: string) => {
+    setLoading(true);
+    try {
+      const res = await adminApi.getScoreDistribution(sd || undefined, ed || undefined);
+      setData(res.data);
+    } catch {
+      setData(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchData(); }, []);
+
+  function handleDateChange(sd: string, ed: string) {
+    setStartDate(sd);
+    setEndDate(ed);
+    fetchData(sd || undefined, ed || undefined);
+  }
+
+  return (
+    <div>
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-9 h-9 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0">
+          <TrendingUp size={18} className="text-purple-500" />
+        </div>
+        <div>
+          <h2 className="font-heading text-base font-semibold text-foreground">Quiz Score Distribution</h2>
+          <p className="text-xs text-muted-foreground">Cohort-wide histogram across all quiz attempts (module + adaptive)</p>
+        </div>
+      </div>
+
+      <GlowCard className="bg-card overflow-hidden">
+        {/* Date filter */}
+        <div className="flex flex-wrap items-center gap-3 p-4 border-b border-border/50">
+          <span className="text-xs font-medium text-muted-foreground shrink-0">Filter by date:</span>
+          <div className="flex items-center gap-2">
+            <input type="date" value={startDate}
+              onChange={(e) => handleDateChange(e.target.value, endDate)}
+              className="text-sm rounded-lg border border-border bg-background text-foreground px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/40" />
+            <span className="text-xs text-muted-foreground">to</span>
+            <input type="date" value={endDate}
+              onChange={(e) => handleDateChange(startDate, e.target.value)}
+              className="text-sm rounded-lg border border-border bg-background text-foreground px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/40" />
+          </div>
+          {(startDate || endDate) && (
+            <button onClick={() => handleDateChange("", "")}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              Clear
+            </button>
+          )}
+        </div>
+
+        <div className="p-5">
+          {loading ? (
+            <div className="h-48 rounded-xl bg-muted animate-pulse" />
+          ) : !data || data.total_attempts === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-10 italic">No quiz attempts in this period.</p>
+          ) : (
+            <>
+              {/* Mean / Median labels */}
+              <div className="flex flex-wrap gap-4 mb-4 text-sm">
+                <span className="text-muted-foreground">
+                  Total attempts: <span className="font-semibold text-foreground">{data.total_attempts}</span>
+                </span>
+                <span className="text-muted-foreground">
+                  Mean: <span className="font-semibold text-purple-500">{data.mean_score.toFixed(1)}%</span>
+                </span>
+                <span className="text-muted-foreground">
+                  Median: <span className="font-semibold text-violet-500">{data.median_score.toFixed(1)}%</span>
+                </span>
+              </div>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={data.buckets} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis dataKey="range" tick={{ fontSize: 10 }} />
+                  <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
+                  <Tooltip
+                    content={({ active, payload, label }) => {
+                      if (!active || !payload?.length) return null;
+                      return (
+                        <div className="rounded-lg border border-border bg-card px-3 py-2 shadow text-xs">
+                          <p className="text-muted-foreground mb-1">{label}%</p>
+                          <p className="font-semibold text-foreground">
+                            Attempts: <span className="text-purple-500">{payload[0].value}</span>
+                          </p>
+                        </div>
+                      );
+                    }}
+                  />
+                  <Bar dataKey="count" name="Attempts" fill="#7c3aed" radius={[3, 3, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </>
+          )}
+        </div>
+      </GlowCard>
+    </div>
+  );
+}
+
+// ── Weak Points Distribution Panel ────────────────────────────────────────────
+
+function WeakPointsPanel() {
+  const [data, setData] = useState<WeakPointDistribution | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [sortField, setSortField] = useState<"user_count" | "avg_strength_score">("user_count");
+  const [sortAsc, setSortAsc] = useState(false);
+
+  const fetchData = async (sd?: string, ed?: string) => {
+    setLoading(true);
+    try {
+      const res = await adminApi.getWeakPointsDistribution(sd || undefined, ed || undefined);
+      setData(res.data);
+    } catch {
+      setData(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchData(); }, []);
+
+  function handleDateChange(sd: string, ed: string) {
+    setStartDate(sd);
+    setEndDate(ed);
+    fetchData(sd || undefined, ed || undefined);
+  }
+
+  function toggleSort(field: "user_count" | "avg_strength_score") {
+    if (sortField === field) setSortAsc((v) => !v);
+    else { setSortField(field); setSortAsc(false); }
+  }
+
+  const rows = data?.weak_points
+    ? [...data.weak_points].sort((a, b) => {
+        const diff = (a[sortField] as number) - (b[sortField] as number);
+        return sortAsc ? diff : -diff;
+      })
+    : [];
+
+  const SortIcon = ({ field }: { field: "user_count" | "avg_strength_score" }) =>
+    sortField === field ? (
+      sortAsc ? <ChevronUp size={12} className="inline ml-0.5" /> : <ChevronDown size={12} className="inline ml-0.5" />
+    ) : null;
+
+  return (
+    <div>
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-9 h-9 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0">
+          <AlertTriangle size={18} className="text-red-500" />
+        </div>
+        <div>
+          <h2 className="font-heading text-base font-semibold text-foreground">Common Weak Points Across Cohort</h2>
+          <p className="text-xs text-muted-foreground">Top 20 topics by number of users who struggle with them</p>
+        </div>
+      </div>
+
+      <GlowCard className="bg-card overflow-hidden">
+        {/* Date filter */}
+        <div className="flex flex-wrap items-center gap-3 p-4 border-b border-border/50">
+          <span className="text-xs font-medium text-muted-foreground shrink-0">Filter by date:</span>
+          <div className="flex items-center gap-2">
+            <input type="date" value={startDate}
+              onChange={(e) => handleDateChange(e.target.value, endDate)}
+              className="text-sm rounded-lg border border-border bg-background text-foreground px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/40" />
+            <span className="text-xs text-muted-foreground">to</span>
+            <input type="date" value={endDate}
+              onChange={(e) => handleDateChange(startDate, e.target.value)}
+              className="text-sm rounded-lg border border-border bg-background text-foreground px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/40" />
+          </div>
+          {(startDate || endDate) && (
+            <button onClick={() => handleDateChange("", "")}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              Clear
+            </button>
+          )}
+        </div>
+
+        {loading ? (
+          <div className="space-y-2 p-4">
+            {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-10 rounded-lg" />)}
+          </div>
+        ) : !rows.length ? (
+          <p className="text-sm text-muted-foreground text-center py-10 italic">No weak point data found.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border/50 bg-muted/30">
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground">Category</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground">Topic</th>
+                  <th
+                    className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
+                    onClick={() => toggleSort("user_count")}
+                  >
+                    Users <SortIcon field="user_count" />
+                  </th>
+                  <th
+                    className="text-right px-4 py-2.5 text-xs font-semibold text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
+                    onClick={() => toggleSort("avg_strength_score")}
+                  >
+                    Avg Strength <SortIcon field="avg_strength_score" />
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/30">
+                {rows.map((wp, i) => (
+                  <tr key={i} className="hover:bg-muted/20 transition-colors">
+                    <td className="px-4 py-2.5">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                        wp.category === "vocab"
+                          ? "bg-blue-500/10 text-blue-500"
+                          : "bg-orange-500/10 text-orange-500"
+                      }`}>
+                        {wp.category}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2.5 text-foreground/80 max-w-[240px] truncate">{wp.topic}</td>
+                    <td className="px-4 py-2.5 text-right font-semibold text-foreground">{wp.user_count}</td>
+                    <td className="px-4 py-2.5 text-right">
+                      <span className={`font-semibold ${wp.avg_strength_score < 0.4 ? "text-red-500" : wp.avg_strength_score < 0.7 ? "text-amber-500" : "text-green-500"}`}>
+                        {(wp.avg_strength_score * 100).toFixed(0)}%
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </GlowCard>
+    </div>
+  );
+}
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AdminPage() {
@@ -775,6 +1030,12 @@ export default function AdminPage() {
 
       {/* ── Language Tips ── */}
       <LanguageTipsPanel />
+
+      {/* ── Score Distribution ── */}
+      <ScoreDistributionPanel />
+
+      {/* ── Weak Points ── */}
+      <WeakPointsPanel />
     </div>
   );
 }
