@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -68,8 +68,7 @@ export default function RegisterPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
   const [showSetPassword, setShowSetPassword] = useState(false);
-  const googleButtonRef = useRef<HTMLDivElement | null>(null);
-  const [googleButtonWidth, setGoogleButtonWidth] = useState(340);
+  const googleBtnRef = useRef<HTMLDivElement>(null);
 
   const {
     register,
@@ -134,21 +133,6 @@ export default function RegisterPage() {
   }
 
   const isLoading = isSubmitting || googleLoading;
-
-  useEffect(() => {
-    const node = googleButtonRef.current;
-    if (!node) return;
-
-    const updateWidth = () => {
-      const width = Math.floor(node.getBoundingClientRect().width);
-      if (width > 0) setGoogleButtonWidth(width);
-    };
-
-    updateWidth();
-    const observer = new ResizeObserver(updateWidth);
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, []);
 
   // ── Render ───────────────────────────────────────────────────────────────
 
@@ -331,11 +315,40 @@ export default function RegisterPage() {
         </div>
 
         {/* Google sign-up */}
-        <div ref={googleButtonRef} className="relative h-10">
+        <div className="relative">
+          {GOOGLE_CLIENT_ID_PRESENT && (
+            <div
+              ref={googleBtnRef}
+              style={{
+                position: "absolute",
+                top: "-9999px",
+                left: "-9999px",
+                width: "340px",
+                height: "44px",
+                overflow: "hidden",
+              }}
+            >
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => setServerError("Google sign-up failed. Please try again.")}
+                useOneTap={false}
+                text="signup_with"
+                shape="rectangular"
+                theme="filled_black"
+                size="large"
+                width="340"
+              />
+            </div>
+          )}
+
           <button
             type="button"
             disabled={isLoading || !GOOGLE_CLIENT_ID_PRESENT}
             title={!GOOGLE_CLIENT_ID_PRESENT ? "Google sign-in is not configured" : undefined}
+            onClick={() => {
+              if (!GOOGLE_CLIENT_ID_PRESENT) return;
+              googleBtnRef.current?.querySelector<HTMLElement>("div[role=button], iframe")?.click();
+            }}
             className="w-full flex items-center justify-center gap-3 h-10 rounded-lg
                        border border-white/15 bg-white/[0.06] hover:bg-white/10
                        text-white/75 hover:text-white text-sm font-medium
@@ -349,32 +362,6 @@ export default function RegisterPage() {
             </svg>
             Continue with Google
           </button>
-
-          {/* Transparent GIS overlay — same pattern as login page */}
-          {GOOGLE_CLIENT_ID_PRESENT && !isLoading && (
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                zIndex: 2,
-                opacity: 0.001,
-                overflow: "hidden",
-                borderRadius: "8px",
-                cursor: "pointer",
-              }}
-            >
-              <GoogleLogin
-                onSuccess={handleGoogleSuccess}
-                onError={() => setServerError("Google sign-up failed. Please try again.")}
-                useOneTap={false}
-                text="signup_with"
-                shape="rectangular"
-                theme="filled_black"
-                size="large"
-                width={String(googleButtonWidth)}
-              />
-            </div>
-          )}
         </div>
 
         {/* Login link */}
