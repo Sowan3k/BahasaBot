@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-27 (Session 62 — Chatbot vocab tooltip portal positioning fix)
+## Last Updated: 2026-04-27 (Session 63 — Course cover readiness fix)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -2338,6 +2338,21 @@ All three Gemini prompts in `course_service.py` said "Use Malaysian Bahasa Melay
 1. **Phase 20 — My Journey (Learning Roadmap)** — next major unbuilt feature.
 2. **Module Quiz Results Page** — `quiz/module/[moduleId]/results/page.tsx` still a TODO stub.
 3. **Deploy** — push backend to Railway, frontend to Vercel, set all env vars, final smoke test.
+
+## What Was Done This Session (2026-04-27 — Course cover readiness fix)
+
+### Course generation cover timing
+- **`backend/services/course_service.py`** — fresh course generation now updates the job to "Creating your course cover..." at 95% and waits for the cover save attempt before marking the job `complete`, so the first courses-list refresh sees the cover instead of a stale placeholder.
+- Template-cloned courses that somehow do not already have a copied cover now also run the same cover save step before job completion.
+
+### Frontend loading state
+- **`frontend/components/courses/CourseGenerationProgress.tsx`** — moved course-query invalidation into a `useEffect` so completion invalidates the course list and course detail once, after the cover-ready job state lands.
+- **`frontend/app/(dashboard)/courses/page.tsx`** — missing-cover cards now show a pulsing "Preparing cover..." state instead of a blank-looking tile.
+- **`frontend/app/(dashboard)/courses/[courseId]/page.tsx`** — detail hero refetches every 4 seconds while its cover is missing and shows "Preparing course cover..." during that window.
+
+### Verification
+- `npx tsc --noEmit` passed.
+- `python -m py_compile backend/services/course_service.py` passed.
 
 ## What Was Done This Session (2026-04-27 — Chatbot vocab tooltip portal positioning fix)
 

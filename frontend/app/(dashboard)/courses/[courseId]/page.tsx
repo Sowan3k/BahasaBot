@@ -117,6 +117,10 @@ export default function CourseDetailPage({
   const { data: course, isLoading, isError } = useQuery<Course>({
     queryKey: ["course", courseId],
     queryFn: () => coursesApi.get(courseId).then((r) => r.data),
+    refetchInterval: (query) => {
+      const current = query.state.data;
+      return current && !current.cover_image_url ? 4000 : false;
+    },
   });
 
   if (isLoading) {
@@ -159,7 +163,12 @@ export default function CourseDetailPage({
             className="absolute inset-0 w-full h-full object-cover"
           />
         ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-primary/15 to-transparent" />
+          <div className="absolute inset-0 overflow-hidden bg-gradient-to-br from-primary/30 via-primary/15 to-transparent">
+            <div className="absolute inset-0 animate-pulse bg-[linear-gradient(110deg,transparent,rgba(255,255,255,0.2),transparent)]" />
+            <div className="absolute bottom-20 left-4 sm:left-6 rounded-full border border-white/20 bg-black/25 px-3 py-1.5 text-xs font-medium text-white/85 backdrop-blur-sm">
+              Preparing course cover...
+            </div>
+          </div>
         )}
         {/* Dark gradient overlay so text is readable over any image */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />

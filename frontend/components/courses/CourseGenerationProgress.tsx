@@ -228,10 +228,14 @@ export function CourseGenerationProgress() {
     setActiveJobId(null);
   }
 
-  // Invalidate course list so the new card appears immediately on completion
-  if (data?.status === "complete") {
+  // Invalidate course data once the completed job includes the saved cover.
+  useEffect(() => {
+    if (data?.status !== "complete") return;
     queryClient.invalidateQueries({ queryKey: ["courses"] });
-  }
+    if (data.course_id) {
+      queryClient.invalidateQueries({ queryKey: ["course", data.course_id] });
+    }
+  }, [data?.status, data?.course_id, queryClient]);
 
   if (!activeJobId || !data) return null;
 

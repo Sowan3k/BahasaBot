@@ -107,7 +107,12 @@ function CourseCard({ course }: { course: CourseSummary }) {
             loading="lazy"
           />
         ) : (
-          <div className="w-full h-24 sm:h-32 bg-gradient-to-br from-primary/20 via-primary/10 to-transparent" />
+          <div className="relative w-full h-24 sm:h-32 overflow-hidden bg-gradient-to-br from-primary/20 via-primary/10 to-transparent">
+            <div className="absolute inset-0 animate-pulse bg-[linear-gradient(110deg,transparent,rgba(255,255,255,0.22),transparent)] translate-x-[-100%] [animation-duration:1.8s]" />
+            <div className="absolute inset-x-3 bottom-3 rounded-md border border-white/20 bg-black/20 px-2 py-1 text-[11px] font-medium text-white/85 backdrop-blur-sm">
+              Preparing cover...
+            </div>
+          </div>
         )}
 
         <div className="p-3 sm:p-5 space-y-2 sm:space-y-3">

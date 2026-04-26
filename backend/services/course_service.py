@@ -613,6 +613,21 @@ async def generate_course(
         course = await _clone_course(template, user_id, db)
         logger.info("Course cloned from template", course_id=str(course.id))
 
+        if not course.cover_image_url:
+            if job_id:
+                await _update_job(
+                    job_id,
+                    "running",
+                    90,
+                    "Creating your course cover...",
+                    course_id=str(course.id),
+                )
+            await _generate_and_save_cover(
+                course_id=str(course.id),
+                course_title=course.title,
+                topic=course.topic,
+            )
+
         if job_id:
             await _update_job(job_id, "complete", 100, "Course ready!", course_id=str(course.id))
 
@@ -713,9 +728,6 @@ async def generate_course(
         )
     await db.commit()
 
-    if job_id:
-        await _update_job(job_id, "complete", 100, "Course ready!", course_id=str(course.id))
-
     # Log course generation activity (fire-and-forget — failure must not abort course save)
     try:
         from backend.utils.analytics import log_activity
@@ -723,18 +735,27 @@ async def generate_course(
     except Exception:
         pass
 
-    # Generate cover image in background — never blocks the response
+    # Generate cover image before marking the background job complete.
     logger.info(
-        f"[IMAGE] Scheduling cover image generation for course_id={course.id}, "
+        f"[IMAGE] Generating cover image before job completion for course_id={course.id}, "
         f"title={course.title!r}"
     )
-    asyncio.create_task(
-        _generate_and_save_cover(
+    if job_id:
+        await _update_job(
+            job_id,
+            "running",
+            95,
+            "Creating your course cover...",
             course_id=str(course.id),
-            course_title=course.title,
-            topic=topic,
         )
+    await _generate_and_save_cover(
+        course_id=str(course.id),
+        course_title=course.title,
+        topic=topic,
     )
+
+    if job_id:
+        await _update_job(job_id, "complete", 100, "Course ready!", course_id=str(course.id))
 
     return course
 
