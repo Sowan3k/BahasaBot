@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-27 (Session 63 — Course cover readiness fix)
+## Last Updated: 2026-04-27 (Session 64 — Desktop course loader visual fix)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -2338,6 +2338,17 @@ All three Gemini prompts in `course_service.py` said "Use Malaysian Bahasa Melay
 1. **Phase 20 — My Journey (Learning Roadmap)** — next major unbuilt feature.
 2. **Module Quiz Results Page** — `quiz/module/[moduleId]/results/page.tsx` still a TODO stub.
 3. **Deploy** — push backend to Railway, frontend to Vercel, set all env vars, final smoke test.
+
+## What Was Done This Session (2026-04-27 — Desktop course loader visual fix)
+
+### Course generation progress component
+- **`frontend/components/courses/CourseGenerationProgress.tsx`** — replaced the desktop-only pinwheel loader, which depended on nested border/clip-path geometry and multiple transforms, with a deterministic fixed-size bloom spinner that stays centered inside the card.
+- Left the mobile domino loader unchanged because its compact visual state was already working well.
+- Moved stale-job cleanup from render-time state mutation into a `useEffect`, avoiding React render-cycle warnings or weird loader flicker when a Redis job expires.
+
+### Verification
+- `npx tsc --noEmit` passed.
+- Attempted Playwright screenshot capture, but local Playwright browsers are not installed (`npx playwright install` required), so browser screenshot verification was not available in this workspace.
 
 ## What Was Done This Session (2026-04-27 — Course cover readiness fix)
 

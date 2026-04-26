@@ -22,73 +22,71 @@ const MAX_MISSES = 5;
 //   rust #c85a3c | gold #d4a843 | olive #8d9d4f | sage #7d8f6b | warm-gold #a18f5c
 // These work on both the light (#e4d7b0) and dark (#111110) card backgrounds.
 const ANIM_CSS = `
-  /* ── Pinwheel flower (desktop card) ────────────────────────────────── */
-
-  /* Outer loader wrapper — layout anchor, 20×20 px */
-  .bb-pw-loader { position: relative; width: 20px; height: 20px; }
-
-  /* Spinning flower container */
-  .bb-pw-spin {
-    position: relative; width: 20px; height: 20px;
-    transform: rotate(30deg) scale(0.77);
-    animation: bbPwRotate 3s infinite linear;
+  .bb-bloom-stage {
+    position: relative;
+    width: 100%;
+    height: 118px;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
   }
 
-  /* Centre pin */
-  .bb-pw-pin {
-    position: absolute; top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    width: 8px; height: 8px;
-    background-color: #fdfbf6;
-    z-index: 10; border-radius: 9999px;
+  .bb-bloom-glow {
+    position: absolute;
+    width: 92px;
+    height: 92px;
+    border-radius: 9999px;
+    background: radial-gradient(circle, rgba(141,157,79,0.22) 0%, rgba(141,157,79,0.08) 42%, transparent 72%);
+    animation: bbBloomGlow 2.4s ease-in-out infinite;
   }
 
-  /* Individual petal wrapper (absolute, scaled up 1.5×) */
-  .bb-pw-pc { position: absolute; scale: 1.5; }
-
-  /* Petal body — teardrop shape via clip-path + border trick */
-  .bb-pw-l1 {
-    position: relative; width: 0; height: 0;
-    clip-path: ellipse(50% 50% at 50% 109%);
-    border-left: 30px solid transparent;
-    border-right: 30px solid transparent;
-    border-top-left-radius: 222px;
-    border-top-right-radius: 222px;
+  .bb-bloom-spin {
+    position: relative;
+    width: 72px;
+    height: 72px;
+    animation: bbBloomRotate 2.8s linear infinite;
   }
 
-  /* Petal shadow/fold overlay */
-  .bb-pw-l2 {
-    position: absolute; right: -1px; bottom: 0;
-    width: 30px; height: 20.5px;
-    border-bottom-right-radius: 2px; z-index: 2;
-  }
-  .bb-pw-l2::before {
-    content: "";
-    position: absolute; bottom: 0;
-    width: 24.5px; height: 20.5px;
-    clip-path: ellipse(100% 100% at 0% 100%);
-    border-top-right-radius: 9999px;
+  .bb-bloom-petal {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 22px;
+    height: 36px;
+    border-radius: 999px 999px 999px 6px;
+    transform-origin: 50% 36px;
     box-shadow:
-      inset -5px 0px 3px -3px rgba(0, 0, 0, 0.2),
-      10px -10px 10px 0px rgba(255, 255, 255, 0.1);
-    z-index: 1;
+      inset -4px -5px 8px rgba(0,0,0,0.14),
+      inset 4px 4px 8px rgba(255,255,255,0.16),
+      0 5px 10px rgba(0,0,0,0.12);
   }
 
-  /* Petal angular positions (unchanged from original) */
-  .bb-pw-a { top: 50%; left: 50%; transform: translate(-80%, -85%);             z-index: 2; }
-  .bb-pw-b { top: 50%; left: 50%; transform: rotate(90deg)  translate(-75%,-10%); z-index: 3; }
-  .bb-pw-c { top: 50%; left: 50%; transform: rotate(180deg) translate(-16%,-17%); z-index: 4; }
-  .bb-pw-d { top: 50%; left: 50%; transform: rotate(270deg) translate(-22%,-90%); z-index: 5; }
+  .bb-bloom-petal:nth-child(1) { background: #c85a3c; transform: translate(-50%, -100%) rotate(0deg); }
+  .bb-bloom-petal:nth-child(2) { background: #d4a843; transform: translate(-50%, -100%) rotate(72deg); }
+  .bb-bloom-petal:nth-child(3) { background: #8d9d4f; transform: translate(-50%, -100%) rotate(144deg); }
+  .bb-bloom-petal:nth-child(4) { background: #7d8f6b; transform: translate(-50%, -100%) rotate(216deg); }
+  .bb-bloom-petal:nth-child(5) { background: #a18f5c; transform: translate(-50%, -100%) rotate(288deg); }
 
-  /* Petal colours — botanical palette */
-  .bb-l1a { border-bottom: 50px solid #c85a3c; } .bb-l1b { background-color: #c85a3c; }
-  .bb-l2a { border-bottom: 50px solid #d4a843; } .bb-l2b { background-color: #d4a843; }
-  .bb-l3a { border-bottom: 50px solid #8d9d4f; } .bb-l3b { background-color: #8d9d4f; }
-  .bb-l4a { border-bottom: 50px solid #7d8f6b; } .bb-l4b { background-color: #7d8f6b; }
+  .bb-bloom-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 16px;
+    height: 16px;
+    transform: translate(-50%, -50%);
+    border-radius: 9999px;
+    background: #fdfbf6;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  }
 
-  @keyframes bbPwRotate {
-    from { transform: rotate(30deg)  scale(0.77); }
-    to   { transform: rotate(390deg) scale(0.77); }
+  @keyframes bbBloomRotate {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+
+  @keyframes bbBloomGlow {
+    0%, 100% { transform: scale(0.92); opacity: 0.72; }
+    50%      { transform: scale(1.08); opacity: 1; }
   }
 
   /* ── Domino bars (mobile pill) ──────────────────────────────────────── */
@@ -124,53 +122,19 @@ const ANIM_CSS = `
   }
 `;
 
-// ── Pinwheel sub-component (desktop) ─────────────────────────────────────────
-// Root cause of previous broken rendering: `display:flex` on the clip container
-// uses `alignItems:stretch` by default, which stretched the scale wrapper to fill
-// the full 100 px height. That moved the `transformOrigin:"center"` point to
-// (10px, 50px) inside the scale wrapper (not 10px) — completely wrong origin.
-//
-// Fix: use `position:absolute; top:50%; left:50%; transform:translate(-50%,-50%)`
-// to centre the 20×20 px loader inside a `position:relative` container, then
-// apply scale(0.55). The scale-origin defaults to the loader's own centre, which
-// is already at the container centre — no flex-stretch ambiguity.
-//
-// Max petal radius from spin-centre (all scales combined):
-//   69.5 px × spin-scale(0.77) × external-scale(0.55) ≈ 29 px
-// Container is 120 px → centre at 60 px → petals span 31–89 px  ✓
-// Stick is intentionally omitted for the card context.
-function Pinwheel() {
+// Desktop bloom loader: deterministic fixed-size petals, so the animation stays
+// centred inside the card without relying on border geometry.
+function DesktopBloom() {
   return (
-    <div style={{ position: "relative", height: 120, width: "100%" }}>
-      <div
-        style={{
-          position: "absolute",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%) scale(0.55)",
-        }}
-      >
-        <div className="bb-pw-loader">
-          <div className="bb-pw-spin">
-            <div className="bb-pw-pin" />
-            <div className="bb-pw-pc bb-pw-a">
-              <div className="bb-pw-l1 bb-l1a" />
-              <div className="bb-pw-l2 bb-l1b" />
-            </div>
-            <div className="bb-pw-pc bb-pw-b">
-              <div className="bb-pw-l1 bb-l2a" />
-              <div className="bb-pw-l2 bb-l2b" />
-            </div>
-            <div className="bb-pw-pc bb-pw-c">
-              <div className="bb-pw-l1 bb-l3a" />
-              <div className="bb-pw-l2 bb-l3b" />
-            </div>
-            <div className="bb-pw-pc bb-pw-d">
-              <div className="bb-pw-l1 bb-l4a" />
-              <div className="bb-pw-l2 bb-l4b" />
-            </div>
-          </div>
-        </div>
+    <div className="bb-bloom-stage" aria-hidden="true">
+      <div className="bb-bloom-glow" />
+      <div className="bb-bloom-spin">
+        <div className="bb-bloom-petal" />
+        <div className="bb-bloom-petal" />
+        <div className="bb-bloom-petal" />
+        <div className="bb-bloom-petal" />
+        <div className="bb-bloom-petal" />
+        <div className="bb-bloom-center" />
       </div>
     </div>
   );
@@ -223,10 +187,12 @@ export function CourseGenerationProgress() {
     retry: MAX_MISSES,
   });
 
-  // Give up polling if Redis TTL has expired and job is gone
-  if (failureCount >= MAX_MISSES && activeJobId) {
-    setActiveJobId(null);
-  }
+  // Give up polling if Redis TTL has expired and job is gone.
+  useEffect(() => {
+    if (failureCount >= MAX_MISSES && activeJobId) {
+      setActiveJobId(null);
+    }
+  }, [activeJobId, failureCount, setActiveJobId]);
 
   // Invalidate course data once the completed job includes the saved cover.
   useEffect(() => {
@@ -263,7 +229,7 @@ export function CourseGenerationProgress() {
         {/* Zone 1 — animation or result icon */}
         <div className="flex flex-col items-center pt-5 pb-1">
           {isActive ? (
-            <Pinwheel />
+            <DesktopBloom />
           ) : isDone ? (
             <CheckCircle2 className="w-14 h-14 text-primary my-3" strokeWidth={1.5} />
           ) : (
