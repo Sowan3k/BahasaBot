@@ -2348,7 +2348,7 @@ All three Gemini prompts in `course_service.py` said "Use Malaysian Bahasa Melay
 
 ### Verification
 - `npx tsc --noEmit` passed.
-- Attempted Playwright screenshot capture, but local Playwright browsers are not installed (`npx playwright install` required), so browser screenshot verification was not available in this workspace.
+- Playwright screenshot capture passed using the installed Chrome channel (`--channel chrome`); desktop loader rendered bottom-right, visible, centered, and unclipped.
 
 ## What Was Done This Session (2026-04-27 — Course cover readiness fix)
 
