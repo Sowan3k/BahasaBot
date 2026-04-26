@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-26 (Session 55 — Admin Panel Phase 2: time spent, chat metrics, quiz raw data, score distribution chart, cohort weak-points table)
+## Last Updated: 2026-04-26 (Session 56 — VocabPill mobile tap fix: chatbot vocabulary pills now open on tap, close on outside tap)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -25,7 +25,7 @@ _Update this file at the end of every session_
 | Onboarding Flow (Phase 14) | ✅ Complete + Enhanced (Session 26) | 8-step questionnaire (Welcome → Gender/Age → NativeLang → WhyLearning → CurrentLevel → Goal → Timeline → DailyStudy); gender + age_range collected for personalised roadmap banner; roadmap auto-generated on finish; loading screen during generation; sonner toast on roadmap_ready; skip at any step saves partial data |
 | First-Login UI Tour | ✅ Complete + Race-fix + Dark theme (Session 30) | driver.js spotlight tour; 8 steps covering sidebar + all nav sections; triggers once after onboarding; has_seen_tour flag on users table; PATCH saves flag on tour done/skip. Race condition fixed: `active={showTour && !showOnboarding}`. Popover fully re-themed: dark card #2e2b22, warm text, olive-green Next button, ghost Back button, matching arrow — replaces default white popover |
 | Admin Control Panel (Phase 15) | ✅ Complete + Evaluation enhancements (Session 54) + Phase 2 (Session 55) | /api/admin/* fully tested; stats, users (search + detail + delete + reset + analytics), feedback; password guards verified; recharts LineChart + BarChart confirmed working; analytics bug fixed (NullType → timedelta); CSV export endpoints (users/quiz-attempts/feedback with optional date range); last_active column on user list; date range filter; avg quiz score pills + score trajectory LineChart; feedback label fix. Session 55: total_time_spent (with coverage caveat), total_chat_messages, avg_msgs_per_session on user detail; GET /api/admin/users/{id}/quiz-attempts (raw Q&A with correct/incorrect indicators, collapsible section); GET /api/admin/analytics/score-distribution (cohort histogram + mean/median, date filter); GET /api/admin/analytics/weak-points (top 20 topics by user count, sortable table, date filter) |
-| Pronunciation Audio (Phase 16) | ✅ Complete + Debugged | usePronunciation hook (ms-MY → ms → default fallback); SpeakerButton component; wired into VocabPills (chatbot), course class vocab cards, quiz results breakdown, dashboard vocabulary table; 3 post-implementation bugs fixed |
+| Pronunciation Audio (Phase 16) | ✅ Complete + Debugged + Mobile tap fix (Session 56) | usePronunciation hook (ms-MY → ms → default fallback); SpeakerButton component; wired into VocabPills (chatbot), course class vocab cards, quiz results breakdown, dashboard vocabulary table; 3 post-implementation bugs fixed; VocabPill now opens on tap (mobile) and closes on outside-tap — previously hover-only, broken on touchscreens |
 | Notification System (Phase 17) | ✅ Complete | GET /api/notifications/ (last 20 + unread_count), POST mark-read, POST read-all; NotificationBell (60s polling, unread badge) + NotificationPanel; floating global icon in layout.tsx |
 | Gamification — Streak + XP (Phase 18) | ✅ Complete | record_learning_activity() in gamification_service.py; Redis-keyed daily streak; XP awards: class=10, quiz pass=25, chatbot session=5; milestone notifications (streak 3/7/14/30, every 100 XP); wired into 4 routers (courses, quiz, chatbot); StreakBadge + XPBar components; dashboard +2 stat cards; sidebar footer shows streak+XP |
 | Sidebar Polish | ✅ Complete | Double divider removed (no border-b on logo area); ThemeToggle repositioned to header row; footer items centered except XP bar; collapsed tooltips use theme-aware bg-popover |
@@ -72,7 +72,23 @@ _Update this file at the end of every session_
 
 ---
 
-## What Was Done This Session (2026-04-26 Session 55 — Admin Panel Phase 2: evaluation data quality)
+## What Was Done This Session (2026-04-26 Session 56 — VocabPill mobile tap fix)
+
+### Goal
+VocabularyHighlight VocabPills in the chatbot were hover-only. On mobile (touch screens), hover events never fire, so the translation + pronunciation tooltip was completely inaccessible.
+
+### Changes — `frontend/components/chatbot/VocabularyHighlight.tsx`
+- Added `wrapperRef` (useRef<HTMLSpanElement>) to the outer `<span>` wrapper — needed for outside-click detection
+- Added `handlePillClick(e)` toggle function: if tooltip is already open → clear delay timer + close immediately; if closed → call existing `openTooltip()`
+- Added `onClick={handlePillClick}` to the pill `<button>` — fires on both desktop click and mobile tap
+- Added `useEffect` that attaches `mousedown` + `touchstart` listeners to `document` while tooltip is open; closes tooltip when event target is outside `wrapperRef` — standard outside-click pattern
+- Changed pill `title` from "Hover to see translation" → "Tap to see translation"
+- Desktop hover behavior (`onMouseEnter`/`onMouseLeave` with 120ms delay) is fully preserved
+- `tsc --noEmit`: 0 errors
+
+---
+
+## What Was Done Previous Session (2026-04-26 Session 55 — Admin Panel Phase 2: evaluation data quality)
 
 ### Goal
 Five evaluation-quality additions to the admin panel: surface time-spent with a coverage caveat, chatbot engagement metrics, a raw quiz attempt inspector, a cohort score distribution histogram, and a cohort weak-points table.

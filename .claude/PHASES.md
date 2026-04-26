@@ -351,6 +351,9 @@ _Status: ✅ Complete + Debugged_
 - [x] Dead variable: `const vh = window.innerHeight` in computePlacement was declared but never used — removed
 - [x] Arrow offset: `right-3`/`left-3` hardcoded offsets for flipped tooltip didn't align with pill center — simplified to always `left-1/2 -translate-x-1/2`
 
+### Mobile tap fix (Session 56 — 2026-04-26)
+- [x] `frontend/components/chatbot/VocabularyHighlight.tsx` — VocabPill was hover-only; touch screens never fire mouseEnter so tooltip was completely inaccessible on mobile. Added `onClick` toggle + document `mousedown`/`touchstart` outside-click handler to close on tap away. Desktop hover behavior preserved. `wrapperRef` added to outer `<span>` for outside-click detection.
+
 ---
 
 ## Phase 17 — Notification System

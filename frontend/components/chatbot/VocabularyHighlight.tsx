@@ -61,11 +61,28 @@ export function VocabPill({ malay, english }: VocabPillProps) {
   });
 
   const pillRef = useRef<HTMLButtonElement>(null);
+  const wrapperRef = useRef<HTMLSpanElement>(null);
   // Delayed hide: gives the mouse time to travel from pill → tooltip without blinking
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Single hook instance covers both the outside speaker and the one inside the tooltip
   const { speak, isSupported } = usePronunciation();
+
+  // Close tooltip when user taps/clicks outside the pill wrapper (mobile support)
+  useEffect(() => {
+    if (!showTooltip) return;
+    function handleOutside(e: MouseEvent | TouchEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setShowTooltip(false);
+      }
+    }
+    document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("touchstart", handleOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("touchstart", handleOutside);
+    };
+  }, [showTooltip]);
 
   // Clear the timer on unmount to avoid setState-on-unmounted-component warnings
   useEffect(() => {
@@ -87,6 +104,20 @@ export function VocabPill({ malay, english }: VocabPillProps) {
 
   function scheduleClose() {
     hideTimer.current = setTimeout(() => setShowTooltip(false), 120);
+  }
+
+  // Toggle on click/tap — primary interaction for mobile; on desktop complements hover
+  function handlePillClick(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (showTooltip) {
+      if (hideTimer.current) {
+        clearTimeout(hideTimer.current);
+        hideTimer.current = null;
+      }
+      setShowTooltip(false);
+    } else {
+      openTooltip();
+    }
   }
 
   // ── Tooltip CSS classes (derived from placement) ─────────────────────────
@@ -117,12 +148,13 @@ export function VocabPill({ malay, english }: VocabPillProps) {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <span className="relative inline-flex items-center gap-0.5 mx-0.5">
-      {/* Pill button (hover trigger) */}
+    <span ref={wrapperRef} className="relative inline-flex items-center gap-0.5 mx-0.5">
+      {/* Pill button — hover on desktop, tap on mobile */}
       <button
         ref={pillRef}
         type="button"
-        title="Hover to see translation"
+        title="Tap to see translation"
+        onClick={handlePillClick}
         onMouseEnter={openTooltip}
         onMouseLeave={scheduleClose}
         onFocus={openTooltip}
