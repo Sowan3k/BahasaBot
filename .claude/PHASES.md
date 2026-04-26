@@ -936,6 +936,9 @@ _Status: 🔄 In progress_
 - [ ] Seed data should make admin panel, dashboard, and roadmap look like a live active system
 - [ ] Document how to run: python backend/data/seed_demo.py
 
+### Admin Accounts — Seeded (2026-04-27)
+- [x] backend/data/create_admin.py — idempotent script to seed drtan@testadmin.com as role='admin' (Dr. Tan Tien Ping, FYP supervisor); run: `backend/venv/Scripts/python.exe -m backend.data.create_admin`
+
 ### Mobile Responsiveness Check
 - [x] Audited all 13 target pages for mobile viewport (<768px) issues
 - [x] admin/users/page.tsx — table grid wrapped in overflow-x-auto + min-w-[700px] inner wrapper; GlowCard changed from overflow-hidden to overflow-x-auto

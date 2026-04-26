@@ -72,7 +72,21 @@ _Update this file at the end of every session_
 
 ---
 
-## What Was Done This Session (2026-04-27 Session 60 — Course generation popup animation upgrade)
+## What Was Done This Session (2026-04-27 Session 67 — Admin seed: Dr. Tan account)
+
+### Goal
+Add a second admin account for Dr. Tan Tien Ping (supervisor) directly into the DB.
+
+### File created — `backend/data/create_admin.py`
+- Idempotent seed script: inserts `drtan@testadmin.com` with role='admin', onboarding_completed=true
+- Uses bcrypt.hashpw directly (consistent with auth.py — no passlib)
+- Run from project root: `backend/venv/Scripts/python.exe -m backend.data.create_admin`
+- Safe to re-run: skips if email already exists; upgrades role if account exists as 'user'
+- Account created: email=drtan@testadmin.com, name="Dr. Tan Tien Ping", role=admin, ID=a5590361-fea5-4d4b-af51-87f000b7dd47
+
+---
+
+## What Was Done (2026-04-27 Session 60 — Course generation popup animation upgrade)
 
 ### Goal
 Replace the plain emoji+progress bar popup with two purpose-built CSS animations that match the project's botanical color palette. Desktop gets a spinning pinwheel; mobile gets a compact non-blocking pill with falling domino bars.
