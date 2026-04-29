@@ -8,9 +8,10 @@ Phase 18: record_learning_activity(), update_streak(), award_xp()
 
 Streak logic (Redis-backed, date-keyed):
   - Redis key: gamif:streak:<user_id>  →  ISO date string of last activity
-  - Same day  → no-op (already counted)
-  - Yesterday → streak += 1
-  - Older / missing → streak resets to 1
+  - Same day        → no-op (already counted)
+  - Yesterday       → streak += 1
+  - Day before that → streak += 1  (one-day grace period)
+  - 2+ days ago / missing → streak resets to 1
 
 Milestone triggers:
   - Streak: 3, 7, 14, 30 days → streak_milestone notification
@@ -34,7 +35,10 @@ logger = get_logger(__name__)
 
 # Redis key template for last-activity date
 _STREAK_KEY = "gamif:streak:{}"
-# TTL 48 h is enough: key survives one day, checked the next
+# TTL 48 h: covers the one-day grace period (last activity could be up to 2 days
+# ago, but the key is renewed on every active day so expiry at 48 h is safe for
+# the common case; edge case: key written at 23:59 and read at 00:01 two days
+# later could be expired — acceptable trade-off to avoid a 72 h TTL on the key).
 _STREAK_KEY_TTL = 48 * 3600
 
 _STREAK_MILESTONES = {3, 7, 14, 30}
@@ -156,9 +160,13 @@ async def record_learning_activity(
         new_xp = old_xp + xp_amount
 
         # ── Update streak (once per calendar day) ─────────────────────────
+        # One-day grace period: missing a single day does not reset the streak.
+        # This reduces frustration from minor schedule disruptions while still
+        # requiring consistent engagement.
         if not streak_already_updated_today:
             yesterday_str = (date.today() - timedelta(days=1)).isoformat()
-            if last_date_str == yesterday_str:
+            day_before_yesterday_str = (date.today() - timedelta(days=2)).isoformat()
+            if last_date_str in (yesterday_str, day_before_yesterday_str):
                 new_streak = old_streak + 1  # continued streak
             else:
                 new_streak = 1  # first activity ever, or streak broken

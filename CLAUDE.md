@@ -146,7 +146,6 @@ bahasabot/
 │   │   ├── quiz_service.py          # Quiz generation logic
 │   │   ├── progress_service.py      # User progress tracking
 │   │   ├── journey_service.py       # Roadmap generation logic
-│   │   ├── audio_service.py         # Pronunciation helpers
 │   │   ├── image_service.py         # Nano Banana 2 image generation
 │   │   ├── email_service.py         # Resend email integration
 │   │   └── gamification_service.py  # Streak + XP logic

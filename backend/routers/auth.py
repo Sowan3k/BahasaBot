@@ -22,7 +22,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token as google_id_token
 from jose import JWTError, jwt
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.db.database import get_db
@@ -329,6 +329,29 @@ def _make_code_hash(email: str, code: str) -> str:
     return hashlib.sha256(f"{email.lower().strip()}:{code}".encode()).hexdigest()
 
 
+async def _cleanup_expired_reset_tokens(db: AsyncSession) -> None:
+    """Delete stale password_reset_tokens rows opportunistically.
+
+    Removes rows that are either expired or used-and-old to keep the table
+    small. Called at the start of forgot_password(); failures are swallowed so
+    cleanup never blocks the actual reset flow.
+    """
+    try:
+        cutoff_used = datetime.now(timezone.utc) - timedelta(hours=24)
+        stmt = delete(PasswordResetToken).where(
+            (PasswordResetToken.expires_at < datetime.now(timezone.utc))
+            | (
+                (PasswordResetToken.used == True)  # noqa: E712
+                & (PasswordResetToken.created_at < cutoff_used)
+            )
+        )
+        result = await db.execute(stmt)
+        await db.commit()
+        logger.info("Cleaned up expired/used reset tokens", deleted=result.rowcount)
+    except Exception as exc:
+        logger.error("_cleanup_expired_reset_tokens failed", error=str(exc))
+
+
 @router.post("/forgot-password", status_code=status.HTTP_200_OK, response_model=ForgotPasswordResponse)
 async def forgot_password(body: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)) -> ForgotPasswordResponse:
     """
@@ -339,6 +362,11 @@ async def forgot_password(body: ForgotPasswordRequest, db: AsyncSession = Depend
       SHA-256(email:code) hash in password_reset_tokens, and emails the code.
     - Non-existent email: returns 200 (prevents email enumeration).
     """
+    try:
+        await _cleanup_expired_reset_tokens(db)
+    except Exception:
+        pass
+
     result = await db.execute(select(User).where(User.email == body.email))
     user = result.scalar_one_or_none()
 

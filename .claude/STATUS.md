@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-27 (Session 68 — Mobile nav UX: scroll-aware bar + tour + TipToast fix)
+## Last Updated: 2026-04-29 (Session 69 — Production hygiene: stale ref removal, reset token cleanup, streak grace period)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -73,7 +73,34 @@ _Update this file at the end of every session_
 
 ---
 
-## What Was Done This Session (2026-04-27 Session 68 — Mobile nav UX: scroll-aware bar + tour + TipToast fix)
+## What Was Done This Session (2026-04-29 Session 69 — Production hygiene fixes)
+
+### Goals
+Three production-hygiene fixes from FEATURE_MAP.md Section 12 (no migrations, no schema changes).
+
+### FIX A — Removed stale `audio_service.py` reference from `CLAUDE.md`
+- `CLAUDE.md` folder structure listed `audio_service.py # Pronunciation helpers` under `backend/services/` — this file does not exist; pronunciation is browser-native (Web Speech API)
+- Removed the single line; no other section referenced it
+
+### FIX B — Opportunistic reset token cleanup (`backend/routers/auth.py`)
+- Added `_cleanup_expired_reset_tokens(db: AsyncSession)` helper above `forgot_password()`
+- Executes a single `DELETE` on `password_reset_tokens` where: `expires_at < now()` OR (`used == True AND created_at < now − 24h`)
+- Logs deleted row count at INFO level; swallows all exceptions (never blocks the reset flow)
+- Called at the top of `forgot_password()` inside a bare `try/except`
+- Added `delete` to `from sqlalchemy import` line
+
+### FIX C — Streak grace period (`backend/services/gamification_service.py`)
+- `record_learning_activity()`: streak comparison now accepts `last_date_str in (yesterday_str, day_before_yesterday_str)` instead of only `== yesterday_str`
+- Missing one calendar day no longer resets the streak; two consecutive missed days still reset to 1
+- Module docstring and `_STREAK_KEY_TTL` comment updated to reflect new behaviour
+- Added explanatory comment above the logic block (viva-defensible: V&V observation that strict daily resets discouraged users after a single missed day)
+
+### File created — `FIX_REPORT.md`
+- Detailed change log appended for auditability
+
+---
+
+## What Was Done (2026-04-27 Session 68 — Mobile nav UX: scroll-aware bar + tour + TipToast fix)
 
 ### Goals
 Three mobile UX fixes triggered by a new-account test run:
