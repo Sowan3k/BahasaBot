@@ -43,3 +43,6 @@ tsconfig.tsbuildinfo
 .claude/hooks/
 .claude/settings.json
 .claude/settings.local.json
+
+# ── Private business/monetization docs (do NOT commit unless explicitly instructed) ──
+SUBSCRIPTION.md
