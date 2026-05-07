@@ -1112,3 +1112,79 @@ No changes required. `generate_course()` returns an identical `Course` object wh
 - [x] `frontend/app/(dashboard)/chatbot/page.tsx` — token batching via `requestAnimationFrame`: tokens accumulate in a local buffer and are flushed in a single `setMessages` call per animation frame (≤60/s) instead of one setState per token (~50–100+/s); eliminates UI jank on fast Gemini responses
 - [x] `frontend/app/(dashboard)/chatbot/page.tsx` — prewarm call on mount: `GET /api/chatbot/prewarm` fires once when the user loads the chatbot page (before typing), so the profile cache is warm by the time the first message is sent
 
+
+---
+
+## Phase 25 — Subscription Model Marketing Pages (Frontend-Only)
+_Status: ✅ Complete (Session 70 — 2026-05-07)_
+
+**Goal:** Add marketing/display-only subscription pages showing the planned monetization model. NO backend, NO DB changes, NO feature gating. Every existing feature works exactly as it does today for every user. The pricing UI is purely informational — it shows judges and users what BahasaBot's monetization will look like once payment integration is built post-graduation.
+
+**Why frontend-only:** Stripe payment integration requires SSM business registration + Malaysian business bank account, both of which depend on post-graduation logistics. The full backend spec is documented in `.claude/SUBSCRIPTION.md` and will be implemented as a future phase. For PIXEL 2026 (FYP showcase), only the marketing pages are needed — the entrepreneurship rubric explicitly rewards "ready for pre-commercialization," which this scope satisfies.
+
+### Plan data (hardcoded constant — NO DB, NO API)
+
+Create `frontend/lib/subscription-plans.ts` with the 4 plans exactly as specified in `.claude/SUBSCRIPTION.md` Section 2 and Section 3:
+
+- **Free** — RM0 / forever — 30 chat msgs/day, 1 course gen/day, unlimited quizzes, no adaptive quiz, no pronunciation audio, no chat history, no learning roadmap, 1 active session
+- **7-Day Power Pass** — RM35 / 7 days — 300 chat msgs/day, 10 course gen/day, unlimited quizzes, adaptive quiz, pronunciation, chat history, roadmap, 1 active session
+- **Monthly Pro** — RM60 / 30 days — 500 chat msgs/day, 5 course gen/day, all paid features, 1 active session
+- **Semester Pass** — RM280 / 6 months — 500 chat msgs/day, 5 course gen/day, all paid features, 1 active session
+
+Export `SUBSCRIPTION_PLANS` array and a `SubscriptionPlan` TypeScript interface. All feature flags and limits hardcoded — never fetched.
+
+### Frontend
+
+#### New files
+- [ ] `frontend/lib/subscription-plans.ts` — hardcoded 4-plan array + TS interface
+- [ ] `frontend/components/subscription/PricingCard.tsx` — single plan card; props: `plan: SubscriptionPlan`, `featured?: boolean` (highlights the 7-Day Pass as recommended for exam season), `ctaLabel: string`, `onCtaClick: () => void`
+- [ ] `frontend/components/subscription/PlanBadge.tsx` — small "Free Plan" badge (always Free for everyone in Phase 25); used in sidebar footer
+- [ ] `frontend/components/subscription/ComingSoonModal.tsx` — triggered by any "Start Free Trial" / "Subscribe" CTA; explains payment integration is in development (post-graduation) and lists what's coming (Stripe card-on-file, 7-day trial, auto-renewal)
+- [ ] `frontend/app/pricing/page.tsx` — **public** route (NOT inside `(dashboard)` group); landing-page-style hero + 4 PricingCards in responsive grid + feature comparison table + FAQ section + footer CTA; ShaderAnimation or background-paths backdrop matching auth pages aesthetic; no auth required (judges should be able to visit without logging in)
+- [ ] `frontend/app/(dashboard)/settings/billing/page.tsx` — logged-in mock view; shows current plan ("Free Plan"), "What you get on Free" recap, prominent "View All Plans" CTA linking to `/pricing`; matches existing settings page patterns (back-to-settings link, GlowCard layout)
+
+#### Modified files
+- [ ] `frontend/components/nav/AppSidebar.tsx` — add top-level "Pricing" nav item (use `Sparkles` or `CreditCard` Lucide icon) between Settings and the footer area; add `<PlanBadge />` to expanded footer above streak/XP row; collapsed sidebar shows badge as a small icon-only variant
+- [ ] `frontend/app/(dashboard)/settings/page.tsx` — add "Billing" entry in the settings hub list (icon + title + description + chevron pattern, same as existing entries); link to `/settings/billing`
+
+#### Specific UI requirements
+
+**`/pricing` page layout (top to bottom):**
+1. Hero — headline "Choose Your Path to Bahasa Mastery" + subheading about international students + 7-day trial mention
+2. 4-card grid — `grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4`; 7-Day Pass marked as "Most Popular" with `featured` prop
+3. Feature comparison table — full matrix from SUBSCRIPTION.md Section 3 with all rows (chat messages, course gen, quizzes, adaptive quiz, pronunciation, chat history, sessions, roadmap); ✅/❌ icons for booleans
+4. 7-day free trial callout section — explains the trial mechanic (card-on-file, auto-charge after 7 days, cancel anytime)
+5. FAQ section (4-5 questions): "Why pricing in MYR?", "What payment methods?", "Can I cancel anytime?", "Is the free plan really free?"
+6. Footer CTA: "Start your free trial" button → opens `ComingSoonModal`
+
+**ComingSoonModal copy:**
+> "Payment integration is launching soon! 🚀
+> We're currently finalizing our payment gateway setup with Stripe. The pricing model and features above are locked and ready — payment processing will be live shortly after launch.
+> Until then, all BahasaBot features are available free of charge. Thank you for your patience!"
+
+**PlanBadge in sidebar:**
+- Expanded: small pill with "Free Plan" text, neutral styling (border + muted bg), tappable → routes to `/pricing`
+- Collapsed: small CreditCard icon with tooltip "Free Plan"
+
+### What this phase does NOT touch
+- ❌ No backend changes (no new routers, services, models, schemas, migrations)
+- ❌ No DB tables (no subscription_plans, user_subscriptions, usage_tracking, active_sessions, payment_logs, referrals)
+- ❌ No new columns on `users` table
+- ❌ No middleware, no rate-limit changes, no `subscription_guard.py`
+- ❌ No NextAuth callback changes
+- ❌ No environment variables added
+- ❌ No feature gating — chat, course gen, adaptive quiz, pronunciation audio, chat history, roadmap all continue working exactly as they do today for every user
+- ❌ No real Stripe/Paddle/ToyyibPay integration
+- ❌ No real referral system (referrals are mentioned in SUBSCRIPTION.md but excluded from Phase 25)
+- ❌ No admin panel additions
+
+### Acceptance criteria
+- [x] `/pricing` is reachable by logged-out users
+- [x] `/pricing` displays all 4 plans with correct prices, durations, and feature lists matching SUBSCRIPTION.md exactly
+- [x] Feature comparison table renders cleanly on mobile (375px) and desktop
+- [x] `/settings/billing` is reachable from `/settings` and displays "Free Plan" + link to `/pricing`
+- [x] Sidebar shows "Pricing" nav item (visible whether collapsed or expanded)
+- [x] Sidebar footer shows `<PlanBadge />` ("Free Plan")
+- [x] Clicking any "Start Free Trial" or "Subscribe" CTA opens `ComingSoonModal` with the specified copy
+- [x] `tsc --noEmit` returns 0 errors
+- [x] No existing feature in BahasaBot has changed behavior — chatbot, courses, quizzes, journey, dashboard, etc. all work identically to before this phase

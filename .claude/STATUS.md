@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-04-29 (Session 69 — Production hygiene: stale ref removal, reset token cleanup, streak grace period)
+## Last Updated: 2026-05-07 (Session 70 — Phase 25: Subscription marketing pages, frontend-only)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -52,6 +52,7 @@ _Update this file at the end of every session_
 | Daily Language Tips | ✅ Complete + New-user suppression (Session 68) | tips table + Alembic migration; GET /api/tips/random; POST /api/tips/generate (admin); TipToast component (framer-motion slide-in, 8s auto-dismiss, shrinking progress bar); **Session 68 fix**: TipToast now reads `["profile"]` query cache (no extra request) and suppresses itself entirely when `onboarding_completed === false` OR `has_seen_tour === false` — prevents tip from appearing over onboarding modal, UI tour, or journey roadmap form during new-user first-login flow. Uses `hasFetched` ref so the effect (keyed on `profile`) only fires the fetch once per mount. |
 | Weekly XP Leaderboard | ✅ Complete + Visual Redesign (Session 48) | New xp_logs table (Alembic migration c1d2e3f4a5b6); XPLog ORM model; record_learning_activity() now inserts into xp_logs on every XP award; GET /api/dashboard/leaderboard (top-10 by weekly XP, current-user rank, Redis-cached 5 min, week resets Monday); LeaderboardCard fully redesigned: animated framer-motion podium (2nd–1st–3rd) for top 3; animated XP progress bars for ranks 4–10 (relative to leader's XP); days-until-Monday-reset countdown chip; empty/loading/outside-top-10 states; tsc --noEmit: 0 errors |
 | Page-refresh Bug Fix | ✅ Fixed (Session 48) | Global React Query staleTime reduced from 5 min → 0 (stale-while-revalidate: data shown instantly from cache while background refetch runs); after class completion now also invalidates ["courses"] and ["dashboard"] queries (previously only ["course", courseId] was invalidated); after module quiz submission also invalidates ["courses"] and ["dashboard"]; AppSidebar profile staleTime lowered 5 min → 60s to match layout (keeps XP/streak display fresh) |
+| Subscription Marketing Pages (Phase 25) | ✅ Complete (Session 70) | Frontend-only display pages — no backend, no DB, no feature gating; `frontend/lib/subscription-plans.ts` (hardcoded 4-plan array + TS interface); `PricingCard`, `PlanBadge`, `ComingSoonModal` components; public `/pricing` page (BackgroundPaths backdrop, hero, 4-card grid, feature comparison table, 7-day trial callout, FAQ, footer CTA); `/settings/billing` page (current plan view + upgrade CTA); AppSidebar: `Pricing` nav item + `PlanBadge` in expanded/collapsed footer; settings hub: Billing & Plans entry; `tsc --noEmit`: 0 errors |
 
 ## Missing / Broken
 *(no known missing items)*
@@ -2415,9 +2416,75 @@ All three Gemini prompts in `course_service.py` said "Use Malaysian Bahasa Melay
 ---
 
 ## Next Priority
-1. **Phase 20 — My Journey (Learning Roadmap)** — next major unbuilt feature.
-2. **Module Quiz Results Page** — `quiz/module/[moduleId]/results/page.tsx` still a TODO stub.
-3. **Deploy** — push backend to Railway, frontend to Vercel, set all env vars, final smoke test.
+1. **Deploy** — push backend to Railway, frontend to Vercel, set all env vars, final smoke test.
+2. **Stripe/Paddle integration (post-graduation)** — full spec in `SUBSCRIPTION.md`; Phase 25 is the marketing-page prerequisite.
+3. **30-user evaluation** — collect feedback via `/admin/feedback`; evaluation guide doc to prepare.
+
+## What Was Done This Session (2026-05-07 Session 70 — Phase 25: Subscription marketing pages)
+
+### Goals
+Implement Phase 25 — frontend-only subscription/monetization marketing pages for PIXEL 2026 showcase. No backend changes. No feature gating. All plan data hardcoded.
+
+### New files created
+
+**`frontend/lib/subscription-plans.ts`**
+- `SubscriptionPlan` TypeScript interface with all fields: id, name, tagline, priceRM, period, durationDays, chatLimitDaily, courseGenLimitDaily, quizAttempts, adaptiveQuiz, pronunciationAudio, chatHistory, learningRoadmap, activeSessions, featured, featuredLabel, accentClass
+- `SUBSCRIPTION_PLANS` array — 4 plans matching `.claude/SUBSCRIPTION.md` Sections 2 & 3 exactly:
+  - Free: RM0, forever, 30 chats/day, 1 course/day, no adaptive/audio/history/roadmap
+  - 7-Day Power Pass: RM35, 7 days, 300 chats/day, 10 courses/day, all features, `featured=true`
+  - Monthly Pro: RM60, 30 days, 500 chats/day, 5 courses/day, all features
+  - Semester Pass: RM280, 6 months, 500 chats/day, 5 courses/day, all features
+
+**`frontend/components/subscription/PricingCard.tsx`**
+- Single plan card with GlowCard wrapper; `featured` prop applies ring-2 ring-primary/40 and stronger glow
+- `FeatureRow` sub-component renders booleans as Check/X icons and string/number values as text
+- Price display: "Free" for RM0, "RM {price}" for paid plans; period label below
+- Featured badge (sparkles icon + "Most Popular") shown only when `featuredLabel` is set
+- CTA button: filled primary for featured, muted/bordered for others
+
+**`frontend/components/subscription/PlanBadge.tsx`**
+- `collapsed` prop: collapsed=true → CreditCard icon with tooltip "Free Plan"; collapsed=false → pill with "Free Plan" text
+- Routes to `/pricing` on click; hover styles match existing sidebar tooltip/icon patterns
+
+**`frontend/components/subscription/ComingSoonModal.tsx`**
+- Full-screen backdrop + centered card; Escape key and backdrop-click to close
+- Rocket icon, heading, body copy exactly matching spec; "Coming soon" bullet list (Stripe card, 7-day trial, FPX, cancel anytime)
+- "Got it, thanks!" CTA dismisses modal
+
+**`frontend/app/pricing/page.tsx`** (public route — not in middleware matcher)
+- Sticky nav bar: BahasaBot logo + "Sign in" + "Get started free" CTA
+- `BackgroundPaths` full-page backdrop (matches auth page aesthetic)
+- Hero: "Choose Your Path to Bahasa Mastery" heading + subheading + trial callout pill
+- 4-card grid: `grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4`; 7-Day Pass marked "Most Popular"
+- Feature comparison table: `overflow-x-auto` + `min-w-[600px]` inner div (mobile horizontal scroll pattern from admin/users/page.tsx); 5-col grid (label + 4 plans); alternating row shading; featured column highlighted with `bg-primary/5`
+- 7-day trial callout section with "Start your free trial" and "Start with Free plan" CTAs
+- FAQ section (5 questions): accordion with ChevronDown/Up toggle
+- Footer CTA + "Already have an account? Sign in" link
+- All "Start Free Trial" / "Subscribe" CTAs open `ComingSoonModal`; "Get Started Free" routes to `/register`
+
+**`frontend/app/(dashboard)/settings/billing/page.tsx`**
+- `BackgroundPaths` backdrop; back-link to `/settings`
+- Current plan GlowCard: CreditCard icon, "Free Plan", "Active" badge, "What you get" feature checklist with Check/X icons
+- Upgrade CTA GlowCard: "View all plans" → `/pricing`; "Start free trial" → opens `ComingSoonModal`
+- Payment notice GlowCard at bottom explaining integration is coming
+
+### Modified files
+
+**`frontend/components/nav/AppSidebar.tsx`**
+- Added `CreditCard` import from lucide-react; `PlanBadge` import from subscription components
+- Added `{ label: "Pricing", href: "/pricing", icon: CreditCard }` to `BASE_NAV_ITEMS` (between Games and Settings)
+- Collapsed footer: `<PlanBadge collapsed />` added between Avatar and Streak
+- Expanded footer: `<PlanBadge />` (full pill) added between user row and Streak+XP row
+
+**`frontend/app/(dashboard)/settings/page.tsx`**
+- Added `CreditCard` to lucide-react imports
+- Added "Billing & Plans" entry to `SETTINGS_ITEMS` array (between Password and Send Feedback): `href="/settings/billing"`, `icon=CreditCard`, label "Billing & Plans", description "View your current plan and explore upgrade options"
+
+### Verification
+- `npx tsc --noEmit` → 0 errors
+- No backend files touched; no DB changes; no feature gating added; all existing features unaffected
+
+---
 
 ## What Was Done This Session (2026-04-27 — Revert Google auth regression)
 

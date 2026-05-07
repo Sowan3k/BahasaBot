@@ -22,9 +22,11 @@ import {
   Flame,
   Star,
   Gamepad2,
+  CreditCard,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { PlanBadge } from "@/components/subscription/PlanBadge";
 import { profileApi } from "@/lib/api";
 
 const BASE_NAV_ITEMS = [
@@ -34,6 +36,7 @@ const BASE_NAV_ITEMS = [
   { label: "Quiz",       href: "/quiz/adaptive",   icon: Brain },
   { label: "My Journey", href: "/journey",         icon: Map },
   { label: "Games",      href: "/games/spelling",  icon: Gamepad2 },
+  { label: "Pricing",    href: "/pricing",         icon: CreditCard },
   { label: "Settings",   href: "/settings",        icon: Settings },
 ] as const;
 
@@ -328,6 +331,8 @@ export function AppSidebar() {
                   </span>
                 </div>
               )}
+              {/* Plan badge (collapsed = icon only) */}
+              <PlanBadge collapsed />
               {/* Streak */}
               <div className="relative group/streak w-10 h-8 flex items-center justify-center">
                 <div className="flex items-center gap-0.5">
@@ -369,6 +374,9 @@ export function AppSidebar() {
                   <span className="text-sm font-medium text-foreground truncate">{userName}</span>
                 </div>
               )}
+
+              {/* Plan badge (expanded = full pill) */}
+              <PlanBadge />
 
               {/* Streak + XP */}
               <div className="flex items-center gap-4">
