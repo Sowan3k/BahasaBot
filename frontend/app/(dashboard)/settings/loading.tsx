@@ -7,7 +7,7 @@ export default function SettingsLoading() {
       </div>
       {/* GlowCard list — 4 items matching SETTINGS_ITEMS */}
       <div className="rounded-xl border border-border bg-card divide-y divide-border overflow-hidden">
-        {[1, 2, 3, 4].map((i) => (
+        {[1, 2, 3, 4, 5].map((i) => (
           <div key={i} className="flex items-center gap-4 px-5 py-4">
             <div className="w-10 h-10 rounded-lg bg-muted shrink-0" />
             <div className="flex-1 space-y-1.5">

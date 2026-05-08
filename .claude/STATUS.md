@@ -1,12 +1,12 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-05-09 (Session 72 — Auth pages: pricing link + free-plan nudge on register)
+## Last Updated: 2026-05-09 (Session 74 — Loading animation audit + settings skeleton fix)
 
 ## Feature Status
 | Feature | Status | Notes |
 |---|---|---|
-| Auth | ✅ Complete + Google password setup | Email + Google OAuth, JWT, token refresh, 30-min sessions; mandatory SetPasswordModal for Google users with NULL password_hash; POST /api/auth/set-password; has_password in profile API; settings/password page now routes to SetPassword vs ChangePassword form based on has_password |
+| Auth | ✅ Complete + Google password setup + Auth page feature slideshow (Session 73) | Email + Google OAuth, JWT, token refresh, 30-min sessions; mandatory SetPasswordModal for Google users with NULL password_hash; POST /api/auth/set-password; has_password in profile API; settings/password page now routes to SetPassword vs ChangePassword form based on has_password; **Session 73**: `auth-card.tsx` left panel now shows auto-cycling feature cards (AI Tutor / Custom Courses / Adaptive Quizzes / Learning Roadmap) with framer-motion fade-slide, 3.5 s interval, clickable dot indicator; mobile/tablet gets a compact `lg:hidden` feature-name strip above the form with the same cycling state |
 | AI Chatbot Tutor | ✅ Complete + App-awareness (Session 40) + Language rule (Session 51) + Latency optimizations (Session 59) | SSE streaming, LangChain, RAG — Malaysian Malay + IPA in prompt; markdown rendering; session persistence; native_language injected into system prompt; RAG context Redis-cached (5 min) saving ~1.3s on repeat queries; ping SSE event for early frontend feedback; **ThinkingIndicator**: 3 bouncing dots + "Thinking…" label replaces the invisible 2px audio bars — shows immediately when user sends message; user profile Redis-cached (5 min TTL, invalidated on PATCH /profile); history cache updated in-place after each message (no more DB re-read on next turn); gamification XP awarded as asyncio.create_task with own session (no longer blocks SSE startup); GET /api/chatbot/prewarm warms profile cache on page load; ChatMessage wrapped in React.memo (previous messages never re-render during streaming); token batching via requestAnimationFrame (cuts setState calls from ~100/s to ≤60/s during streaming); **language detection rule**: if student writes in English → full English response; if Malay → full Malay; if mixed → English (overrides all other rules); dialect rule demoted to secondary; **Session 59 latency**: three Redis cache_get calls now run via asyncio.gather() (parallel) before any DB fallback — saves ~10–15ms per message on warm paths; RAG k reduced 5→3 (faster embedding query + smaller context fed to Gemini) |
 | Course Generator | ✅ Complete + English-medium fix | Lesson content in English; Malay words taught inline; Malaysian BM only |
 | Quiz | ✅ Complete + English-medium fix | Question text explicitly English; Malay vocabulary uses Malaysian BM; IPA in explanations |
@@ -2458,6 +2458,52 @@ All three Gemini prompts in `course_service.py` said "Use Malaysian Bahasa Melay
 1. **Deploy** — push backend to Railway, frontend to Vercel, set all env vars, final smoke test.
 2. **Stripe/Paddle integration (post-graduation)** — full spec in `SUBSCRIPTION.md`; Phase 25 is the marketing-page prerequisite.
 3. **30-user evaluation** — collect feedback via `/admin/feedback`; evaluation guide doc to prepare.
+
+## What Was Done This Session (2026-05-09 Session 74 — Loading animation audit + settings skeleton fix)
+
+### Goal
+Audit all loading animations and skeletons across the frontend for correctness.
+
+### Audit findings
+- All 8 `loading.tsx` files reviewed — structure, item counts, and grid layouts compared against their corresponding page components.
+- All inline skeleton states inside page files reviewed.
+- `CourseGenerationProgress.tsx`, `PageTransition.tsx`, and `auth-card.tsx` animations all confirmed working correctly.
+
+### Bug found and fixed — `frontend/app/(dashboard)/settings/loading.tsx`
+- **Issue**: Skeleton rendered 4 list items (`[1, 2, 3, 4].map`) but `settings/page.tsx` has 5 items in `SETTINGS_ITEMS` (Profile, Password, Billing & Plans, Send Feedback, About BahasaBot).
+- **Cause**: Billing & Plans was added in Session 72 but the loading skeleton was never updated.
+- **Fix**: Changed `[1, 2, 3, 4].map` → `[1, 2, 3, 4, 5].map` — skeleton now matches the real page exactly.
+
+### All other skeletons verified correct
+| Skeleton | Verdict |
+|---|---|
+| admin/loading.tsx | ✅ 7 stat cards + 4 nav items — matches admin page |
+| chatbot/loading.tsx | ✅ header + welcome state + input footer — matches page |
+| courses/loading.tsx | ✅ 6 course cards with cover/content/delete — matches CourseCard |
+| dashboard/loading.tsx | ✅ 5 tabs + 8 stat cards + BPS strip + 2 panels — matches page |
+| games/spelling/loading.tsx | ✅ lobby layout — matches start screen |
+| journey/loading.tsx | ✅ header + banner + progress card + 5 nodes — matches road UI |
+| quiz/adaptive/loading.tsx | ✅ icon + heading + 3-cell grid + CTA — matches lobby |
+| settings/loading.tsx | ✅ FIXED: now 5 items |
+
+---
+
+## What Was Done This Session (2026-05-09 Session 73 — Auth left panel: feature cards slideshow)
+
+### Goal
+Replace the static 4-bullet feature list on the login/register left branding panel with an animated auto-cycling feature showcase, so first-time visitors immediately understand what BahasaBot offers.
+
+### File changed — `frontend/components/ui/auth-card.tsx`
+- Deleted static `FEATURES` string array
+- Added `FEATURE_SLIDES` array (4 entries): AI Malay Tutor (emerald), Custom Courses (amber), Adaptive Quizzes (violet), Learning Roadmap (sky) — each with a Lucide icon, color tokens, title, and description
+- Added `useState(0)` + `useEffect` interval (3.5 s, auto-clears on unmount) for slide cycling
+- **Desktop left panel** (`hidden lg:flex`): fixed-height `h-[110px]` container with `AnimatePresence mode="wait"` — each slide fades/slides vertically in/out; icon in colored rounded box, bold title, muted description; clickable pill-dots below (`w-6` active / `w-1.5` inactive)
+- **Mobile/tablet** (`lg:hidden`): compact `h-8` strip inside the right glass panel, above the form — icon + feature name slide horizontally; non-interactive dots flush right; same `slide` state as desktop (one interval drives both)
+- Logo, wordmark, tagline, shader animation, right panel form, and all other auth pages unchanged
+- New imports: `useState`, `useEffect` (React), `motion`/`AnimatePresence` (framer-motion, already installed), `MessageCircle`/`BookOpen`/`BrainCircuit`/`Map` (lucide-react, already installed)
+- `tsc --noEmit`: 0 errors
+
+---
 
 ## What Was Done This Session (2026-05-07 Session 70 — Phase 25: Subscription marketing pages)
 
