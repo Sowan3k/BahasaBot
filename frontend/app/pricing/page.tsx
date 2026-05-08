@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Check, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Check, X, ChevronDown, ChevronUp, ArrowLeft } from "lucide-react";
 import { BackgroundPaths } from "@/components/ui/background-paths";
 import { PricingCard } from "@/components/subscription/PricingCard";
 import { ComingSoonModal } from "@/components/subscription/ComingSoonModal";
@@ -137,9 +137,18 @@ export default function PricingPage() {
 
       {/* Nav bar */}
       <header className="relative z-10 flex items-center justify-between px-6 py-4 border-b border-border/50 bg-background/80 backdrop-blur-md sticky top-0">
-        <Link href="/" className="flex items-center">
-          <Image src="/Logo new (1).svg" width={140} height={44} alt="BahasaBot" className="object-contain" />
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft size={16} />
+            <span className="hidden sm:inline">Dashboard</span>
+          </Link>
+          <Link href="/dashboard" className="flex items-center">
+            <Image src="/Logo new (1).svg" width={140} height={44} alt="BahasaBot" className="object-contain" />
+          </Link>
+        </div>
         <div className="flex items-center gap-3">
           <Link
             href="/login"

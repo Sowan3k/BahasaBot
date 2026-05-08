@@ -22,7 +22,6 @@ import {
   Flame,
   Star,
   Gamepad2,
-  CreditCard,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
@@ -36,7 +35,6 @@ const BASE_NAV_ITEMS = [
   { label: "Quiz",       href: "/quiz/adaptive",   icon: Brain },
   { label: "My Journey", href: "/journey",         icon: Map },
   { label: "Games",      href: "/games/spelling",  icon: Gamepad2 },
-  { label: "Pricing",    href: "/pricing",         icon: CreditCard },
   { label: "Settings",   href: "/settings",        icon: Settings },
 ] as const;
 
