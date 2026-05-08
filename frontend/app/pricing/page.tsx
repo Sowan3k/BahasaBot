@@ -149,7 +149,7 @@ export default function PricingPage() {
             dark:bg-white/[0.10] dark:hover:bg-white/[0.16] dark:border-white/[0.14] dark:text-foreground/80 dark:hover:text-foreground"
         >
           <ArrowLeft size={15} />
-          <span className="hidden sm:inline">Dashboard</span>
+          <span className="hidden sm:inline">Back</span>
         </Link>
       </div>
 
