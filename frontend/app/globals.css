@@ -12,6 +12,7 @@
 
 @layer base {
   :root {
+    --button-ripple-color: rgba(0, 0, 0, 0.12);
     --card: #e7dbbf;
     --ring: #9db18c;
     --input: #dbc894;
@@ -55,6 +56,7 @@
 
   .dark {
     /* ── Library dark mode — near-black neutral reading surface ── */
+    --button-ripple-color: rgba(255, 255, 255, 0.18);
     --background: #111110;
     --foreground: #e6e1d8;
     --card: #1c1b1a;

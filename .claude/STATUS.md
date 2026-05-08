@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-05-07 (Session 70 — Phase 25: Subscription marketing pages, frontend-only)
+## Last Updated: 2026-05-09 (Session 71 — Phase 25 redesign: animated glassy pricing UI)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -52,7 +52,7 @@ _Update this file at the end of every session_
 | Daily Language Tips | ✅ Complete + New-user suppression (Session 68) | tips table + Alembic migration; GET /api/tips/random; POST /api/tips/generate (admin); TipToast component (framer-motion slide-in, 8s auto-dismiss, shrinking progress bar); **Session 68 fix**: TipToast now reads `["profile"]` query cache (no extra request) and suppresses itself entirely when `onboarding_completed === false` OR `has_seen_tour === false` — prevents tip from appearing over onboarding modal, UI tour, or journey roadmap form during new-user first-login flow. Uses `hasFetched` ref so the effect (keyed on `profile`) only fires the fetch once per mount. |
 | Weekly XP Leaderboard | ✅ Complete + Visual Redesign (Session 48) | New xp_logs table (Alembic migration c1d2e3f4a5b6); XPLog ORM model; record_learning_activity() now inserts into xp_logs on every XP award; GET /api/dashboard/leaderboard (top-10 by weekly XP, current-user rank, Redis-cached 5 min, week resets Monday); LeaderboardCard fully redesigned: animated framer-motion podium (2nd–1st–3rd) for top 3; animated XP progress bars for ranks 4–10 (relative to leader's XP); days-until-Monday-reset countdown chip; empty/loading/outside-top-10 states; tsc --noEmit: 0 errors |
 | Page-refresh Bug Fix | ✅ Fixed (Session 48) | Global React Query staleTime reduced from 5 min → 0 (stale-while-revalidate: data shown instantly from cache while background refetch runs); after class completion now also invalidates ["courses"] and ["dashboard"] queries (previously only ["course", courseId] was invalidated); after module quiz submission also invalidates ["courses"] and ["dashboard"]; AppSidebar profile staleTime lowered 5 min → 60s to match layout (keeps XP/streak display fresh) |
-| Subscription Marketing Pages (Phase 25) | ✅ Complete (Session 70) | Frontend-only display pages — no backend, no DB, no feature gating; `frontend/lib/subscription-plans.ts` (hardcoded 4-plan array + TS interface); `PricingCard`, `PlanBadge`, `ComingSoonModal` components; public `/pricing` page (BackgroundPaths backdrop, hero, 4-card grid, feature comparison table, 7-day trial callout, FAQ, footer CTA); `/settings/billing` page (current plan view + upgrade CTA); AppSidebar: `Pricing` nav item + `PlanBadge` in expanded/collapsed footer; settings hub: Billing & Plans entry; `tsc --noEmit`: 0 errors |
+| Subscription Marketing Pages (Phase 25) | ✅ Complete + Glassy redesign (Session 71) | Frontend-only display pages — no backend, no DB, no feature gating; `frontend/lib/subscription-plans.ts` (hardcoded 4-plan array + TS interface); `PricingCard`, `PlanBadge`, `ComingSoonModal` components; public `/pricing` page; `/settings/billing` page; AppSidebar: `PlanBadge` in footer; settings hub: Billing & Plans entry. **Session 71 redesign**: WebGL `ShaderCanvas` (animated circle shader, BahasaBot cream/near-black background) replaces BackgroundPaths on `/pricing`; new `GlassCard` primitive (`backdrop-blur-[14px]` + glass gradient borders); `PricingCard` rewritten with GlassCard + extralight font headings + gradient divider + RippleButton CTAs; all page sections (comparison table, FAQ accordion, trial callout, footer) use GlassCard; hero title uses `bg-gradient-to-r from-foreground via-primary to-accent` clip-text; `RippleButton` component (`multi-type-ripple-buttons.tsx`) added for all CTAs; `--button-ripple-color` CSS var added to globals.css; `tsc --noEmit`: 0 errors |
 
 ## Missing / Broken
 *(no known missing items)*
@@ -71,6 +71,26 @@ _Update this file at the end of every session_
 
 ## ✅ Fixed Issues (Session 13)
 - **Course covers not appearing (2026-04-13):** Session 12 correctly fixed `image_service.py` (httpx REST API) and `course_service.py` (retroactive healing + `asyncio.create_task`), but the backend was **never restarted** after those changes were made. Uvicorn started at 08:19, files modified at 14:22–14:28 — old broken code was still running. Fix: killed old uvicorn PIDs (18316, 25012), started fresh process on port 8000. Also manually ran `_generate_and_save_cover()` for all 3 existing courses that had `cover_image_url = NULL`. All verified: Gemini REST API returns JPEG (~1.1 MB base64, ~17s), DB save works, `GET /api/courses/` returns cover correctly. **Important**: after any code change to the backend, the uvicorn process MUST be restarted manually (no `--reload` flag in prod mode).
+
+---
+
+## What Was Done This Session (2026-05-09 Session 71 — Glassy pricing UI redesign)
+
+### Goals
+Redesign Phase 25 subscription/pricing pages with an animated glassy aesthetic using WebGL and glass-morphism cards.
+
+### New files created
+- `frontend/components/ui/multi-type-ripple-buttons.tsx` — `RippleButton` component; supports default/hover/hoverborder/ghost variants; JS click-ripple animation via keyframes; default ripple color uses `--button-ripple-color` CSS var; hoverBaseColor defaulted to BahasaBot olive `#8d9d4f`
+- `frontend/components/ui/animated-glassy-pricing.tsx` — exports `ShaderCanvas` (WebGL animated ring shader; background RGB adapted: light = cream `#e4d7b0`, dark = near-black `#111110`; foreground circle colors shifted to warm olive/wheat tones); `GlassCard` (generic `backdrop-blur-[14px]` glass wrapper with `featured` ring variant); standalone `PricingCard` (flat-props API) and `ModernPricingPage` for future use
+
+### Modified files
+- `frontend/components/subscription/PricingCard.tsx` — dropped GlowCard; now uses `GlassCard` + `RippleButton`; large extralight plan name heading; price in `font-heading font-extralight`; gradient divider; `text-primary` Check icons; styled for featured (ring + scale) vs standard cards
+- `frontend/app/pricing/page.tsx` — full visual redesign: `BackgroundPaths` → `ShaderCanvas` (fixed WebGL background); sticky nav uses `backdrop-blur-[20px] bg-background/40`; hero title uses `bg-gradient-to-r from-foreground via-primary to-accent` clip-text gradient; comparison table wrapped in `GlassCard`; FAQ accordion items wrapped in `GlassCard` (glass hover states); 7-day trial callout and footer CTA use `GlassCard featured`; all CTAs replaced with `RippleButton`; all section headings use `font-light tracking-tight`
+- `frontend/app/(dashboard)/settings/billing/page.tsx` — keeps `BackgroundPaths` (inside dashboard layout); all cards upgraded to `GlassCard`; buttons upgraded to `RippleButton`; gradient divider separating plan name from feature list
+- `frontend/app/globals.css` — added `--button-ripple-color: rgba(0,0,0,0.12)` (light) and `rgba(255,255,255,0.18)` (dark) CSS variables for RippleButton
+
+### Verification
+- `tsc --noEmit`: 0 errors
 
 ---
 
