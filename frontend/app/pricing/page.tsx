@@ -138,11 +138,15 @@ export default function PricingPage() {
       {/* Animated WebGL background */}
       <ShaderCanvas />
 
-      {/* Floating back button */}
-      <div className="absolute top-5 left-5 z-20">
+      {/* Floating back button — fixed so it stays visible while scrolling */}
+      <div className="fixed top-5 left-5 z-30">
         <Link
           href="/dashboard"
-          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm text-foreground/60 hover:text-foreground backdrop-blur-[20px] bg-white/40 dark:bg-black/30 border border-black/10 dark:border-white/10 hover:bg-white/60 dark:hover:bg-black/50 transition-all"
+          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium
+            text-foreground/70 hover:text-foreground transition-all
+            backdrop-blur-[24px]
+            bg-white/55 hover:bg-white/70 border border-black/12
+            dark:bg-white/[0.10] dark:hover:bg-white/[0.16] dark:border-white/[0.14] dark:text-foreground/80 dark:hover:text-foreground"
         >
           <ArrowLeft size={15} />
           <span className="hidden sm:inline">Dashboard</span>

@@ -91,9 +91,14 @@ export const ShaderCanvas = () => {
         mask += paintCircle(uv,center,radius-.018,.01).r;
         mask += paintCircle(uv,center,radius+.018,.005).r;
         vec2 v=rotate2d(iTime)*uv;
-        vec3 foregroundColor=vec3(v.x*.6+.3,v.y*.5+.35,.5-v.y*v.x*.4);
+        // BahasaBot palette: olive green (#8d9d4f) → warm wheat (#dbc894)
+        float t = clamp(v.x * 0.6 + 0.5, 0.0, 1.0);
+        float brightness = 0.72 + abs(v.y) * 0.28;
+        vec3 oliveGreen = vec3(0.49, 0.62, 0.27);
+        vec3 warmWheat  = vec3(0.86, 0.78, 0.58);
+        vec3 foregroundColor = mix(oliveGreen, warmWheat, t) * brightness;
         vec3 color=mix(uBackgroundColor,foregroundColor,mask);
-        color=mix(color,vec3(.95,.92,.85),paintCircle(uv,center,radius,.003).r);
+        color=mix(color,vec3(0.98,0.95,0.82),paintCircle(uv,center,radius,.003).r);
         gl_FragColor=vec4(color,1.);
       }`;
 
@@ -167,10 +172,10 @@ export interface GlassCardProps {
 export const GlassCard = ({ children, featured = false, className }: GlassCardProps) => (
   <div
     className={cn(
-      "backdrop-blur-[28px] bg-gradient-to-br rounded-2xl shadow-xl transition-all duration-300",
-      "from-white/60 to-white/40 border border-black/12",
-      "dark:from-white/14 dark:to-white/7 dark:border-white/12 dark:backdrop-brightness-[0.88]",
-      featured && "ring-2 ring-primary/40 from-white/75 to-white/55 dark:from-white/22 dark:to-white/12 dark:border-primary/30 shadow-2xl",
+      "backdrop-blur-[32px] bg-gradient-to-br rounded-2xl shadow-xl transition-all duration-300",
+      "from-white/65 to-white/45 border border-black/14",
+      "dark:from-white/[0.13] dark:to-white/[0.07] dark:border-white/[0.14] dark:shadow-black/60",
+      featured && "ring-2 ring-primary/50 from-white/78 to-white/58 dark:from-white/[0.20] dark:to-white/[0.11] dark:border-primary/40 shadow-2xl",
       className
     )}
   >
