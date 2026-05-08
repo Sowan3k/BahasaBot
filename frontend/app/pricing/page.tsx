@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { Check, X, ChevronDown, ChevronUp, ArrowLeft } from "lucide-react";
 import { ShaderCanvas, GlassCard } from "@/components/ui/animated-glassy-pricing";
 import { RippleButton } from "@/components/ui/multi-type-ripple-buttons";
@@ -139,38 +138,18 @@ export default function PricingPage() {
       {/* Animated WebGL background */}
       <ShaderCanvas />
 
-      {/* Sticky nav */}
-      <header className="sticky top-0 z-20 flex items-center justify-between px-6 py-4
-        backdrop-blur-[20px] bg-background/40 border-b border-black/10 dark:border-white/8">
-        <div className="flex items-center gap-4">
-          <Link
-            href="/dashboard"
-            className="flex items-center gap-1.5 text-sm text-foreground/60 hover:text-foreground transition-colors"
-          >
-            <ArrowLeft size={16} />
-            <span className="hidden sm:inline">Dashboard</span>
-          </Link>
-          <Link href="/dashboard" className="flex items-center">
-            <Image src="/Logo new (1).svg" width={130} height={40} alt="BahasaBot" className="object-contain" />
-          </Link>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link
-            href="/login"
-            className="text-sm text-foreground/60 hover:text-foreground transition-colors"
-          >
-            Sign in
-          </Link>
-          <RippleButton
-            onClick={() => { window.location.href = "/register"; }}
-            className="px-4 py-2 rounded-xl text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors border-0"
-          >
-            Get started free
-          </RippleButton>
-        </div>
-      </header>
+      {/* Floating back button */}
+      <div className="absolute top-5 left-5 z-20">
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm text-foreground/60 hover:text-foreground backdrop-blur-[20px] bg-white/40 dark:bg-black/30 border border-black/10 dark:border-white/10 hover:bg-white/60 dark:hover:bg-black/50 transition-all"
+        >
+          <ArrowLeft size={15} />
+          <span className="hidden sm:inline">Dashboard</span>
+        </Link>
+      </div>
 
-      <main className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-14 space-y-24">
+      <main className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 pt-20 pb-14 space-y-24">
 
         {/* ── Hero ── */}
         <section className="text-center space-y-6 max-w-3xl mx-auto">

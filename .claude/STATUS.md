@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-05-09 (Session 71 — Phase 25 redesign: animated glassy pricing UI)
+## Last Updated: 2026-05-09 (Session 71 — Phase 25 redesign: glassy pricing UI + nav strip removed)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -91,6 +91,10 @@ Redesign Phase 25 subscription/pricing pages with an animated glassy aesthetic u
 
 ### Verification
 - `tsc --noEmit`: 0 errors
+
+### Follow-up fixes (same session)
+- `/pricing` nav bar removed entirely; replaced with a small floating back-to-dashboard pill (absolute top-left, glass blur); `Image` import removed; `main` padding adjusted to `pt-20` to fill the freed space
+- `GlassCard` blur upgraded from `backdrop-blur-[14px]` → `backdrop-blur-[28px]` and background opacities raised (`from-white/60 to-white/40` light; `from-white/14 to-white/7` dark) so cards read clearly against the animated WebGL background; featured card bumped to `from-white/75`
 
 ---
 
