@@ -12,6 +12,7 @@
  */
 
 import Image from "next/image";
+import Link from "next/link";
 import { ShaderAnimation } from "@/components/ui/shader-animation";
 
 const FEATURES = [
@@ -24,6 +25,14 @@ const FEATURES = [
 export function AuthCard({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen w-screen relative overflow-hidden flex">
+
+      {/* ── Pricing link — top-right corner, visible on all auth pages ── */}
+      <Link
+        href="/pricing"
+        className="absolute top-4 right-5 z-20 text-xs text-white/45 hover:text-white/80 transition-colors duration-200 tracking-wide"
+      >
+        Pricing
+      </Link>
 
       {/* ── Full-screen shader background ── */}
       <div className="absolute inset-0">

@@ -357,6 +357,14 @@ export default function RegisterPage() {
           )}
         </div>
 
+        {/* Free plan nudge */}
+        <p className="text-center text-[11px] text-white/30 -mt-1">
+          Free plan available &middot;{" "}
+          <Link href="/pricing" className="text-white/50 hover:text-white/80 transition-colors duration-200 underline underline-offset-2 decoration-white/25 hover:decoration-white/60">
+            See all plans →
+          </Link>
+        </p>
+
         {/* Login link */}
         <motion.p
           className="text-center text-xs text-white/50 mt-2"
