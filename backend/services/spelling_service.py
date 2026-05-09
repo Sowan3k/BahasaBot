@@ -42,6 +42,9 @@ _SEEN_KEY = "spelling:seen:{}"
 _WRONG_TTL = 3600   # 1 hour — matches a game session
 _SEEN_TTL = 3600
 
+# XP awarded per correct answer, keyed by difficulty
+XP_TABLE: dict[str, int] = {"easy": 1, "medium": 2, "hard": 4}
+
 
 # ── IPA extraction ─────────────────────────────────────────────────────────────
 
@@ -167,6 +170,7 @@ async def evaluate_answer(
     vocab_id: str,
     user_answer: str,
     db: AsyncSession,
+    difficulty: str = "medium",
 ) -> dict:
     """
     Evaluate the user's spelling attempt.
@@ -208,7 +212,7 @@ async def evaluate_answer(
 
     correct = distance == 0
     almost = distance == 1
-    xp_awarded = 2 if correct else 0
+    xp_awarded = XP_TABLE.get(difficulty, 2) if correct else 0
 
     # Update wrong-list in Redis
     wrong_key = _WRONG_KEY.format(user_id)
@@ -244,20 +248,24 @@ async def save_session_score(
     words_correct: int,
     words_attempted: int,
     db: AsyncSession,
+    game_type: str = "spelling",
 ) -> None:
     """
-    Persist a completed spelling game session score.
+    Persist a completed game session score.
 
-    One row per calendar day — if the user plays again today, we upsert
-    (update whichever run had more correct answers).
+    One row per (game_type, calendar day) — if the user plays the same game
+    again today, we keep whichever run had more correct answers.
+    The game_type filter prevents a spelling and word-match session on the
+    same day from colliding.
     """
     today = date.today()
 
-    # Check for an existing score today
+    # Check for an existing score today for this specific game type
     result = await db.execute(
         select(SpellingGameScore).where(
             SpellingGameScore.user_id == user_id,
             SpellingGameScore.session_date == today,
+            SpellingGameScore.game_type == game_type,
         )
     )
     existing: SpellingGameScore | None = result.scalar_one_or_none()
@@ -274,13 +282,15 @@ async def save_session_score(
             words_correct=words_correct,
             words_attempted=words_attempted,
             session_date=today,
+            game_type=game_type,
         )
         db.add(score)
         await db.commit()
 
     logger.info(
-        "Spelling session score saved",
+        "Game session score saved",
         user_id=str(user_id),
+        game_type=game_type,
         correct=words_correct,
         attempted=words_attempted,
     )
@@ -289,12 +299,16 @@ async def save_session_score(
 async def get_personal_best(user_id: uuid.UUID, db: AsyncSession) -> dict:
     """
     Return the user's best spelling game score (most words correct in a session).
+    Filters to game_type='spelling' to avoid mixing with word_match scores.
     """
     result = await db.execute(
         select(
             func.max(SpellingGameScore.words_correct).label("best_correct"),
             func.max(SpellingGameScore.words_attempted).label("best_attempted"),
-        ).where(SpellingGameScore.user_id == user_id)
+        ).where(
+            SpellingGameScore.user_id == user_id,
+            SpellingGameScore.game_type == "spelling",
+        )
     )
     row = result.one()
     return {

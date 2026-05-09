@@ -34,7 +34,7 @@ const BASE_NAV_ITEMS = [
   { label: "Courses",    href: "/courses",         icon: BookOpen },
   { label: "Quiz",       href: "/quiz/adaptive",   icon: Brain },
   { label: "My Journey", href: "/journey",         icon: Map },
-  { label: "Games",      href: "/games/spelling",  icon: Gamepad2 },
+  { label: "Games",      href: "/games",            icon: Gamepad2 },
   { label: "Settings",   href: "/settings",        icon: Settings },
 ] as const;
 

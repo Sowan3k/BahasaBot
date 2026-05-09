@@ -35,6 +35,7 @@ import backend.models.chatbot       # noqa: F401
 import backend.models.course        # noqa: F401
 import backend.models.document      # noqa: F401
 import backend.models.evaluation    # noqa: F401
+import backend.models.game          # noqa: F401
 import backend.models.journey       # noqa: F401
 import backend.models.notification  # noqa: F401
 import backend.models.progress      # noqa: F401

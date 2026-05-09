@@ -44,6 +44,10 @@ import type {
   SpellingWord,
   SpellingSubmitResponse,
   SpellingPersonalBest,
+  GameDifficulty,
+  WordMatchQuestion,
+  WordMatchSubmitResponse,
+  WordMatchPersonalBest,
   UserRoadmap,
   GenerateRoadmapPayload,
   AdminRoadmapRow,
@@ -401,29 +405,57 @@ export const notificationsApi = {
     apiClient.delete<{ success: boolean; message: string }>("/api/notifications/"),
 };
 
-// ── Games API (Phase 19) ──────────────────────────────────────────────────────
+// ── Games API (Phase 19 + Phase 27) ──────────────────────────────────────────
 
 export const gamesApi = {
+  // — Spelling —
+
   /** Fetch the next vocabulary word to spell. Returns 404 if not enough vocab. */
   getSpellingWord: () => apiClient.get<SpellingWord>("/api/games/spelling/word"),
 
   /** Submit a spelling attempt. Returns evaluation result + XP awarded. */
-  submitSpellingAnswer: (vocab_id: string, answer: string) =>
+  submitSpellingAnswer: (vocab_id: string, answer: string, difficulty: GameDifficulty = "medium") =>
     apiClient.post<SpellingSubmitResponse>("/api/games/spelling/submit", {
       vocab_id,
       answer,
+      difficulty,
     }),
 
-  /** Save the final session score (called when a session is complete or quit). */
-  endSession: (words_correct: number, words_attempted: number) =>
+  /** Save the final spelling session score. */
+  endSpellingSession: (words_correct: number, words_attempted: number) =>
     apiClient.post<{ success: boolean }>("/api/games/spelling/session", {
       words_correct,
       words_attempted,
     }),
 
-  /** Get the user's all-time personal best score. */
-  getPersonalBest: () =>
+  /** Get the user's all-time spelling personal best score. */
+  getSpellingBest: () =>
     apiClient.get<SpellingPersonalBest>("/api/games/spelling/best"),
+
+  // — Word Match —
+
+  /** Fetch the next Word Match MCQ question. Returns 404 if fewer than 4 vocab words. */
+  getWordMatchQuestion: () =>
+    apiClient.get<WordMatchQuestion>("/api/games/word-match/question"),
+
+  /** Submit a Word Match answer. Returns evaluation result + XP awarded. */
+  submitWordMatchAnswer: (vocab_id: string, selected_meaning: string, difficulty: GameDifficulty = "medium") =>
+    apiClient.post<WordMatchSubmitResponse>("/api/games/word-match/submit", {
+      vocab_id,
+      selected_meaning,
+      difficulty,
+    }),
+
+  /** Save the final Word Match session score. */
+  endWordMatchSession: (words_correct: number, words_attempted: number) =>
+    apiClient.post<{ success: boolean }>("/api/games/word-match/session", {
+      words_correct,
+      words_attempted,
+    }),
+
+  /** Get the user's all-time Word Match personal best score. */
+  getWordMatchBest: () =>
+    apiClient.get<WordMatchPersonalBest>("/api/games/word-match/best"),
 };
 
 // ── Journey API (Phase 20 v2) ─────────────────────────────────────────────────

@@ -1,46 +1,30 @@
 "use client";
 
 /**
- * SpellingGame — v3
+ * WordMatchGame
  *
  * State machine:
  *   start → countdown → loading → ready → submitted → (next | summary)
  *                                        ↘ timeout  ↗
  *
- * v3 additions:
- *   - Difficulty selector (Easy/Medium/Hard) on the start screen.
- *     Timer and XP scale with chosen difficulty.
- *   - DifficultySelector is disabled once the game starts.
+ * Shows a Malay word; the user picks its English meaning from 4 MCQ buttons.
+ * Tests vocabulary recognition (vs. Spelling which tests recall/production).
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Volume2, Zap, Trophy, RotateCcw, CheckCircle2, XCircle,
-  AlertCircle, Flame, BookOpen, Clock, Play, ChevronRight, X,
+  BookOpen, Clock, Play, ChevronRight, X, Shuffle,
 } from "lucide-react";
 import { gamesApi } from "@/lib/api";
-import type { GameDifficulty, SpellingWord, SpellingSubmitResponse, SpellingPersonalBest } from "@/lib/types";
+import type { GameDifficulty, WordMatchQuestion, WordMatchSubmitResponse, WordMatchPersonalBest } from "@/lib/types";
 import { usePronunciation } from "@/lib/hooks/usePronunciation";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { DifficultySelector, DIFFICULTY_TIMER } from "@/components/games/DifficultySelector";
 
 const SESSION_SIZE = 10;
 
-const SPELLING_XP: Record<GameDifficulty, number> = { easy: 1, medium: 2, hard: 4 };
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function getComboLabel(combo: number): string {
-  if (combo >= 5) return "×2";
-  if (combo >= 3) return "×1.5";
-  return "×1";
-}
-function getComboColor(combo: number): string {
-  if (combo >= 5) return "text-orange-500";
-  if (combo >= 3) return "text-yellow-500";
-  return "text-muted-foreground";
-}
+const WORD_MATCH_XP: Record<GameDifficulty, number> = { easy: 1, medium: 1, hard: 2 };
 
 function timerBarColor(secs: number, limit: number): string {
   const pct = secs / limit;
@@ -52,17 +36,16 @@ function timerBarColor(secs: number, limit: number): string {
 // ── Session Summary ───────────────────────────────────────────────────────────
 
 function SessionSummary({
-  wordsCorrect, wordsAttempted, xpEarned, peakCombo, difficulty,
+  wordsCorrect, wordsAttempted, xpEarned, difficulty,
   masteredWords, reviewWords, personalBest, onPlayAgain,
 }: {
   wordsCorrect: number; wordsAttempted: number; xpEarned: number;
-  peakCombo: number; difficulty: GameDifficulty; masteredWords: string[];
-  reviewWords: string[]; personalBest: SpellingPersonalBest | null;
-  onPlayAgain: () => void;
+  difficulty: GameDifficulty; masteredWords: string[]; reviewWords: string[];
+  personalBest: WordMatchPersonalBest | null; onPlayAgain: () => void;
 }) {
   const accuracy = wordsAttempted > 0 ? Math.round((wordsCorrect / wordsAttempted) * 100) : 0;
   const isPersonalBest = personalBest !== null && wordsCorrect > personalBest.best_correct;
-  const difficultyLabel = { easy: "🌱 Easy", medium: "⚡ Medium", hard: "🔥 Hard" }[difficulty];
+  const diffLabel = { easy: "🌱 Easy", medium: "⚡ Medium", hard: "🔥 Hard" }[difficulty];
 
   return (
     <div className="flex flex-col items-center gap-5 py-6 px-4 w-full max-w-md mx-auto animate-in fade-in slide-in-from-bottom-4 duration-400">
@@ -71,7 +54,7 @@ function SessionSummary({
         <h2 className="text-2xl font-bold">Session Complete!</h2>
         <div className="flex items-center justify-center gap-2 mt-1 flex-wrap">
           <span className="px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-xs font-medium">
-            {difficultyLabel}
+            {diffLabel}
           </span>
           {isPersonalBest && (
             <span className="px-2 py-0.5 rounded-full bg-yellow-500 text-yellow-950 text-xs font-semibold">
@@ -81,7 +64,7 @@ function SessionSummary({
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-3 w-full">
+      <div className="grid grid-cols-2 gap-3 w-full">
         <div className="bg-card border rounded-xl p-3 text-center">
           <div className="text-2xl font-bold text-primary">{accuracy}%</div>
           <div className="text-xs text-muted-foreground mt-0.5">Accuracy</div>
@@ -89,10 +72,6 @@ function SessionSummary({
         <div className="bg-card border rounded-xl p-3 text-center">
           <div className="text-2xl font-bold text-emerald-500">+{xpEarned}</div>
           <div className="text-xs text-muted-foreground mt-0.5">XP Earned</div>
-        </div>
-        <div className="bg-card border rounded-xl p-3 text-center">
-          <div className="text-2xl font-bold text-orange-500">{peakCombo}</div>
-          <div className="text-xs text-muted-foreground mt-0.5">Peak Combo</div>
         </div>
       </div>
 
@@ -141,9 +120,9 @@ function SessionSummary({
   );
 }
 
-// ── Main component ─────────────────────────────────────────────────────────────
+// ── Main component ────────────────────────────────────────────────────────────
 
-export function SpellingGame() {
+export function WordMatchGame() {
   type Phase =
     | "start"
     | "countdown"
@@ -154,14 +133,17 @@ export function SpellingGame() {
     | "summary"
     | "empty";
 
+  // option button visual state
+  type OptionState = "idle" | "correct" | "wrong" | "reveal";
+
   const [phase, setPhase] = useState<Phase>("start");
   const [difficulty, setDifficulty] = useState<GameDifficulty>("medium");
-  const [currentWord, setCurrentWord] = useState<SpellingWord | null>(null);
-  const [answer, setAnswer] = useState("");
-  const [result, setResult] = useState<SpellingSubmitResponse | null>(null);
+  const [question, setQuestion] = useState<WordMatchQuestion | null>(null);
+  const [result, setResult] = useState<WordMatchSubmitResponse | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [optionStates, setOptionStates] = useState<OptionState[]>(["idle", "idle", "idle", "idle"]);
 
   const [countdownNum, setCountdownNum] = useState(3);
-
   const [timeLeft, setTimeLeft] = useState(DIFFICULTY_TIMER["medium"]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const difficultyRef = useRef<GameDifficulty>("medium");
@@ -169,27 +151,18 @@ export function SpellingGame() {
   const [wordsAttempted, setWordsAttempted] = useState(0);
   const [wordsCorrect, setWordsCorrect]     = useState(0);
   const [xpEarned, setXpEarned]             = useState(0);
-  const [combo, setCombo]                   = useState(0);
-  const [peakCombo, setPeakCombo]           = useState(0);
   const [masteredWords, setMasteredWords]   = useState<string[]>([]);
   const [reviewWords, setReviewWords]       = useState<string[]>([]);
+  const [personalBest, setPersonalBest]     = useState<WordMatchPersonalBest | null>(null);
+  const [isSubmitting, setIsSubmitting]     = useState(false);
 
-  const [personalBest, setPersonalBest] = useState<SpellingPersonalBest | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const inputRef = useRef<HTMLInputElement>(null);
   const { speak, isSupported } = usePronunciation();
-
-  // Keep a ref so timer callbacks always read the current limit
   const timeLimit = DIFFICULTY_TIMER[difficulty];
 
-  // ── Timer control ─────────────────────────────────────────────────────────
+  // ── Timer ─────────────────────────────────────────────────────────────────
 
   const stopTimer = useCallback(() => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
   }, []);
 
   const startTimer = useCallback(() => {
@@ -198,46 +171,30 @@ export function SpellingGame() {
     setTimeLeft(limit);
     timerRef.current = setInterval(() => {
       setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timerRef.current!);
-          timerRef.current = null;
-          return 0;
-        }
+        if (prev <= 1) { clearInterval(timerRef.current!); timerRef.current = null; return 0; }
         return prev - 1;
       });
     }, 1000);
   }, [stopTimer]);
 
   useEffect(() => {
-    if (timeLeft === 0 && phase === "ready") {
-      handleTimeout();
-    }
+    if (timeLeft === 0 && phase === "ready") handleTimeout();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeLeft, phase]);
 
   useEffect(() => () => stopTimer(), [stopTimer]);
 
-  // ── Fetch personal best on mount ──────────────────────────────────────────
-
   useEffect(() => {
-    gamesApi.getSpellingBest().then((r) => setPersonalBest(r.data)).catch(() => {});
+    gamesApi.getWordMatchBest().then((r) => setPersonalBest(r.data)).catch(() => {});
   }, []);
 
-  // ── Auto-play audio when word is ready ────────────────────────────────────
-
+  // Auto-play audio when question is ready
   useEffect(() => {
-    if (phase === "ready" && currentWord && isSupported) {
-      const t = setTimeout(() => speak(currentWord.word), 200);
+    if (phase === "ready" && question && isSupported) {
+      const t = setTimeout(() => speak(question.word), 200);
       return () => clearTimeout(t);
     }
-  }, [phase, currentWord, isSupported, speak]);
-
-  useEffect(() => {
-    if (phase === "ready") {
-      const t = setTimeout(() => inputRef.current?.focus(), 250);
-      return () => clearTimeout(t);
-    }
-  }, [phase]);
+  }, [phase, question, isSupported, speak]);
 
   // ── Countdown ────────────────────────────────────────────────────────────
 
@@ -245,33 +202,29 @@ export function SpellingGame() {
     difficultyRef.current = difficulty;
     setPhase("countdown");
     setCountdownNum(3);
-
     let count = 3;
     const tick = () => {
       count -= 1;
-      if (count > 0) {
-        setCountdownNum(count);
-        setTimeout(tick, 700);
-      } else {
-        setPhase("loading");
-        fetchNextWord();
-      }
+      if (count > 0) { setCountdownNum(count); setTimeout(tick, 700); }
+      else { setPhase("loading"); fetchNextQuestion(); }
     };
     setTimeout(tick, 700);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [difficulty]);
 
-  // ── Fetch next word ──────────────────────────────────────────────────────
+  // ── Fetch question ────────────────────────────────────────────────────────
 
-  const fetchNextWord = useCallback(async () => {
+  const fetchNextQuestion = useCallback(async () => {
     setPhase("loading");
-    setAnswer("");
+    setQuestion(null);
     setResult(null);
+    setSelectedIndex(null);
+    setOptionStates(["idle", "idle", "idle", "idle"]);
     stopTimer();
 
     try {
-      const res = await gamesApi.getSpellingWord();
-      setCurrentWord(res.data);
+      const res = await gamesApi.getWordMatchQuestion();
+      setQuestion(res.data);
       setPhase("ready");
       startTimer();
     } catch (err: unknown) {
@@ -279,13 +232,13 @@ export function SpellingGame() {
       if (axiosErr?.response?.status === 404) {
         setPhase("empty");
       } else {
-        setTimeout(fetchNextWord, 2000);
+        setTimeout(fetchNextQuestion, 2000);
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startTimer, stopTimer]);
 
-  // ── Timeout handler ──────────────────────────────────────────────────────
+  // ── Timeout ───────────────────────────────────────────────────────────────
 
   const handleTimeout = useCallback(() => {
     stopTimer();
@@ -293,37 +246,47 @@ export function SpellingGame() {
 
     const newAttempted = wordsAttempted + 1;
     setWordsAttempted(newAttempted);
-    setCombo(0);
 
-    if (currentWord) {
+    if (question) {
+      // Reveal correct answer in option buttons
+      setOptionStates((prev) =>
+        prev.map((_, i) => (i === question.correct_index ? "reveal" : "idle"))
+      );
       setReviewWords((prev) =>
-        prev.includes(currentWord.word) ? prev : [...prev, currentWord.word]
+        prev.includes(question.word) ? prev : [...prev, question.word]
       );
     }
 
     if (newAttempted >= SESSION_SIZE) {
-      gamesApi.endSpellingSession(wordsCorrect, newAttempted).catch(() => {});
-      setTimeout(() => setPhase("summary"), 1500);
+      gamesApi.endWordMatchSession(wordsCorrect, newAttempted).catch(() => {});
+      setTimeout(() => setPhase("summary"), 1800);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stopTimer, wordsAttempted, wordsCorrect, currentWord]);
+  }, [stopTimer, wordsAttempted, wordsCorrect, question]);
 
-  // ── Submit handler ───────────────────────────────────────────────────────
+  // ── Option selection (submits immediately) ────────────────────────────────
 
-  const handleSubmit = useCallback(async () => {
-    if (!currentWord || !answer.trim() || isSubmitting || phase !== "ready") return;
-
+  const handleSelect = useCallback(async (idx: number) => {
+    if (!question || isSubmitting || phase !== "ready") return;
     stopTimer();
     setIsSubmitting(true);
+    setSelectedIndex(idx);
 
     try {
-      const res = await gamesApi.submitSpellingAnswer(
-        currentWord.id, answer.trim(), difficultyRef.current
+      const selectedMeaning = question.options[idx];
+      const res = await gamesApi.submitWordMatchAnswer(
+        question.id, selectedMeaning, difficultyRef.current
       );
       const evalResult = res.data;
-
       setResult(evalResult);
       setPhase("submitted");
+
+      // Colour the buttons
+      setOptionStates(question.options.map((_, i) => {
+        if (i === question.correct_index) return "correct";
+        if (i === idx && !evalResult.correct) return "wrong";
+        return "idle";
+      }));
 
       const newAttempted = wordsAttempted + 1;
       setWordsAttempted(newAttempted);
@@ -332,24 +295,20 @@ export function SpellingGame() {
         const newCorrect = wordsCorrect + 1;
         setWordsCorrect(newCorrect);
         setXpEarned((prev) => prev + evalResult.xp_awarded);
-        const newCombo = combo + 1;
-        setCombo(newCombo);
-        setPeakCombo((prev) => Math.max(prev, newCombo));
         setMasteredWords((prev) =>
-          prev.includes(currentWord.word) ? prev : [...prev, currentWord.word]
+          prev.includes(question.word) ? prev : [...prev, question.word]
         );
+        // Play audio on correct
+        if (isSupported) speak(question.word);
       } else {
-        setCombo(0);
-        if (!evalResult.almost) {
-          setReviewWords((prev) =>
-            prev.includes(currentWord.word) ? prev : [...prev, currentWord.word]
-          );
-        }
+        setReviewWords((prev) =>
+          prev.includes(question.word) ? prev : [...prev, question.word]
+        );
       }
 
       if (newAttempted >= SESSION_SIZE) {
         try {
-          await gamesApi.endSpellingSession(
+          await gamesApi.endWordMatchSession(
             evalResult.correct ? wordsCorrect + 1 : wordsCorrect,
             newAttempted
           );
@@ -359,54 +318,38 @@ export function SpellingGame() {
     } catch { /* allow retry */ } finally {
       setIsSubmitting(false);
     }
-  }, [currentWord, answer, isSubmitting, phase, stopTimer, wordsAttempted, wordsCorrect, combo]);
+  }, [question, isSubmitting, phase, stopTimer, wordsAttempted, wordsCorrect, isSupported, speak]);
 
-  // ── Reset / play again ───────────────────────────────────────────────────
+  // ── Reset ─────────────────────────────────────────────────────────────────
 
   const resetSession = useCallback(() => {
     stopTimer();
     setWordsAttempted(0);
     setWordsCorrect(0);
     setXpEarned(0);
-    setCombo(0);
-    setPeakCombo(0);
     setMasteredWords([]);
     setReviewWords([]);
-    setAnswer("");
+    setQuestion(null);
     setResult(null);
-    setCurrentWord(null);
+    setSelectedIndex(null);
+    setOptionStates(["idle", "idle", "idle", "idle"]);
     setPhase("start");
   }, [stopTimer]);
 
-  // ── Keyboard shortcuts ───────────────────────────────────────────────────
+  // ── Keyboard shortcut (Escape to exit) ───────────────────────────────────
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
-      if (phase === "start" && e.code === "Enter") {
-        e.preventDefault();
-        startCountdown();
-      }
-      if (phase === "ready") {
-        if (e.code === "Space" && document.activeElement !== inputRef.current) {
-          e.preventDefault();
-          if (currentWord) speak(currentWord.word);
-        }
-        if (e.code === "Enter" && answer.trim()) {
-          e.preventDefault();
-          handleSubmit();
-        }
-      }
-      if (e.code === "Escape") {
-        resetSession();
-      }
+      if (phase === "start" && e.code === "Enter") { e.preventDefault(); startCountdown(); }
+      if (e.code === "Escape") { resetSession(); }
       if ((phase === "submitted" || phase === "timeout") && e.code === "Enter") {
         e.preventDefault();
-        if (wordsAttempted < SESSION_SIZE) fetchNextWord();
+        if (wordsAttempted < SESSION_SIZE) fetchNextQuestion();
       }
     }
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [phase, currentWord, answer, handleSubmit, fetchNextWord, speak, startCountdown, resetSession, wordsAttempted]);
+  }, [phase, startCountdown, resetSession, wordsAttempted, fetchNextQuestion]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // RENDER BRANCHES
@@ -416,7 +359,7 @@ export function SpellingGame() {
     return (
       <SessionSummary
         wordsCorrect={wordsCorrect} wordsAttempted={wordsAttempted}
-        xpEarned={xpEarned} peakCombo={peakCombo} difficulty={difficulty}
+        xpEarned={xpEarned} difficulty={difficulty}
         masteredWords={masteredWords} reviewWords={reviewWords}
         personalBest={personalBest} onPlayAgain={resetSession}
       />
@@ -429,10 +372,10 @@ export function SpellingGame() {
         <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
           <BookOpen className="w-8 h-8 text-primary" />
         </div>
-        <h3 className="text-lg font-semibold">No vocabulary yet</h3>
+        <h3 className="text-lg font-semibold">Need more vocabulary</h3>
         <p className="text-muted-foreground text-sm leading-relaxed">
-          Complete a course class or chat with the AI Tutor to build your
-          vocabulary. Come back once you have learned your first word!
+          Word Match needs at least 4 vocabulary words to create a question with
+          3 unique answer choices. Complete a course class or chat with the AI Tutor first!
         </p>
         <Button variant="outline" onClick={resetSession}>Check Again</Button>
       </div>
@@ -444,10 +387,10 @@ export function SpellingGame() {
     return (
       <div className="min-h-full flex flex-col animate-in fade-in duration-300">
         <div className="flex-shrink-0 flex items-center gap-2 px-6 py-4">
-          <BookOpen className="w-4 h-4 text-primary" />
-          <span className="text-sm font-semibold">Spelling Practice</span>
+          <Shuffle className="w-4 h-4 text-primary" />
+          <span className="text-sm font-semibold">Word Match</span>
           <span className="text-muted-foreground text-sm hidden sm:inline">
-            · Test yourself on vocabulary you have already learned
+            · Match the Malay word to its English meaning
           </span>
         </div>
 
@@ -456,23 +399,22 @@ export function SpellingGame() {
 
             <div className="flex justify-center">
               <div className="w-16 h-16 rounded-2xl bg-primary/15 flex items-center justify-center ring-1 ring-primary/20">
-                <Zap className="w-8 h-8 text-primary" />
+                <Shuffle className="w-8 h-8 text-primary" />
               </div>
             </div>
 
             <div className="text-center">
-              <h1 className="text-2xl font-bold mb-1">Ready to be tested?</h1>
+              <h1 className="text-2xl font-bold mb-1">Match the meaning!</h1>
               <p className="text-sm text-muted-foreground">
-                Listen to the word and type its correct Malay spelling.
+                A Malay word is shown. Tap the correct English meaning before time runs out.
               </p>
             </div>
 
-            {/* Stats grid — timer updates with difficulty */}
             <div className="grid grid-cols-3 gap-2 text-center">
               {[
-                { value: SESSION_SIZE,                      label: "words / round",  color: "text-foreground" },
-                { value: `${DIFFICULTY_TIMER[difficulty]}s`, label: "per word",       color: "text-yellow-500" },
-                { value: "×2",                              label: "max combo",       color: "text-orange-500" },
+                { value: SESSION_SIZE,                       label: "words / round", color: "text-foreground" },
+                { value: `${DIFFICULTY_TIMER[difficulty]}s`, label: "per word",      color: "text-yellow-500" },
+                { value: "4",                                label: "options",        color: "text-primary" },
               ].map(({ value, label, color }) => (
                 <div key={label} className="rounded-xl border bg-card py-3">
                   <div className={`text-xl font-bold ${color}`}>{value}</div>
@@ -481,28 +423,23 @@ export function SpellingGame() {
               ))}
             </div>
 
-            {/* Difficulty picker */}
             <div>
               <p className="text-xs text-muted-foreground mb-2 font-medium">Select difficulty</p>
               <DifficultySelector
                 value={difficulty}
                 onChange={setDifficulty}
-                xpTable={SPELLING_XP}
+                xpTable={WORD_MATCH_XP}
               />
             </div>
 
             <div className="space-y-2 text-sm text-muted-foreground">
               <div className="flex items-center gap-2.5">
                 <Volume2 className="w-4 h-4 text-primary flex-shrink-0" />
-                <span>
-                  Audio plays automatically —{" "}
-                  <kbd className="px-1.5 py-0.5 rounded border bg-muted font-mono text-[11px] text-foreground">Space</kbd>{" "}
-                  to replay
-                </span>
+                <span>Audio plays on correct answers to reinforce pronunciation</span>
               </div>
               <div className="flex items-center gap-2.5">
-                <Flame className="w-4 h-4 text-orange-500 flex-shrink-0" />
-                <span>Consecutive correct answers build your combo multiplier</span>
+                <Zap className="w-4 h-4 text-yellow-500 flex-shrink-0" />
+                <span>Wrong answers get higher selection weight next round</span>
               </div>
             </div>
 
@@ -584,19 +521,12 @@ export function SpellingGame() {
         <div className="w-full bg-card border border-red-200 dark:border-red-800 rounded-2xl p-6 text-center shadow-sm">
           <Clock className="w-10 h-10 text-red-500 mx-auto mb-3" />
           <h3 className="text-xl font-bold text-red-600 dark:text-red-400 mb-1">Time&apos;s Up!</h3>
-          {currentWord && (
+          {question && (
             <>
-              <p className="text-sm text-muted-foreground mb-2">The correct spelling was:</p>
-              <p className="text-2xl font-bold mb-1">{currentWord.word}</p>
-              {currentWord.ipa && (
-                <p className="text-sm font-mono text-muted-foreground">{currentWord.ipa}</p>
-              )}
-              <button
-                onClick={() => speak(currentWord.word)}
-                className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
-              >
-                <Volume2 className="w-3.5 h-3.5" /> Hear pronunciation
-              </button>
+              <p className="text-sm text-muted-foreground mb-1">The correct meaning of</p>
+              <p className="text-2xl font-bold mb-1">{question.word}</p>
+              <p className="text-sm text-muted-foreground">was:</p>
+              <p className="mt-1 font-semibold text-foreground">{question.options[question.correct_index]}</p>
             </>
           )}
         </div>
@@ -612,7 +542,7 @@ export function SpellingGame() {
             <Button variant="outline" onClick={resetSession} className="flex-1">
               <RotateCcw className="w-4 h-4 mr-1.5" /> Start Over
             </Button>
-            <Button onClick={fetchNextWord} className="flex-1">
+            <Button onClick={fetchNextQuestion} className="flex-1">
               Next Word <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
           </div>
@@ -644,12 +574,6 @@ export function SpellingGame() {
         <div className="text-muted-foreground">
           <span className="font-semibold text-foreground">{wordsAttempted}/{SESSION_SIZE}</span> words
         </div>
-        <div className={`flex items-center gap-1 font-semibold ${getComboColor(combo)}`}>
-          <Flame className="w-4 h-4" />
-          {combo > 0
-            ? <span>{combo} combo {getComboLabel(combo)}</span>
-            : <span className="font-normal text-muted-foreground">No combo</span>}
-        </div>
         <div className="flex items-center gap-1">
           <Zap className="w-3.5 h-3.5 text-yellow-500" />
           <span className="font-medium">+{xpEarned} XP</span>
@@ -679,112 +603,92 @@ export function SpellingGame() {
         </div>
       )}
 
+      {/* Word card */}
       <div className="w-full bg-card border rounded-2xl p-6 shadow-sm">
         {phase === "loading" ? (
-          <div className="flex flex-col items-center gap-3 py-6 animate-pulse">
-            <div className="h-8 w-32 bg-muted rounded-lg" />
-            <div className="h-4 w-48 bg-muted rounded" />
+          <div className="flex flex-col items-center gap-3 py-4 animate-pulse">
+            <div className="h-10 w-40 bg-muted rounded-lg" />
+            <div className="h-4 w-24 bg-muted rounded" />
           </div>
         ) : (
-          <>
-            <p className="text-xs text-muted-foreground uppercase tracking-widest text-center mb-4">
-              Spell this word
+          <div className="text-center">
+            <p className="text-xs text-muted-foreground uppercase tracking-widest mb-3">
+              What does this mean?
             </p>
-
-            <div className="flex justify-center mb-4">
+            <p className="text-4xl font-bold mb-1">{question?.word}</p>
+            {question?.ipa && (
+              <p className="text-sm font-mono text-muted-foreground">{question.ipa}</p>
+            )}
+            {question && isSupported && (
               <button
-                onClick={() => currentWord && speak(currentWord.word)}
-                disabled={!isSupported}
-                className="group flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 hover:bg-primary/20 transition-colors disabled:opacity-40"
-                title="Replay (Space)"
+                onClick={() => speak(question.word)}
+                className="mt-3 inline-flex items-center gap-1 text-xs text-primary hover:underline"
               >
-                <Volume2 className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
-                <span className="text-sm text-primary font-medium">Hear the word</span>
+                <Volume2 className="w-3.5 h-3.5" /> Hear pronunciation
               </button>
-            </div>
-
-            {currentWord?.ipa && (
-              <p className="text-center text-sm text-muted-foreground mb-4 font-mono">
-                {currentWord.ipa}
-              </p>
             )}
-
-            {phase === "submitted" && result && (
-              <div className={`flex items-start gap-3 p-3 rounded-xl mb-2 border ${
-                result.correct
-                  ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800"
-                  : result.almost
-                  ? "bg-yellow-50 dark:bg-yellow-950/30 border-yellow-200 dark:border-yellow-800"
-                  : "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800"
-              }`}>
-                {result.correct
-                  ? <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
-                  : result.almost
-                  ? <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
-                  : <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />}
-                <div className="min-w-0">
-                  {result.correct ? (
-                    <p className="text-emerald-700 dark:text-emerald-400 font-semibold text-sm">
-                      Correct! +{result.xp_awarded} XP
-                      {combo >= 3 && <span className="ml-1 text-orange-500">🔥 {combo} combo!</span>}
-                    </p>
-                  ) : result.almost ? (
-                    <>
-                      <p className="text-yellow-700 dark:text-yellow-400 font-semibold text-sm">Almost! Correct spelling:</p>
-                      <p className="text-yellow-800 dark:text-yellow-300 font-bold mt-0.5">
-                        {result.correct_word}
-                        {result.ipa && <span className="font-normal font-mono text-xs ml-1 opacity-70">{result.ipa}</span>}
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <p className="text-red-700 dark:text-red-400 font-semibold text-sm">Incorrect — correct spelling:</p>
-                      <p className="text-red-800 dark:text-red-300 font-bold mt-0.5">
-                        {result.correct_word}
-                        {result.ipa && <span className="font-normal font-mono text-xs ml-1 opacity-70">{result.ipa}</span>}
-                      </p>
-                      <p className="text-xs text-red-600 dark:text-red-400 mt-1 opacity-80 line-clamp-2">{result.meaning}</p>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
-          </>
+          </div>
         )}
       </div>
 
-      {phase !== "loading" && (
-        <div className="w-full flex flex-col gap-2">
-          <div className="flex gap-2">
-            <Input
-              ref={inputRef}
-              value={answer}
-              onChange={(e) => setAnswer(e.target.value)}
-              placeholder={phase === "submitted" ? "" : "Type the Malay word…"}
-              disabled={phase === "submitted" || isSubmitting}
-              className="flex-1 text-base h-11"
-              autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck={false}
-            />
-            {phase === "ready" ? (
-              <Button onClick={handleSubmit} disabled={!answer.trim() || isSubmitting} className="h-11 px-5">
-                Check
-              </Button>
-            ) : (
-              wordsAttempted < SESSION_SIZE && (
-                <Button onClick={fetchNextWord} variant="outline" className="h-11 px-4">
-                  Next <ChevronRight className="w-4 h-4 ml-0.5" />
-                </Button>
-              )
-            )}
-          </div>
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>{phase === "ready" ? "Enter to submit · Space to replay" : "Enter for next · Escape to start over"}</span>
-            {phase === "ready" && (
-              <button onClick={resetSession} className="hover:text-foreground transition-colors">
-                Start Over
+      {/* 4 option buttons — 2×2 grid */}
+      {phase !== "loading" && question && (
+        <div className="w-full grid grid-cols-2 gap-2.5">
+          {question.options.map((opt, idx) => {
+            const state = optionStates[idx];
+            let cls =
+              "w-full text-left px-4 py-3.5 rounded-xl border text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ";
+
+            if (state === "correct") {
+              cls += "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-400 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-400";
+            } else if (state === "wrong") {
+              cls += "bg-red-50 dark:bg-red-950/40 border-red-400 text-red-700 dark:text-red-300 ring-1 ring-red-400";
+            } else if (state === "reveal") {
+              cls += "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-400 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-400";
+            } else if (phase === "submitted") {
+              cls += "bg-muted/50 border-border text-muted-foreground opacity-60 cursor-default";
+            } else {
+              cls += "bg-card border-border hover:border-primary/50 hover:bg-primary/5 cursor-pointer active:scale-[0.98]";
+            }
+
+            return (
+              <button
+                key={idx}
+                className={cls}
+                onClick={() => phase === "ready" && handleSelect(idx)}
+                disabled={phase !== "ready" || isSubmitting}
+                aria-label={`Option ${idx + 1}: ${opt}`}
+              >
+                <span className="flex items-start gap-2">
+                  <span className="shrink-0 mt-0.5">
+                    {state === "correct" || state === "reveal"
+                      ? <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                      : state === "wrong"
+                      ? <XCircle className="w-4 h-4 text-red-500" />
+                      : <span className="inline-flex w-4 h-4 rounded-full border border-border items-center justify-center text-[10px] text-muted-foreground font-mono">{idx + 1}</span>}
+                  </span>
+                  <span className="leading-snug">{opt}</span>
+                </span>
               </button>
-            )}
+            );
+          })}
+        </div>
+      )}
+
+      {/* Post-answer navigation */}
+      {phase === "submitted" && result && (
+        <div className="w-full space-y-2">
+          <div className={`text-sm font-medium text-center ${result.correct ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
+            {result.correct
+              ? `Correct! +${result.xp_awarded} XP`
+              : `Incorrect — correct: "${result.correct_meaning}"`}
           </div>
+          {wordsAttempted < SESSION_SIZE && (
+            <Button onClick={fetchNextQuestion} className="w-full" variant="outline">
+              Next Word <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          )}
+          <p className="text-center text-xs text-muted-foreground">Press Enter for next · Escape to start over</p>
         </div>
       )}
 

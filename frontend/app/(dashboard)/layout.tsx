@@ -17,7 +17,7 @@ const PREFETCH_ROUTES = [
   "/dashboard",
   "/courses",
   "/quiz/adaptive",
-  "/games/spelling",
+  "/games",
   "/settings",
 ];
 import { useQuery, useQueryClient } from "@tanstack/react-query";

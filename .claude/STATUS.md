@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-05-09 (Session 74 — Loading animation audit + settings skeleton fix)
+## Last Updated: 2026-05-09 (Session 76 — Games Hub: difficulty modes + Word Match game)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -33,7 +33,9 @@ _Update this file at the end of every session_
 | Chat History Page (Phase 21) | ✅ Complete + Session Delete | /chatbot/history; ChatHistoryList (paginated, title from first user msg, message count); session detail read-only view; History button in chatbot header; backend ChatSessionResponse extended with title + message_count; DELETE /api/chatbot/sessions/{id} (ownership-verified, cascade messages, preserves vocab/grammar); Trash2 icon + inline confirm strip per row; error banner with 4s auto-dismiss |
 | Image Generation — Nano Banana 2 (Phase 22) | ✅ Complete + Personalised banners + Cover endpoint (Session 36) + Streak milestone cards | image_service.py uses Gemini REST API via httpx; list endpoint returns has_cover bool (no blob); GET /api/courses/{id}/cover serves raw bytes with Cache-Control: immutable (browser caches permanently); course detail page hero banner; journey banners use gender + age_range for personalised subject prompt. generate_streak_milestone_card() added to image_service.py; _generate_and_save_streak_milestone_card() background task added to gamification_service.py — streak_milestone notifications now include image_url, matching the BPS milestone card pattern in quiz_service.py. |
 | Course Deduplication + Clone System (Phase 24) | ✅ Complete | topic_slug + is_template + cloned_from columns on courses; Alembic migration applied; _make_topic_slug(), _find_template(), _clone_course() in course_service.py; generate_course() checks for template before calling Gemini — clone path completes in milliseconds; frontend/router unchanged |
-| Spelling Practice Game (Phase 19) | ✅ Complete + v2 redesign | Leitner-box word selection; Levenshtein fuzzy matching; Start screen → 3-2-1 countdown → 10s per-word timer (green→yellow→red pulse) → Time's Up screen with Next/Start Over; combo multiplier; session summary; keyboard shortcuts (Enter/Space/Escape); personal best; Games link in sidebar |
+| Spelling Practice Game (Phase 19) | ✅ Complete + v3 difficulty modes (Session 76) | Leitner-box word selection; Levenshtein fuzzy matching; Start screen → 3-2-1 countdown → per-word timer (green→yellow→red pulse) → Time's Up screen with Next/Start Over; combo multiplier; session summary; keyboard shortcuts (Enter/Space/Escape); personal best. **v3**: DifficultySelector added to start screen — Easy (20s/+1XP), Medium (10s/+2XP), Hard (5s/+4XP); timer bar colour thresholds scale with difficulty; difficulty locked during gameplay via difficultyRef. |
+| Word Match Game (Phase 27 / Session 76) | ✅ Complete | MCQ vocabulary recognition game: shows Malay word → user picks English meaning from 4 shuffled options. Min 4 vocab entries required. Leitner-box weighted selection + meaning deduplication for distractors. DifficultySelector (Easy 20s/+1XP, Medium 10s/+1XP, Hard 5s/+2XP). Correct answer auto-plays audio; wrong answer reveals correct option in green. Session summary with accuracy, XP, mastered/review word lists. Separate Redis keys (wordmatch:wrong:{}, wordmatch:seen:{}). Personal best tracked separately from Spelling in spelling_game_scores (game_type='word_match'). |
+| Games Hub (Phase 27 / Session 76) | ✅ Complete | /games hub page: two game cards (Spelling Challenge + Word Match), clicking renders game inline; "← Back to Games" returns to card selector. Sidebar link updated /games/spelling → /games. layout.tsx prefetch updated to /games. |
 | Chatbot vocab pipeline fix | ✅ Fixed | _extract_and_save() now opens its own AsyncSessionLocal session — asyncio.create_task with request-scoped session was silently failing after SSE stream ended; vocab/grammar now reliably saved after every chatbot response |
 | Frontend Performance Optimizations | ✅ Complete | Session cache in api.ts (60s TTL, eliminates /api/auth/session round-trip on every API call); profile fetch deduplication via shared useQuery(['profile']) key in AppSidebar + OnboardingChecker; login router.refresh() race condition removed; redirect loading overlay added |
 | Performance + Animations (Session 14) | ✅ Complete | Admin stats Redis cache (2min TTL, key: admin:stats); admin page parallel Promise.allSettled replacing sequential waterfall; PageTransition component (fade+slide, 0.3s) wired into layout keyed by pathname; journey obstacle stagger (0.08s between nodes); course card stagger + whileHover scale 1.02 |
@@ -71,6 +73,86 @@ _Update this file at the end of every session_
 
 ## ✅ Fixed Issues (Session 13)
 - **Course covers not appearing (2026-04-13):** Session 12 correctly fixed `image_service.py` (httpx REST API) and `course_service.py` (retroactive healing + `asyncio.create_task`), but the backend was **never restarted** after those changes were made. Uvicorn started at 08:19, files modified at 14:22–14:28 — old broken code was still running. Fix: killed old uvicorn PIDs (18316, 25012), started fresh process on port 8000. Also manually ran `_generate_and_save_cover()` for all 3 existing courses that had `cover_image_url = NULL`. All verified: Gemini REST API returns JPEG (~1.1 MB base64, ~17s), DB save works, `GET /api/courses/` returns cover correctly. **Important**: after any code change to the backend, the uvicorn process MUST be restarted manually (no `--reload` flag in prod mode).
+
+---
+
+## What Was Done This Session (2026-05-09 Session 76 — Games Hub: difficulty modes + Word Match)
+
+### Goals
+Add difficulty modes (Easy/Medium/Hard) to the Spelling game and build a second game type (Word Match — MCQ vocabulary recognition), both accessible from a new /games hub page.
+
+### Files Created
+- `backend/db/migrations/versions/20260509_1000_add_game_type_column.py` — Alembic migration: adds `game_type VARCHAR(50) NOT NULL DEFAULT 'spelling'` to `spelling_game_scores` + composite index on (game_type, user_id). revision d2e3f4a5b6c7, down_revision c1d2e3f4a5b6
+- `backend/services/word_match_service.py` — Full Word Match service: `get_word_match_question()` (weighted selection, meaning-dedup distractors, shuffled options, correct_index), `evaluate_word_match()` (case-insensitive comparison, Redis wrong-list), `save_word_match_session()` (delegates to save_session_score with game_type='word_match'), `get_word_match_best()`. Uses separate Redis keys: wordmatch:wrong:{}, wordmatch:seen:{}.
+- `frontend/components/games/DifficultySelector.tsx` — Shared difficulty picker component (Easy/Medium/Hard pill buttons). Exports `DIFFICULTY_TIMER = {easy:20, medium:10, hard:5}`. Shows timer and XP per button. disabled prop locks it mid-game.
+- `frontend/components/games/WordMatchGame.tsx` — Full MCQ game component mirroring SpellingGame state machine. 4 option buttons in a 2×2 grid; clicking one submits immediately. Correct turns green + plays audio; wrong turns red + reveals correct in green. Timeout reveals correct. Session summary with accuracy, XP, word lists.
+- `frontend/app/(dashboard)/games/page.tsx` — Games hub: two GameCard components (Spelling + Word Match). Inline game rendering (no page navigation) with "← Back to Games" button. Dynamic imports for both games.
+
+### Files Modified
+- `backend/models/game.py` — Added `game_type: Mapped[str]` column; updated docstring to reflect multi-game usage
+- `backend/services/spelling_service.py` — Added `XP_TABLE = {easy:1, medium:2, hard:4}`; `difficulty` param to `evaluate_answer()`; `game_type` param to `save_session_score()` (filters DB query by game_type to prevent date collision); `get_personal_best()` now filters `WHERE game_type='spelling'`
+- `backend/routers/games.py` — Complete rewrite: `SpellingSubmitRequest` gains `difficulty: Literal["easy","medium","hard"] = "medium"`; 4 new Word Match endpoints (GET /word-match/question, POST /word-match/submit, POST /word-match/session, GET /word-match/best); new Pydantic schemas `WordMatchQuestionResponse`, `WordMatchSubmitRequest`, `WordMatchSubmitResponse`; XP awarded via `record_learning_activity(source="word_match_correct")` 
+- `backend/main.py` — Added `import backend.models.game  # noqa: F401` to model registration block (was missing, needed for Alembic autogenerate)
+- `frontend/lib/types.ts` — Added `GameDifficulty` type, `WordMatchQuestion`, `WordMatchSubmitResponse`, `WordMatchPersonalBest` interfaces
+- `frontend/lib/api.ts` — Added `GameDifficulty, WordMatchQuestion, WordMatchSubmitResponse, WordMatchPersonalBest` imports; updated `gamesApi`: `submitSpellingAnswer` gains `difficulty` param; renamed `endSession`→`endSpellingSession`, `getPersonalBest`→`getSpellingBest`; added 4 new word-match functions (`getWordMatchQuestion`, `submitWordMatchAnswer`, `endWordMatchSession`, `getWordMatchBest`)
+- `frontend/components/games/SpellingGame.tsx` — v3: added `difficulty` state + `difficultyRef` (so timer callbacks read current difficulty); `DifficultySelector` on start screen; stats grid timer cell shows `DIFFICULTY_TIMER[difficulty]s`; timer urgency thresholds are percentage-based (25%/50% of timeLimit); `timerBarColor` takes limit param; `getSpellingBest`/`endSpellingSession` updated API calls; difficulty passed to `submitSpellingAnswer`; `SessionSummary` shows difficulty tag
+- `frontend/components/nav/AppSidebar.tsx` — Games href `/games/spelling` → `/games`
+- `frontend/app/(dashboard)/layout.tsx` — Prefetch route `/games/spelling` → `/games`
+
+### Backend Logic Verified
+- `game_type` filter in `save_session_score()` prevents same-day Spelling + Word Match sessions from colliding in the upsert
+- `get_personal_best()` filters `WHERE game_type='spelling'` so Word Match scores don't inflate Spelling personal bests
+- `get_word_match_best()` filters `WHERE game_type='word_match'` symmetrically
+- Distractor deduplication: candidates filtered by `meaning.lower().strip() != correct_meaning_norm` — no ambiguous options
+- Min vocab = 4 for Word Match (returns None → 404 → "Need more vocabulary" state)
+- Redis namespacing: wordmatch:* keys are fully separate from spelling:* keys
+
+### Validation
+- `python -m py_compile` on all 5 modified Python files → OK
+- `npx tsc --noEmit` → 0 errors
+- No regressions in existing `/games/spelling` direct route (page.tsx unchanged, still functional)
+
+---
+
+## What Was Done This Session (2026-05-09 Session 75 — CLAUDE.md documentation sync)
+
+### Goals
+Documentation-only session. No code, components, routes, services, schemas, or migrations were written or modified. Only `CLAUDE.md` was edited.
+
+### 6 Edits Made to CLAUDE.md
+
+**EDIT 1 — Session Start Protocol block**
+- Inserted a new `## ⚡ Session Start Protocol (READ FIRST, EVERY SESSION)` section immediately after the front-matter quote and before `## 1. Project Overview`
+- Mandates reading `STATUS.md` + `PHASES.md` in full before responding to any user message
+- Explains what to do when asked about phases or current state
+- Declares the protocol non-negotiable
+
+**EDIT 2 — Section 5.21 (Course Deduplication & Templating)**
+- Added after `5.20 30-User Evaluation & In-App Feedback Survey`
+- Documents the template + clone model: topic slug normalisation, DB columns (topic_slug, is_template, cloned_from), clone scope, race condition handling, analytics distinction, and implementation entry points in `course_service.py`
+
+**EDIT 3 — Section 5.22 (Subscription Marketing Pages)**
+- Added after `5.21` (combined with Edit 2 — both inserted in the same location)
+- Documents the Phase 25 frontend-only pricing pages: /pricing, /settings/billing, subscription-plans.ts, ComingSoonModal, PlanBadge, sidebar Pricing nav item
+- Explicitly states NO backend, NO DB tables, NO feature gating
+- References `.claude/SUBSCRIPTION.md` as the post-graduation backend monetization roadmap
+- Includes PIXEL 2026 demo narrative
+
+**EDIT 4 — Section 9 (Development Constraints)**
+- Replaced `**Timeline:** ~16–21 days to a publishable version` with `**Deployment Status:** Project is deployed in production at https://bahasabot-main3.vercel.app — ongoing iteration and feature additions`
+- Updated scope lock reference from `5.1 through 5.20` → `5.1 through 5.22`
+
+**EDIT 5 — Section 12 (Environment Variables)**
+- Frontend block: added `NEXT_PUBLIC_GOOGLE_CLIENT_ID` and `NEXT_PUBLIC_SENTRY_DSN`
+- Backend block: added `SYNC_DATABASE_URL`, `RESEND_FROM_EMAIL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `SENTRY_DSN`; added clarifying comment to `DATABASE_URL`
+- Added new `### Notes on environment variables` subsection with four rules covering asyncpg/psycopg2 URL format, statement_cache_size=0, and the Google Client ID parity requirement
+
+**EDIT 6 — Section 15 (Claude Code Rules)**
+- Replaced `Read .claude/STATUS.md and .claude/PHASES.md at the start of every session` with a stronger directive referencing the Session Start Protocol and explicitly stating not to skip even for trivial tasks
+
+### Files Modified
+- `CLAUDE.md` — 6 edits as described above
+- `.claude/STATUS.md` — this session log
 
 ---
 

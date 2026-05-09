@@ -610,6 +610,10 @@ export interface NotificationListResponse {
   unread_count: number;
 }
 
+// ── Games — Shared (Phase 27) ─────────────────────────────────────────────────
+
+export type GameDifficulty = "easy" | "medium" | "hard";
+
 // ── Games — Spelling Practice (Phase 19) ──────────────────────────────────────
 
 export interface SpellingWord {
@@ -631,6 +635,27 @@ export interface SpellingSubmitResponse {
 }
 
 export interface SpellingPersonalBest {
+  best_correct: number;
+  best_attempted: number;
+}
+
+// ── Games — Word Match (Phase 27) ─────────────────────────────────────────────
+
+export interface WordMatchQuestion {
+  id: string;
+  word: string;
+  ipa: string | null;
+  options: string[];
+  correct_index: number;
+}
+
+export interface WordMatchSubmitResponse {
+  correct: boolean;
+  correct_meaning: string;
+  xp_awarded: number;
+}
+
+export interface WordMatchPersonalBest {
   best_correct: number;
   best_attempted: number;
 }
