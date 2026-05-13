@@ -6,6 +6,22 @@
 
 ---
 
+## ⚡ Session Start Protocol (READ FIRST, EVERY SESSION)
+
+Before responding to ANY user message in this project, Claude Code MUST:
+
+1. Read `.claude/STATUS.md` in full — this contains the latest session log, known bugs, recent fixes, and current state of every feature.
+2. Read `.claude/PHASES.md` in full — this contains all completed and in-progress phases with file-level checklists.
+3. Confirm understanding of the current project state before writing any code or making any architectural decision.
+
+If the user asks to "work on Phase X" — go directly to that phase in PHASES.md after the read.
+
+If the user asks a question that depends on current state (e.g. "what's deployed?", "is X done?", "what changed recently?") — answer from STATUS.md, NOT from memory or assumption.
+
+Skipping this protocol leads to outdated assumptions, duplicate work, and broken features. It is non-negotiable.
+
+---
+
 ## 1. Project Overview
 
 **Project Name:** BahasaBot
@@ -254,18 +270,20 @@ The dashboard must display:
 
 ### 5.8 My Journey — Personalized Learning Roadmap
 
-- User sets a learning deadline (2 months to 1 year) and a goal type (survival, conversational, academic Malay)
-- System fetches user's current proficiency level and weak_points from DB
-- Gemini generates a structured JSON roadmap: phases → weeks → activities
-- Each activity has a type: 'course', 'quiz', or 'chatbot'
-- type='course' → clicking navigates to /courses with topic pre-populated in CourseGenerationModal
-- type='quiz' → clicking navigates to /quiz/adaptive with topic context
-- type='chatbot' → clicking navigates to /chatbot with a suggested prompt pre-filled
-- Roadmap is saved to DB (learning_roadmaps table) as JSONB — one active roadmap per user
-- Activity completions tracked in roadmap_activity_completions table
-- Completed activities cross-referenced against user_progress and standalone_quiz_attempts to show visual progress
+- User answers 3 questions on first login: intent (5 preset options + free text), learning goal (free text), target timeline (1–6 months)
+- System fetches user's current BPS level, weak_points, and native_language from DB
+- Gemini generates an ordered flat list of course obstacle topics proportional to timeline: 1 month = 4, 2 months = 6, 3 months = 9, 4 months = 12, 5 months = 15, 6 months = 18
+- Roadmap elements are COURSES ONLY — no quiz or chatbot activity types (v1 structure was retired in Phase 20 v2)
+- Each obstacle: { order, topic, description, estimated_weeks, completed, completed_at }
+- Completion tracked by fuzzy-matching completed course topics (fuzzywuzzy ≥ 70%) against obstacle topics in JSONB
+- Roadmap stored in user_roadmaps table (JSONB elements); partial unique index enforces one active roadmap per user
+- Visual road/path UI: completed (green checkmark), current (pulse/glow), locked (grey/foggy)
+- Overdue state: if today > deadline and not complete → status = 'overdue'; user can extend once (extended=true after use)
+- BPS upgrade banner: if BPS improved, Redis flag `journey_bps_upgrade:{user_id}` shown; user can regenerate uncompleted elements
+- Identity-verified deletion: email users confirm password; Google OAuth users confirm email
+- Past completed roadmaps shown in history section
+- Nano Banana 2 generates a personalized banner image on creation (uses gender + age_range for subject prompt)
 - User can delete roadmap and generate a new one with a new deadline at any time
-- Nano Banana 2 generates a personalized banner image for the roadmap on creation
 
 ### 5.9 Onboarding Flow
 
@@ -281,23 +299,28 @@ The dashboard must display:
 - Fallback: if ms-MY voice not available, use ms voice, then default
 - No external API needed — fully browser-native, zero cost
 
-### 5.11 Spelling Practice Game
+### 5.11 Games Hub (Spelling Practice + Word Match)
 
-- Accessible from sidebar under Games
-- System picks a Malay vocabulary word from the user's vocabulary_learned table
-- Audio plays automatically: user hears the word pronounced
-- User types the spelling into an input field
-- Correct: +XP, visual celebration, next word
-- Incorrect: show correct spelling with IPA, explanation, try again option
-- Score tracked per session; personal best saved to DB
+- Accessible from sidebar via /games — a hub page showing both games as cards
+- Games launch inline (no page navigation); "← Back to Games" returns to card selector
+- **Spelling Practice Game**: user hears a word, types the spelling; difficulty modes Easy/Medium/Hard with per-difficulty timers (20s/10s/5s) and XP rewards (+1/+2/+4 XP respectively); Leitner-box weighted word selection (wrong words ×3 priority); fuzzy "Almost!" feedback (Levenshtein distance 1); 3-2-1 countdown; combo multiplier; session summary
+- **Word Match Game**: shows a Malay word → user picks the correct English meaning from 4 options; difficulty modes Easy/Medium/Hard (20s/10s/5s timers; +1/+1/+2 XP); correct answer auto-plays audio; wrong answer reveals correct in green; same session summary pattern
+- Both games use vocabulary_learned table; minimum 4 vocabulary entries required for Word Match
+- Scores tracked in spelling_game_scores table with game_type column ('spelling' | 'word_match')
+- Personal bests stored and displayed per game type
 
 ### 5.12 Gamification — Streak & XP
 
-- Streak: consecutive days the user has completed at least one learning activity (course class, quiz, chatbot session, spelling game)
+- Streak: consecutive days the user has completed at least one learning activity (course class, quiz, chatbot session, spelling/word-match game)
+- **One-day grace period**: missing one calendar day does not reset the streak (two consecutive missed days still reset to 1) — implemented via `last_date in (yesterday, day_before_yesterday)` check in `gamification_service.py`
 - Streak displayed in sidebar and dashboard
-- XP points awarded: course class completed = 10 XP, quiz passed = 25 XP, chatbot session = 5 XP, spelling word correct = 2 XP
-- XP total and streak stored in user_streaks and user_xp tables (or as columns on users table)
-- Milestone notifications triggered at streak milestones (3, 7, 14, 30 days) and XP milestones
+- XP points awarded: course class completed = 10 XP, quiz passed = 25 XP, chatbot session = 5 XP; spelling/word-match XP is difficulty-dependent:
+  - Spelling: Easy = +1 XP, Medium = +2 XP, Hard = +4 XP (see `XP_TABLE` in `spelling_service.py`)
+  - Word Match: Easy = +1 XP, Medium = +1 XP, Hard = +2 XP (see `games.py` router)
+- Roadmap obstacle completed = +100 XP; roadmap completed on time = +500 XP; after deadline = +200 XP
+- XP total and streak stored as columns on the users table (`streak_count`, `xp_total`); every XP award also appended to `xp_logs` table for weekly leaderboard aggregation
+- Milestone notifications triggered at streak milestones (3, 7, 14, 30 days) and every 100 XP
+- Streak milestone cards and BPS milestone cards generated by Nano Banana 2 and attached as `image_url` on the notification
 
 ### 5.13 In-App Notification System
 
@@ -312,27 +335,31 @@ The dashboard must display:
     - Halfway-timeline warning: >50% of timeline elapsed but <30% of elements completed (one-time, Redis-gated)
     - 7-day deadline warning: deadline ≤ 7 days away and roadmap not completed (one-time, Redis-gated)
     - Journey completed: "You completed your entire journey! 🎉"
-- Notifications stored in notifications table (user_id, type, message, read, created_at)
+- Notifications stored in notifications table (user_id, type, message, read, image_url, created_at)
 - GET /api/notifications/ — list last 20 notifications with unread count
 - POST /api/notifications/{id}/read — mark as read
 - POST /api/notifications/read-all — mark all read
-- Notifications panel: dropdown from bell icon showing last 20 notifications
+- DELETE /api/notifications/ — delete all notifications for the user (clear-all button in panel)
+- Notifications panel: dropdown from bell icon in AppSidebar (mobile header + desktop sidebar footer); panelSide + panelDirection props control popup direction
 
 ### 5.14 Forgot Password
 
-- POST /api/auth/forgot-password — accepts email, generates a secure time-limited reset token (15 min TTL), sends email via Resend
-- POST /api/auth/reset-password — accepts token + new password, validates token not expired, updates password hash
-- Reset tokens stored in password_reset_tokens table (token_hash, user_id, expires_at, used)
-- Frontend: /forgot-password page and /reset-password?token=... page
-- Only works for email/password accounts — Google OAuth accounts show a message directing them to Google
+- **3-endpoint 6-digit OTP flow** (no clickable links — more mobile-friendly and enumeration-safe):
+  - POST /api/auth/forgot-password — accepts email; generates a 6-digit code; stores SHA256(email:code) hash (10-min TTL) in password_reset_tokens; sends styled email via Resend; returns 200 for both valid and non-existent emails (enumeration protection)
+  - POST /api/auth/verify-reset-code — accepts email + code; validates hash; returns 200 (code not yet consumed)
+  - POST /api/auth/reset-password — accepts email + code + new password; validates atomically; updates password hash; marks code used
+- Reset tokens stored in password_reset_tokens table (token_hash, user_id, expires_at, used, created_at); expired tokens cleaned up opportunistically on each /forgot-password call
+- Frontend: /forgot-password page — 4-step single-page flow (Email → 6-digit OTP boxes + resend cooldown → New Password → Success auto-redirect 4s); /reset-password page deprecated (shows redirect message)
+- Only works for email/password accounts — Google OAuth accounts (password_hash IS NULL) receive an appropriate message
 
 ### 5.15 User Profile Management
 
-- GET /api/profile/ — get current user profile
-- PATCH /api/profile/ — update name, native language, learning goal, profile picture (URL)
-- Profile page at /settings/profile
-- Fields: display name, email (read-only), native language, reason for learning Malay, profile picture upload
-- Profile data feeds into Journey roadmap generation and chatbot personalization
+- GET /api/profile/ — get current user profile (includes has_password bool for conditional password UI)
+- PATCH /api/profile/ — update name, native language, learning goal, profile picture URL, onboarding_completed, has_seen_tour, gender, age_range; invalidates Redis profile cache on commit
+- POST /api/profile/change-password — change password (requires current password; Google OAuth guard: blocked if password_hash IS NULL)
+- POST /api/profile/delete-account — permanently delete account; bcrypt verify for email accounts, email-match confirm for Google OAuth; signs user out and cascades all DB rows
+- Profile page at /settings/profile; uses free-text input + datalist for native_language (accommodates any format stored in DB); textarea for learning_goal
+- Profile data feeds into Journey roadmap generation and chatbot personalization (Redis-cached 5 min in langchain_service)
 
 ### 5.16 Chat History Page
 
@@ -380,6 +407,53 @@ The dashboard must display:
 - Admin panel shows all feedback responses with aggregate stats
 - This provides structured evidence for the FYP evaluation that the system collects and uses user learning data
 
+### 5.21 Course Deduplication & Templating (Phase 24)
+
+- The first course generated for a given topic+BPS-level combination is marked is_template=true and becomes the canonical reusable version
+- Subsequent users requesting the same topic+level get a deep clone of the template in milliseconds, with zero Gemini API calls
+- Topic slug normalisation: lowercase → strip non-alphanum → collapse whitespace → append level (e.g. "Ordering food at a Restaurant!" + "BPS-1" → "ordering-food-at-a-restaurant:bps1")
+- DB columns on courses table: topic_slug (VARCHAR 600, indexed), is_template (BOOLEAN), cloned_from (UUID FK to courses.id, ON DELETE SET NULL)
+- Clone scope: Course + all Modules + all Classes + cover_image_url; does NOT copy user-specific data (UserProgress, ModuleQuizAttempt, VocabularyLearned)
+- Race condition handling: if two users hit the slow path simultaneously, only one becomes the template (the second checks again before claiming template status)
+- Activity logged as "course_clone" vs "course_gen" in activity_logs for analytics distinction
+- Implementation: backend/services/course_service.py — _make_topic_slug(), _find_template(), _clone_course(); generate_course() checks for template before calling Gemini
+
+### 5.22 Subscription Marketing Pages (Phase 25 — Frontend-Only)
+
+- Display-only pricing pages — NO backend, NO DB tables, NO feature gating, NO real payment integration
+- /pricing — public page (reachable logged-out) showing 4 planned tiers: Free / 7-Day Power Pass / Monthly Pro / Semester Pass
+- /settings/billing — logged-in mock view showing "Free Plan" + link to /pricing
+- All plan data hardcoded in frontend/lib/subscription-plans.ts — never fetched from any API
+- ComingSoonModal triggered by all "Start Free Trial" / "Subscribe" CTAs — explains payment integration is post-graduation
+- Sidebar shows top-level "Pricing" nav item + PlanBadge ("Free Plan") in footer
+- Every existing BahasaBot feature works exactly as before for every user — chat, course gen, quizzes, pronunciation, chat history, roadmap all remain unchanged and ungated
+- The full backend monetization spec (Stripe integration, trial card-on-file, usage tracking, session enforcement, referral system, webhooks, cron jobs, admin panel additions) is documented in .claude/SUBSCRIPTION.md as a post-graduation roadmap, not built for the FYP
+- Demo narrative for PIXEL 2026: "Pricing UI is built and locked; payment gateway integration is the next milestone, planned post-graduation alongside SSM business registration"
+
+### 5.23 Daily Language Tips
+
+- GET /api/tips/random — returns a random active tip from the tips table; shown as a `TipToast` framer-motion slide-in (8 s auto-dismiss) on the dashboard
+- POST /api/tips/generate — admin-only; bulk-generates categorised tips via Gemini and stores them
+- Tips suppressed for new users: TipToast reads the shared `["profile"]` React Query cache; does not show if `onboarding_completed === false` OR `has_seen_tour === false`
+- Tips table: id, content, category (word_origin | common_mistakes | cultural_context | grammar), generated_by, is_active, created_at
+- Alembic migration: 20260419_1000_tips_table.py
+
+### 5.24 Weekly XP Leaderboard
+
+- GET /api/dashboard/leaderboard — top-10 users by XP earned in the current calendar week (Mon–Sun); includes current user's rank even if outside top 10; Redis-cached 5 min; week resets Monday
+- xp_logs table records every individual XP award event (user_id, xp_amount, source, created_at); weekly aggregation is a GROUP BY + SUM query on created_at >= Monday 00:00 UTC
+- Frontend: LeaderboardCard with framer-motion animated podium (2nd–1st–3rd) for top 3; animated XP progress bars for ranks 4–10; days-until-Monday countdown chip
+- Alembic migration: 20260420_1200_xp_logs_table.py
+
+### 5.25 First-Login UI Tour
+
+- Driver.js spotlight tour on desktop (md+ breakpoint), framer-motion card-slide tour on mobile (<768px)
+- 8 steps covering all main sidebar features (Dashboard, AI Tutor, Courses, Quiz, Journey, Spelling Game, Settings)
+- Tour state tracked via `has_seen_tour` boolean on users table; PATCH /api/profile/ sets it true on completion
+- Tour fires after onboarding modal closes (gated by `!showOnboarding`); never shown concurrently with onboarding
+- Mobile tour: full-screen dark overlay, 340px card, directional slide animations, pill progress dots, Skip button
+- Alembic migration: 20260414_2100_add_has_seen_tour.py
+
 ---
 
 ## 6. Database Schema (Core Tables)
@@ -387,56 +461,108 @@ The dashboard must display:
 ```sql
 -- Users
 -- proficiency_level stores BPS values (BPS-1 through BPS-4); the column name was never changed
-users (id, email, password_hash, name, created_at, proficiency_level,
-       onboarding_completed, native_language, learning_goal,
-       profile_picture_url, role, streak_count, xp_total)
+-- provider: 'email' | 'google' — tracks original sign-up method only
+users (id UUID, email VARCHAR(255) UNIQUE, password_hash VARCHAR(255) NULLABLE,
+       name VARCHAR(255), provider VARCHAR(20) DEFAULT 'email',
+       proficiency_level VARCHAR(10) DEFAULT 'BPS-1',  -- Enum: BPS-1/BPS-2/BPS-3/BPS-4
+       is_active BOOLEAN DEFAULT true,
+       onboarding_completed BOOLEAN DEFAULT false,
+       has_seen_tour BOOLEAN DEFAULT false,
+       native_language VARCHAR(100), learning_goal VARCHAR(500),
+       profile_picture_url VARCHAR(1000),
+       role VARCHAR(20) DEFAULT 'user',  -- 'user' | 'admin'
+       streak_count INTEGER DEFAULT 0, xp_total INTEGER DEFAULT 0,
+       gender VARCHAR(20),      -- 'male'|'female'|'non-binary'|'prefer_not_to_say'
+       age_range VARCHAR(20),   -- 'under_18'|'18-24'|'25-34'|'35-44'|'45+'
+       created_at TIMESTAMPTZ)
 
--- Courses
-courses (id, user_id, title, description, topic, objectives, created_at, cover_image_url TEXT)
-modules (id, course_id, title, description, order_index)
-classes (id, module_id, title, content, vocabulary_json, examples_json, order_index)
+-- Courses (deduplication columns added Phase 24)
+courses (id UUID, user_id UUID FK users, title VARCHAR(500), description TEXT,
+         topic VARCHAR(500), objectives JSON, cover_image_url TEXT,
+         topic_slug VARCHAR(600) INDEXED,  -- normalised "topic:level" lookup key
+         is_template BOOLEAN DEFAULT false,
+         cloned_from UUID FK courses ON DELETE SET NULL,
+         created_at TIMESTAMPTZ)
+modules (id UUID, course_id UUID FK courses, title VARCHAR(500), description TEXT,
+         order_index INTEGER, created_at TIMESTAMPTZ)
+classes (id UUID, module_id UUID FK modules, title VARCHAR(500), content TEXT,
+         vocabulary_json JSON,  -- [{word, meaning, example}]
+         examples_json JSON,    -- [{bm, en}]
+         order_index INTEGER, created_at TIMESTAMPTZ)
 
 -- Progress
-user_progress (id, user_id, course_id, module_id, class_id, completed_at)
-module_quiz_attempts (id, user_id, module_id, score, answers_json, taken_at)
-standalone_quiz_attempts (id, user_id, score, questions_json, answers_json, taken_at)
+user_progress (id UUID, user_id UUID, course_id UUID, module_id UUID,
+               class_id UUID NULLABLE, completed_at TIMESTAMPTZ)
+module_quiz_attempts (id UUID, user_id UUID, module_id UUID,
+                      score FLOAT,  -- normalised 0.0–1.0; >= 0.70 = pass
+                      answers_json JSON, taken_at TIMESTAMPTZ)
+standalone_quiz_attempts (id UUID, user_id UUID, score FLOAT,
+                          questions_json JSON, answers_json JSON, taken_at TIMESTAMPTZ)
 
 -- Learning Tracking
-vocabulary_learned (id, user_id, word, meaning, source_type, source_id, learned_at)
-grammar_learned (id, user_id, rule, example, source_type, source_id, learned_at)
-weak_points (id, user_id, topic, type [vocab/grammar], strength_score, updated_at)
+vocabulary_learned (id UUID, user_id UUID, word VARCHAR(255), meaning TEXT,
+                    source_type VARCHAR(20),  -- 'chatbot' | 'course'
+                    source_id UUID, learned_at TIMESTAMPTZ)
+grammar_learned (id UUID, user_id UUID, rule TEXT, example TEXT,
+                 source_type VARCHAR(20), source_id UUID, learned_at TIMESTAMPTZ)
+weak_points (id UUID, user_id UUID, topic VARCHAR(500),
+             type VARCHAR(20),  -- 'vocab' | 'grammar'
+             strength_score FLOAT DEFAULT 0.5,  -- 0.0 (very weak) → 1.0 (mastered)
+             updated_at TIMESTAMPTZ)
 
 -- Chatbot
-chat_sessions (id, user_id, title TEXT, created_at)
-chat_messages (id, session_id, role [user/assistant], content, created_at)
+chat_sessions (id UUID, user_id UUID, title TEXT, created_at TIMESTAMPTZ)
+chat_messages (id UUID, session_id UUID FK chat_sessions,
+               role VARCHAR(20),  -- 'user' | 'assistant'
+               content TEXT, created_at TIMESTAMPTZ)
 
 -- RAG
-documents (id, content, embedding vector(768), metadata_json, created_at)
+documents (id UUID, content TEXT, embedding vector(768), metadata_json JSON, created_at TIMESTAMPTZ)
 
 -- Journey / Roadmap
--- Partial unique index on user_id WHERE status = 'active' enforces one active roadmap per user
+-- Partial unique index user_roadmaps_one_active_per_user ON user_id WHERE status = 'active'
 user_roadmaps (id UUID, user_id UUID FK users, intent VARCHAR(100), goal TEXT,
-               timeline_months INTEGER CHECK (timeline_months BETWEEN 1 AND 6),
-               elements JSONB, status VARCHAR(20) DEFAULT 'active', deadline DATE,
-               extended BOOLEAN DEFAULT false, created_at TIMESTAMPTZ,
-               completed_at TIMESTAMPTZ, bps_level_at_creation VARCHAR(10),
-               banner_image_url TEXT)
+               timeline_months INTEGER CHECK (1 <= timeline_months <= 6),
+               elements JSONB,  -- [{order, topic, description, estimated_weeks, completed, completed_at}]
+               status VARCHAR(20) DEFAULT 'active',  -- 'active'|'overdue'|'completed'|'deleted'
+               deadline DATE, extended BOOLEAN DEFAULT false,
+               created_at TIMESTAMPTZ, completed_at TIMESTAMPTZ,
+               bps_level_at_creation VARCHAR(10), banner_image_url TEXT)
 
 -- Notifications
-notifications (id, user_id, type, message, read BOOLEAN, image_url TEXT, created_at)
+notifications (id UUID, user_id UUID, type VARCHAR(50), message TEXT,
+               read BOOLEAN DEFAULT false, image_url TEXT, created_at TIMESTAMPTZ)
 
 -- Auth
-password_reset_tokens (id, user_id, token_hash, expires_at, used BOOLEAN, created_at)
+password_reset_tokens (id UUID, user_id UUID, token_hash VARCHAR(255),
+                       expires_at TIMESTAMPTZ, used BOOLEAN DEFAULT false, created_at TIMESTAMPTZ)
 
 -- Evaluation
-evaluation_feedback (id, user_id, quiz_type, rating, weak_points_relevant, comments, created_at)
+evaluation_feedback (id UUID, user_id UUID,
+                     quiz_type VARCHAR(20),  -- 'module' | 'standalone' | 'general'
+                     rating INTEGER,  -- 1–5
+                     weak_points_relevant VARCHAR(20),  -- 'yes'|'no'|'somewhat'
+                     comments TEXT, created_at TIMESTAMPTZ)
 
--- Games
-spelling_game_scores (id, user_id, words_correct, words_attempted, session_date)
+-- Games (multi-game; game_type distinguishes spelling vs word_match)
+spelling_game_scores (id UUID, user_id UUID, words_correct INTEGER,
+                      words_attempted INTEGER, session_date DATE,
+                      game_type VARCHAR(50) DEFAULT 'spelling')
+
+-- Leaderboard
+xp_logs (id UUID, user_id UUID FK users, xp_amount INTEGER, source VARCHAR(50), created_at TIMESTAMPTZ)
+
+-- Daily Tips
+tips (id UUID, content TEXT, category VARCHAR(50),
+      generated_by VARCHAR(50) DEFAULT 'gemini',
+      is_active BOOLEAN DEFAULT true, created_at TIMESTAMPTZ)
 
 -- Analytics / Monitoring
-token_usage_logs (id, user_id, feature, input_tokens, output_tokens, total_tokens, created_at)
-activity_logs (id, user_id, feature, duration_seconds, created_at)
+token_usage_logs (id UUID, user_id UUID, feature VARCHAR(30),
+                  input_tokens INTEGER, output_tokens INTEGER,
+                  total_tokens INTEGER, created_at TIMESTAMPTZ)
+activity_logs (id UUID, user_id UUID, feature VARCHAR(30),
+               duration_seconds INTEGER DEFAULT 0, created_at TIMESTAMPTZ)
 ```
 
 ---
@@ -449,58 +575,90 @@ activity_logs (id, user_id, feature, duration_seconds, created_at)
 POST   /api/auth/register
 POST   /api/auth/login
 GET    /api/auth/me
-POST   /api/auth/forgot-password
-POST   /api/auth/reset-password
-POST   /api/auth/set-password        # Set password for Google users who have never set one (no current password required)
+POST   /api/auth/refresh             # Exchange refresh token for new access token
+POST   /api/auth/google              # Verify Google ID token, return JWT tokens
+POST   /api/auth/forgot-password     # Send 6-digit OTP to email
+POST   /api/auth/verify-reset-code   # Validate OTP (does not consume it)
+POST   /api/auth/reset-password      # Consume OTP + update password
+POST   /api/auth/set-password        # Set password for Google users with NULL password_hash
 
-POST   /api/chatbot/message          # Send message, get AI response
-GET    /api/chatbot/history          # Get chat history for user
-GET    /api/chatbot/sessions         # List user's sessions
+POST   /api/chatbot/message          # Send message, receive SSE streaming response
+GET    /api/chatbot/history          # Paginated message history for a session
+GET    /api/chatbot/sessions         # List user's sessions (with title + message count)
+DELETE /api/chatbot/sessions/{id}    # Delete session + cascade messages
+GET    /api/chatbot/prewarm          # Warm the profile Redis cache before first message
 
-POST   /api/courses/generate         # Generate a new course from topic (enqueues background job)
-GET    /api/courses/jobs/{job_id}    # Poll background course generation status
-GET    /api/courses/                 # List user's courses
-GET    /api/courses/{course_id}      # Get full course structure
-POST   /api/courses/{course_id}/modules/{module_id}/complete   # Mark module done
-GET    /api/courses/{course_id}/modules/{module_id}/quiz       # Get module quiz
-POST   /api/courses/{course_id}/modules/{module_id}/quiz       # Submit module quiz
+POST   /api/courses/generate         # Generate/clone course from topic (202 + job_id)
+GET    /api/courses/jobs/{job_id}    # Poll background job status
+GET    /api/courses/                 # Paginated course list with progress
+GET    /api/courses/{course_id}      # Full course tree + per-class lock/progress state
+GET    /api/courses/{course_id}/cover # Raw cover image bytes (immutable, browser-cached)
+GET    /api/courses/{course_id}/modules/{module_id}/classes/{class_id}  # Class detail
+POST   /api/courses/{course_id}/modules/{module_id}/classes/{class_id}/complete  # Mark done
+GET    /api/courses/{course_id}/modules/{module_id}/quiz    # Get/generate module quiz
+POST   /api/courses/{course_id}/modules/{module_id}/quiz    # Submit module quiz
+DELETE /api/courses/{course_id}      # Delete course + cascade
 
-GET    /api/quiz/                    # Get adaptive standalone quiz
-POST   /api/quiz/submit              # Submit standalone quiz
+GET    /api/quiz/                    # Generate adaptive standalone quiz (15 questions)
+POST   /api/quiz/submit              # Score + update weak_points + recalculate BPS level
 
-GET    /api/dashboard/               # Get full dashboard data
-GET    /api/dashboard/vocabulary     # Get vocabulary list
-GET    /api/dashboard/grammar        # Get grammar list
-GET    /api/dashboard/progress       # Get progress stats
-GET    /api/dashboard/weak-points    # Get weak points
+GET    /api/dashboard/               # Full dashboard summary (Redis cached 5 min)
+GET    /api/dashboard/vocabulary     # Paginated vocabulary list
+GET    /api/dashboard/grammar        # Paginated grammar list
+GET    /api/dashboard/progress       # Course progress breakdown
+GET    /api/dashboard/weak-points    # Weak points + recommendations
+GET    /api/dashboard/quiz-history   # Paginated quiz history
+GET    /api/dashboard/leaderboard    # Top-10 weekly XP leaderboard + current user rank
 
-GET    /api/profile/                 # Get current user profile
-PATCH  /api/profile/                 # Update profile fields
+GET    /api/profile/                 # Get current user profile (includes has_password)
+PATCH  /api/profile/                 # Update profile fields (invalidates chatbot profile cache)
 POST   /api/profile/change-password  # Change password (Google-account guard)
+POST   /api/profile/delete-account   # Permanently delete account (bcrypt/email confirm)
 
-GET    /api/admin/stats              # Admin dashboard stats
-GET    /api/admin/users              # Admin user list
-GET    /api/admin/feedback           # Admin evaluation feedback view
-GET    /api/admin/journeys           # Admin: all user roadmaps (read-only)
+GET    /api/admin/stats              # Admin dashboard stats (Redis cached 2 min)
+GET    /api/admin/users              # Paginated user list (search, date filter, last_active)
+GET    /api/admin/users/{id}         # Full user profile + 8 stat counts
+GET    /api/admin/users/{id}/analytics  # Token/activity charts (7–90 day range)
+GET    /api/admin/users/{id}/quiz-attempts  # Raw Q&A quiz history (collapsible)
+PATCH  /api/admin/users/{id}/deactivate     # Deactivate user account
+DELETE /api/admin/users/{id}         # Delete user (admin_password body required)
+POST   /api/admin/users/{id}/reset   # Reset user data (admin_password body required)
+GET    /api/admin/feedback           # Paginated evaluation feedback
+GET    /api/admin/journeys           # All user roadmaps (read-only)
+GET    /api/admin/analytics/score-distribution   # Cohort score histogram + mean/median
+GET    /api/admin/analytics/weak-points          # Top 20 weak-point topics (sortable)
+GET    /api/admin/export/users       # CSV export: all users
+GET    /api/admin/export/quiz-attempts  # CSV export: all quiz attempts
+GET    /api/admin/export/feedback    # CSV export: all feedback
 
 POST   /api/journey/roadmap/generate          # Generate new roadmap (3-question input)
-GET    /api/journey/roadmap                    # Get active roadmap + flags
-GET    /api/journey/roadmap/history            # Get past completed/deleted roadmaps
-POST   /api/journey/roadmap/verify-and-delete  # Identity-verified deletion
-PATCH  /api/journey/roadmap/extend             # Extend deadline (one-time)
-POST   /api/journey/roadmap/regenerate         # Regen uncompleted after BPS upgrade
-DELETE /api/journey/roadmap/dismiss-upgrade    # Clear BPS upgrade flag
+GET    /api/journey/roadmap                    # Get active roadmap + flags (checks overdue/BPS)
+GET    /api/journey/roadmap/history            # Past completed/deleted roadmaps
+POST   /api/journey/roadmap/verify-and-delete  # Identity-verified soft-delete
+PATCH  /api/journey/roadmap/extend             # Extend deadline once (extended=true after)
+POST   /api/journey/roadmap/regenerate         # Regen uncompleted elements after BPS upgrade
+DELETE /api/journey/roadmap/dismiss-upgrade    # Clear BPS upgrade Redis flag
 
-GET    /api/notifications/           # List unread notifications
-POST   /api/notifications/{id}/read  # Mark notification as read
-POST   /api/notifications/read-all   # Mark all notifications read
+GET    /api/notifications/           # Last 20 notifications + unread count
+POST   /api/notifications/{id}/read  # Mark single notification read
+POST   /api/notifications/read-all   # Mark all read
+DELETE /api/notifications/           # Delete all notifications (clear-all)
 
-GET    /api/games/spelling/word      # Get next spelling word
-POST   /api/games/spelling/submit    # Submit spelling attempt
-POST   /api/games/spelling/session   # Save session score
-GET    /api/games/spelling/best      # Get personal best
+GET    /api/games/spelling/word      # Next weighted spelling word
+POST   /api/games/spelling/submit    # Submit answer (difficulty param; fuzzy matching)
+POST   /api/games/spelling/session   # Save session score (upsert best per day per game_type)
+GET    /api/games/spelling/best      # Personal best for spelling game
+GET    /api/games/word-match/question  # Next MCQ word match question (4 shuffled options)
+POST   /api/games/word-match/submit    # Submit MCQ answer
+POST   /api/games/word-match/session   # Save word match session score
+GET    /api/games/word-match/best      # Personal best for word match game
 
-POST   /api/evaluation/feedback      # Submit optional user feedback
+POST   /api/evaluation/feedback      # Submit survey (quiz_type: module|standalone|general)
+
+GET    /api/tips/random              # Random active tip (suppressed during onboarding)
+POST   /api/tips/generate            # Admin only: bulk-generate tips via Gemini
+
+GET    /health                       # Health check: app status + Redis ping
 ```
 
 ---
@@ -554,8 +712,10 @@ Even though this is an FYP with ~30 users, it MUST be built to production standa
 - **Budget Constraint:** Deployment must fit within free tiers of Vercel, Railway/Render, Supabase/Neon
 - **Gemini API Cost:** Rate limit chatbot and course generation to avoid excessive API costs
 - **Solo Developer:** One developer — keep code readable, well-commented, and avoid over-engineering
-- **Timeline:** ~16–21 days to a publishable version
-- **Scope Lock:** Scope is now extended — refer to Section 5 features 5.1 through 5.20 as the complete and locked feature list
+- **Deployment Status:** Project is deployed in production at https://bahasabot-main3.vercel.app — ongoing iteration and feature additions
+- **Scope Lock:** Refer to Section 5 features 5.1 through 5.25 as the complete and locked feature list
+- **Concurrency:** Course class content generation is limited to `asyncio.Semaphore(2)` — NOT 3 — to respect the free-tier Gemini RPM limit (`_CONTENT_SEMAPHORE = asyncio.Semaphore(2)` in `backend/services/course_service.py`)
+- **JWT Timing:** Access token default is 15 minutes (`ACCESS_TOKEN_EXPIRE_MINUTES=15` env var, overridable); refresh token is 7 days; NextAuth front-end refreshes 60 s before expiry (29-minute client-side TTL)
 
 ---
 
@@ -624,21 +784,34 @@ NEXTAUTH_SECRET=
 NEXT_PUBLIC_API_URL=          # FastAPI backend URL
 NEXT_PUBLIC_SUPABASE_URL=     # If using Supabase Auth
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
+NEXT_PUBLIC_GOOGLE_CLIENT_ID= # Google OAuth client ID (must match backend GOOGLE_CLIENT_ID)
+NEXT_PUBLIC_SENTRY_DSN=       # Sentry DSN for frontend error monitoring (optional)
 ```
 
 ### Backend (.env)
 
 ```
-DATABASE_URL=                 # PostgreSQL connection string
+DATABASE_URL=                 # PostgreSQL connection string (asyncpg driver, ssl=require)
+SYNC_DATABASE_URL=            # PostgreSQL sync connection string for Alembic migrations (psycopg2 driver, sslmode=require)
 REDIS_URL=                    # Redis connection string
 GEMINI_API_KEY=               # Google Gemini API key
 JWT_SECRET=
 FRONTEND_URL=                 # Next.js frontend URL (for CORS)
 ENVIRONMENT=                  # development / production
 RESEND_API_KEY=               # Resend email service API key
+RESEND_FROM_EMAIL=            # From-address for transactional emails (e.g. noreply@yourdomain.com)
 GEMINI_IMAGE_MODEL=gemini-3.1-flash-image-preview
 ADMIN_EMAILS=                 # Comma-separated emails that get role='admin' on registration (e.g. dev@example.com,supervisor@example.com). Falls back to ADMIN_EMAIL if not set.
+GOOGLE_CLIENT_ID=             # Google OAuth client ID (must match frontend NEXT_PUBLIC_GOOGLE_CLIENT_ID)
+GOOGLE_CLIENT_SECRET=         # Google OAuth client secret (backend only, never expose)
+SENTRY_DSN=                   # Sentry DSN for backend error monitoring (optional but recommended)
 ```
+
+### Notes on environment variables
+- DATABASE_URL must use postgresql+asyncpg://...?ssl=require (omit channel_binding=require — asyncpg does not support it)
+- SYNC_DATABASE_URL must use postgresql+psycopg2://...?sslmode=require (Alembic only)
+- For Neon pooled connections, statement_cache_size=0 is required in code (already applied in backend/db/database.py) — do NOT remove
+- GOOGLE_CLIENT_ID in backend and NEXT_PUBLIC_GOOGLE_CLIENT_ID in frontend MUST be identical
 
 ---
 
@@ -805,7 +978,7 @@ Vercel generates a unique subdomain for every push (e.g. `bahasa-<hash>-noor-moh
 - NEVER touch venv/ or node_modules/
 - Always ask which specific file/function to focus on before starting
 - This is production-grade: always include error handling and input validation
-- Read .claude/STATUS.md and .claude/PHASES.md at the start of every session
+- ALWAYS read .claude/STATUS.md and .claude/PHASES.md at the start of EVERY session — this is enforced by the Session Start Protocol at the top of this file. Do not skip this step even for trivial-seeming tasks.
 - **Always check this file before starting any task**
 - **Never remove or replace a mandatory tech stack item**
 - **Always generate modular code** — each feature is its own module/router/service

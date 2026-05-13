@@ -45,7 +45,7 @@ _Status: ✅ Complete (services not fully verified)_
 - [x] Text generation, JSON generation, streaming, embeddings
 - [x] LangChain chains setup (services/langchain_service.py) ⚠️ not verified
 - [x] RAG pipeline with pgvector similarity search (services/rag_service.py) ⚠️ not verified
-- [x] Malay language corpus seeding — ⚠️ backend/data/malay_corpus.py MISSING
+- [x] Malay language corpus seeding — backend/data/malay_corpus.py (1155 lines, 60+ semantic chunks of Bahasa Melayu knowledge; file exists and is ingested to pgvector on first startup)
 - [x] POST /api/chatbot/message — SSE streaming response
 - [x] GET /api/chatbot/history — paginated message history
 - [x] GET /api/chatbot/sessions — list user's sessions
@@ -66,7 +66,7 @@ _Status: ✅ Complete_
 - [x] POST /api/courses/generate — generate course from topic
 - [x] Two-pass content filter: regex blocklist + Gemini moderation (utils/content_filter.py)
 - [x] Gemini course skeleton generation (Course → Modules → Classes)
-- [x] Parallel class content generation (asyncio.gather, Semaphore-limited to 3)
+- [x] Parallel class content generation (asyncio.gather, Semaphore-limited to 2 — `asyncio.Semaphore(2)` in course_service.py)
 - [x] Course persistence: courses, modules, classes tables
 - [x] Vocabulary saved to vocabulary_learned on class completion
 - [x] GET /api/courses/ — list user's courses (paginated)
@@ -97,9 +97,9 @@ _Status: ✅ Complete_
 _Status: ✅ Complete_
 
 - [x] GET /api/quiz/ — generate adaptive 15-question quiz from user's weak points
-- [x] POST /api/quiz/submit — score answers, update weak/strong points, recalculate CEFR
+- [x] POST /api/quiz/submit — score answers, update weak/strong points, recalculate BPS level
 - [x] Question mix: 6 MCQ + 6 fill-in-blank + 3 translation
-- [x] CEFR level recalculation after each attempt (A1/A2/B1/B2, rule-based from last 3 attempts)
+- [x] BPS level recalculation after each attempt (BPS-1/BPS-2/BPS-3/BPS-4, rule-based from last 3 attempts — avg ≥0.80=BPS-4, ≥0.60=BPS-3, ≥0.40=BPS-2, else BPS-1; function is named `_calculate_cefr_level()` internally but returns BPS labels)
 - [x] Redis cache (30min TTL per user)
 - [x] Score history tracked (standalone_quiz_attempts table)
 - [x] Frontend: adaptive quiz page (quiz/adaptive/page.tsx)
@@ -144,7 +144,7 @@ _Status: ✅ Complete — deployment pending_
 - [x] Sentry integration — backend: sentry_sdk.init() in main.py; frontend: @sentry/nextjs + sentry.*.config.ts + instrumentation.ts
 - [x] Health endpoint — /health returns Redis status; UptimeRobot can target this
 - [x] CORS locked to env var — ALLOWED_ORIGINS reads from .env (set to Vercel domain in production)
-- [x] JWT expiry verified — access token 30 min, refresh token 7 days
+- [x] JWT expiry verified — access token 15 min default (`ACCESS_TOKEN_EXPIRE_MINUTES` env var, default 15 in auth.py), refresh token 7 days; frontend auth.ts refreshes 60s before expiry
 - [x] Deployment config — backend/Procfile + backend/railway.toml; frontend/vercel.json updated
 - [x] Environment variables audit — added missing GOOGLE_CLIENT_ID to .env.example
 - [x] Frontend session cache — `getCachedSession()` in `frontend/lib/api.ts`; 60s TTL eliminates repeated `/api/auth/session` lookups on every API request
@@ -416,7 +416,7 @@ _Status: ✅ Complete (2026-04-07)_
 ---
 
 ## Phase 19 — Spelling Practice Game
-_Status: ✅ Complete + v2 redesign (2026-04-07)_
+_Status: ✅ Complete + v2 redesign (2026-04-07) + v3 difficulty modes (Session 76, 2026-05-13)_
 
 **Goal:** Gamified spelling practice using the user's own learned vocabulary.
 
@@ -1188,3 +1188,80 @@ Export `SUBSCRIPTION_PLANS` array and a `SubscriptionPlan` TypeScript interface.
 - [x] Clicking any "Start Free Trial" or "Subscribe" CTA opens `ComingSoonModal` with the specified copy
 - [x] `tsc --noEmit` returns 0 errors
 - [x] No existing feature in BahasaBot has changed behavior — chatbot, courses, quizzes, journey, dashboard, etc. all work identically to before this phase
+
+---
+
+## Phase 26 — Post-Phase 25 Features (Sessions 45–68)
+_Status: ✅ Complete_
+
+This phase groups standalone features added across Sessions 45–68 that each merited individual sessions but are not large enough to form a dedicated numbered phase.
+
+### Delete Account (Session 45)
+
+- [x] `backend/routers/profile.py` — POST /api/profile/delete-account: bcrypt password verify for email accounts, email-match confirm for Google OAuth accounts; cascade deletes all user data; signs out + redirects to /login
+- [x] `frontend/app/(dashboard)/settings/profile/page.tsx` — `DeleteAccountModal` with danger-zone card; confirmation input; signs user out after deletion
+- [x] Profile page: native_language switched from `<select>` to free-text `<input list="...">` with datalist; learning_goal switched from predefined `<select>` to `<textarea>` with 500-char counter (fixes display of Journey free-text goals)
+- [x] About page: developer name updated to "Noor Mohammad Sowan"
+
+### Weekly XP Leaderboard (Session 48)
+
+- [x] `backend/db/migrations/versions/*_xp_logs.py` — Alembic migration: new `xp_logs` table (id UUID, user_id FK, xp_amount INT, source VARCHAR, created_at TIMESTAMPTZ); revision `c1d2e3f4a5b6`
+- [x] `backend/models/xp_log.py` — XPLog ORM model
+- [x] `backend/services/gamification_service.py` — `record_learning_activity()` now inserts row into xp_logs on every XP award (fire-and-forget, never blocks)
+- [x] `backend/routers/dashboard.py` — GET /api/dashboard/leaderboard: top-10 users by SUM(xp_logs.xp_amount) for current ISO week (Monday–Sunday); includes current user's rank even if outside top-10; Redis-cached 5 min
+- [x] `frontend/components/dashboard/LeaderboardCard.tsx` — animated framer-motion podium for top 3 (2nd–1st–3rd height order); animated XP progress bars for ranks 4–10 relative to leader's XP; days-until-Monday countdown chip; empty/loading/outside-top-10 states
+- [x] `frontend/app/(dashboard)/dashboard/page.tsx` — LeaderboardCard added to Overview tab
+- [x] Global React Query staleTime reduced 5 min → 0 (stale-while-revalidate): data shown from cache instantly, background refetch runs immediately; class completion now also invalidates `["courses"]` + `["dashboard"]`; module quiz submission also invalidates both; AppSidebar profile staleTime 5 min → 60s
+
+### Daily Language Tips (Session 68)
+
+- [x] `backend/db/migrations/versions/*_tips_table.py` — Alembic migration: new `tips` table (id UUID, category VARCHAR, malay_word TEXT, english_meaning TEXT, example_sentence TEXT, cultural_note TEXT, created_at TIMESTAMPTZ)
+- [x] `backend/models/tip.py` — Tip ORM model (category: word_origin / common_mistakes / cultural_context / grammar)
+- [x] `backend/routers/tips.py` — GET /api/tips/random: returns one random tip; POST /api/tips/generate (admin-only): Gemini-generated tip batch insert
+- [x] `frontend/components/ui/TipToast.tsx` — framer-motion slide-in toast; 8s auto-dismiss with shrinking progress bar; SpeakerButton for Malay word pronunciation
+- [x] TipToast suppression: reads `["profile"]` React Query cache (no extra HTTP request); suppresses when `onboarding_completed === false` OR `has_seen_tour === false` — prevents tip appearing over onboarding modal, UI tour, or journey generation form during first-login flow
+- [x] `backend/main.py` + `frontend/lib/api.ts` + `frontend/lib/types.ts` — tips router registered; `tipsApi.getRandom()` added; `DailyTip` interface added
+
+### First-Login UI Tour (Session 68)
+
+- [x] `users.has_seen_tour` BOOLEAN column added (Alembic migration); ORM model updated
+- [x] Desktop tour: driver.js `1.4.0` spotlight tour triggered after onboarding completes; data-tour attribute targets for sidebar items; `blocked={showOnboarding}` guard prevents tour launching over onboarding modal
+- [x] Mobile tour (<768px): driver.js targets `[data-tour="sidebar"]` which is `hidden md:flex` — invisible on mobile. Replaced with full-screen card-slide flow: framer-motion directional slide animations, 8 feature cards (Menu Nav / Dashboard / AI Tutor / Courses / Quiz / Journey / Spelling Game / Settings), botanical-palette icon circles, pill progress dots (active widens), Skip top-right, Back/Next footer
+- [x] `useEffect` with `resize` listener detects mobile/desktop at runtime; desktop driver.js unchanged
+- [x] PATCH /api/profile/ called with `has_seen_tour: true` on tour completion; TipToast, gamification, and other "new user" suppressions gate on this flag
+
+---
+
+## Phase 27 — Games Hub + Word Match Game (Session 76 — 2026-05-09)
+_Status: ✅ Complete_
+
+**Goal:** Expand the Games section into a two-game hub. Add difficulty modes (Easy/Medium/Hard) to the existing Spelling game and build a new Word Match game (MCQ vocabulary recognition). Both games accessible from a new /games landing page.
+
+### DB Migration
+
+- [x] `backend/db/migrations/versions/20260509_1000_add_game_type_column.py` — adds `game_type VARCHAR(50) NOT NULL DEFAULT 'spelling'` to `spelling_game_scores` + composite index on (game_type, user_id); revision `d2e3f4a5b6c7`, down_revision `c1d2e3f4a5b6`
+
+### Backend — New Files
+
+- [x] `backend/services/word_match_service.py` — `get_word_match_question()`: weighted Leitner-box selection from vocabulary_learned, meaning-dedup distractors, shuffled 4 options, correct_index; `evaluate_word_match()`: case-insensitive comparison, updates Redis wrong-list; `save_word_match_session()`: delegates to `save_session_score(game_type='word_match')`; `get_word_match_best()`: filters spelling_game_scores by game_type; separate Redis keys: `wordmatch:wrong:{user_id}`, `wordmatch:seen:{user_id}`
+
+### Backend — Modified Files
+
+- [x] `backend/models/game.py` — `game_type: Mapped[str]` column added; docstring updated to reflect multi-game usage; SpellingGameScore.__repr__ updated
+- [x] `backend/services/spelling_service.py` — `XP_TABLE = {easy:1, medium:2, hard:4}`; `difficulty` param added to `evaluate_answer()`; `game_type` param added to `save_session_score()` (filters DB query by game_type to prevent date collision); `get_personal_best()` now explicitly filters `WHERE game_type='spelling'`
+- [x] `backend/routers/games.py` — complete rewrite: `SpellingSubmitRequest` gains `difficulty: Literal["easy","medium","hard"] = "medium"`; 4 new Word Match endpoints (GET /api/games/word-match/question, POST /api/games/word-match/submit, POST /api/games/word-match/session, GET /api/games/word-match/best); new Pydantic schemas `WordMatchQuestionResponse`, `WordMatchSubmitRequest`, `WordMatchSubmitResponse`; XP via `record_learning_activity(source="word_match_correct")`
+- [x] `backend/main.py` — `import backend.models.game` added to model-registration block (was missing)
+
+### Frontend — New Files
+
+- [x] `frontend/components/games/DifficultySelector.tsx` — shared pill button picker (Easy 20s / Medium 10s / Hard 5s); exports `DIFFICULTY_TIMER = {easy:20, medium:10, hard:5}`; shows timer + XP per pill; `disabled` prop locks during gameplay
+- [x] `frontend/components/games/WordMatchGame.tsx` — MCQ game mirroring SpellingGame state machine; 2×2 option grid; click-to-submit; correct → green + audio; wrong → red + reveal correct in green; timeout → reveal correct; session summary with accuracy, XP earned, mastered/review word lists
+- [x] `frontend/app/(dashboard)/games/page.tsx` — Games Hub: two `GameCard` components (Spelling Challenge + Word Match); clicking renders game inline (no page navigation); "← Back to Games" returns to card selector; dynamic imports for both game components
+
+### Frontend — Modified Files
+
+- [x] `frontend/components/games/SpellingGame.tsx` — v3: `difficulty` state + `difficultyRef` (timer callbacks read ref not state); `DifficultySelector` on start screen; timer urgency thresholds percentage-based (25%/50% of timeLimit); `timerBarColor` parameterised; API calls updated to renamed `getSpellingBest` / `endSpellingSession`; difficulty passed to `submitSpellingAnswer`; `SessionSummary` shows difficulty tag
+- [x] `frontend/lib/types.ts` — `GameDifficulty` union type; `WordMatchQuestion`, `WordMatchSubmitResponse`, `WordMatchPersonalBest` interfaces
+- [x] `frontend/lib/api.ts` — `gamesApi`: `submitSpellingAnswer` gains `difficulty` param; `endSession` renamed `endSpellingSession`; `getPersonalBest` renamed `getSpellingBest`; 4 new word-match functions added
+- [x] `frontend/components/nav/AppSidebar.tsx` — Games link href `/games/spelling` → `/games`
+- [x] `frontend/app/(dashboard)/layout.tsx` — prefetch `/games/spelling` → `/games`
