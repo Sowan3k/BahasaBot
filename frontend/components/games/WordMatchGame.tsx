@@ -14,7 +14,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Volume2, Zap, Trophy, RotateCcw, CheckCircle2, XCircle,
-  BookOpen, Clock, Play, ChevronRight, X, Shuffle,
+  AlertCircle, BookOpen, Clock, Play, ChevronRight, X, Shuffle,
 } from "lucide-react";
 import { gamesApi } from "@/lib/api";
 import type { GameDifficulty, WordMatchQuestion, WordMatchSubmitResponse, WordMatchPersonalBest } from "@/lib/types";
@@ -131,7 +131,8 @@ export function WordMatchGame() {
     | "submitted"
     | "timeout"
     | "summary"
-    | "empty";
+    | "empty"
+    | "error";
 
   // option button visual state
   type OptionState = "idle" | "correct" | "wrong" | "reveal";
@@ -157,6 +158,7 @@ export function WordMatchGame() {
   const [isSubmitting, setIsSubmitting]     = useState(false);
 
   const { speak, isSupported } = usePronunciation();
+  const fetchRetryRef = useRef(0);
   const timeLimit = DIFFICULTY_TIMER[difficulty];
 
   // ── Timer ─────────────────────────────────────────────────────────────────
@@ -224,6 +226,7 @@ export function WordMatchGame() {
 
     try {
       const res = await gamesApi.getWordMatchQuestion();
+      fetchRetryRef.current = 0;
       setQuestion(res.data);
       setPhase("ready");
       startTimer();
@@ -232,7 +235,13 @@ export function WordMatchGame() {
       if (axiosErr?.response?.status === 404) {
         setPhase("empty");
       } else {
-        setTimeout(fetchNextQuestion, 2000);
+        fetchRetryRef.current += 1;
+        if (fetchRetryRef.current >= 3) {
+          fetchRetryRef.current = 0;
+          setPhase("error");
+        } else {
+          setTimeout(fetchNextQuestion, 2000);
+        }
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -291,9 +300,12 @@ export function WordMatchGame() {
       const newAttempted = wordsAttempted + 1;
       setWordsAttempted(newAttempted);
 
+      // Compute finalCorrect before any setState so the session-end call uses
+      // the right value regardless of React batching the state update.
+      const finalCorrect = evalResult.correct ? wordsCorrect + 1 : wordsCorrect;
+
       if (evalResult.correct) {
-        const newCorrect = wordsCorrect + 1;
-        setWordsCorrect(newCorrect);
+        setWordsCorrect(finalCorrect);
         setXpEarned((prev) => prev + evalResult.xp_awarded);
         setMasteredWords((prev) =>
           prev.includes(question.word) ? prev : [...prev, question.word]
@@ -308,10 +320,7 @@ export function WordMatchGame() {
 
       if (newAttempted >= SESSION_SIZE) {
         try {
-          await gamesApi.endWordMatchSession(
-            evalResult.correct ? wordsCorrect + 1 : wordsCorrect,
-            newAttempted
-          );
+          await gamesApi.endWordMatchSession(finalCorrect, newAttempted);
         } catch { /* non-blocking */ }
         setTimeout(() => setPhase("summary"), 1800);
       }
@@ -378,6 +387,22 @@ export function WordMatchGame() {
           3 unique answer choices. Complete a course class or chat with the AI Tutor first!
         </p>
         <Button variant="outline" onClick={resetSession}>Check Again</Button>
+      </div>
+    );
+  }
+
+  if (phase === "error") {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-full gap-4 py-8 px-4 text-center max-w-sm mx-auto">
+        <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center">
+          <AlertCircle className="w-8 h-8 text-destructive" />
+        </div>
+        <h3 className="text-lg font-semibold">Connection error</h3>
+        <p className="text-muted-foreground text-sm leading-relaxed">
+          Could not load the next question after several attempts. Check your connection and try again.
+        </p>
+        <Button onClick={fetchNextQuestion}>Try Again</Button>
+        <Button variant="outline" onClick={resetSession}>Back to Start</Button>
       </div>
     );
   }

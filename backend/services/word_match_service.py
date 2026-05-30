@@ -28,7 +28,7 @@ import random
 import uuid
 from datetime import date
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.models.game import SpellingGameScore
@@ -229,18 +229,22 @@ async def save_word_match_session(
 
 
 async def get_word_match_best(user_id: uuid.UUID, db: AsyncSession) -> dict:
-    """Return the user's best Word Match session score."""
+    """
+    Return the user's best Word Match session score.
+    Uses ORDER BY + LIMIT 1 so both columns come from the same row, avoiding
+    the cross-row mismatch that MAX(col_a), MAX(col_b) would produce.
+    """
     result = await db.execute(
-        select(
-            func.max(SpellingGameScore.words_correct).label("best_correct"),
-            func.max(SpellingGameScore.words_attempted).label("best_attempted"),
-        ).where(
+        select(SpellingGameScore)
+        .where(
             SpellingGameScore.user_id == user_id,
             SpellingGameScore.game_type == "word_match",
         )
+        .order_by(SpellingGameScore.words_correct.desc())
+        .limit(1)
     )
-    row = result.one()
+    row = result.scalar_one_or_none()
     return {
-        "best_correct": row.best_correct or 0,
-        "best_attempted": row.best_attempted or 0,
+        "best_correct": row.words_correct if row else 0,
+        "best_attempted": row.words_attempted if row else 0,
     }

@@ -26,7 +26,7 @@ import re
 import uuid
 from datetime import date
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.models.game import SpellingGameScore
@@ -112,7 +112,7 @@ async def get_next_word(
     )
     all_vocab: list[VocabularyLearned] = result.scalars().all()
 
-    if len(all_vocab) < 1:
+    if len(all_vocab) < 3:
         return None
 
     # Load Redis state
@@ -299,19 +299,22 @@ async def save_session_score(
 async def get_personal_best(user_id: uuid.UUID, db: AsyncSession) -> dict:
     """
     Return the user's best spelling game score (most words correct in a session).
+    Uses ORDER BY + LIMIT 1 so both columns come from the same row (the row
+    with the highest words_correct), avoiding the cross-row mismatch that
+    MAX(col_a), MAX(col_b) would produce.
     Filters to game_type='spelling' to avoid mixing with word_match scores.
     """
     result = await db.execute(
-        select(
-            func.max(SpellingGameScore.words_correct).label("best_correct"),
-            func.max(SpellingGameScore.words_attempted).label("best_attempted"),
-        ).where(
+        select(SpellingGameScore)
+        .where(
             SpellingGameScore.user_id == user_id,
             SpellingGameScore.game_type == "spelling",
         )
+        .order_by(SpellingGameScore.words_correct.desc())
+        .limit(1)
     )
-    row = result.one()
+    row = result.scalar_one_or_none()
     return {
-        "best_correct": row.best_correct or 0,
-        "best_attempted": row.best_attempted or 0,
+        "best_correct": row.words_correct if row else 0,
+        "best_attempted": row.words_attempted if row else 0,
     }

@@ -152,7 +152,8 @@ export function SpellingGame() {
     | "submitted"
     | "timeout"
     | "summary"
-    | "empty";
+    | "empty"
+    | "error";
 
   const [phase, setPhase] = useState<Phase>("start");
   const [difficulty, setDifficulty] = useState<GameDifficulty>("medium");
@@ -178,6 +179,7 @@ export function SpellingGame() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const fetchRetryRef = useRef(0);
   const { speak, isSupported } = usePronunciation();
 
   // Keep a ref so timer callbacks always read the current limit
@@ -271,6 +273,7 @@ export function SpellingGame() {
 
     try {
       const res = await gamesApi.getSpellingWord();
+      fetchRetryRef.current = 0;
       setCurrentWord(res.data);
       setPhase("ready");
       startTimer();
@@ -279,7 +282,13 @@ export function SpellingGame() {
       if (axiosErr?.response?.status === 404) {
         setPhase("empty");
       } else {
-        setTimeout(fetchNextWord, 2000);
+        fetchRetryRef.current += 1;
+        if (fetchRetryRef.current >= 3) {
+          fetchRetryRef.current = 0;
+          setPhase("error");
+        } else {
+          setTimeout(fetchNextWord, 2000);
+        }
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -328,9 +337,12 @@ export function SpellingGame() {
       const newAttempted = wordsAttempted + 1;
       setWordsAttempted(newAttempted);
 
+      // Compute finalCorrect before any setState so the session-end call uses
+      // the right value regardless of React batching the state update.
+      const finalCorrect = evalResult.correct ? wordsCorrect + 1 : wordsCorrect;
+
       if (evalResult.correct) {
-        const newCorrect = wordsCorrect + 1;
-        setWordsCorrect(newCorrect);
+        setWordsCorrect(finalCorrect);
         setXpEarned((prev) => prev + evalResult.xp_awarded);
         const newCombo = combo + 1;
         setCombo(newCombo);
@@ -349,10 +361,7 @@ export function SpellingGame() {
 
       if (newAttempted >= SESSION_SIZE) {
         try {
-          await gamesApi.endSpellingSession(
-            evalResult.correct ? wordsCorrect + 1 : wordsCorrect,
-            newAttempted
-          );
+          await gamesApi.endSpellingSession(finalCorrect, newAttempted);
         } catch { /* non-blocking */ }
         setTimeout(() => setPhase("summary"), 1800);
       }
@@ -435,6 +444,22 @@ export function SpellingGame() {
           vocabulary. Come back once you have learned your first word!
         </p>
         <Button variant="outline" onClick={resetSession}>Check Again</Button>
+      </div>
+    );
+  }
+
+  if (phase === "error") {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-full gap-4 py-8 px-4 text-center max-w-sm mx-auto">
+        <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center">
+          <AlertCircle className="w-8 h-8 text-destructive" />
+        </div>
+        <h3 className="text-lg font-semibold">Connection error</h3>
+        <p className="text-muted-foreground text-sm leading-relaxed">
+          Could not load the next word after several attempts. Check your connection and try again.
+        </p>
+        <Button onClick={fetchNextWord}>Try Again</Button>
+        <Button variant="outline" onClick={resetSession}>Back to Start</Button>
       </div>
     );
   }
