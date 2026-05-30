@@ -12,7 +12,7 @@ interface ThemeContextValue {
 }
 
 export const ThemeContext = createContext<ThemeContextValue>({
-  theme: "light",
+  theme: "dark",
   toggle: () => {},
   setTheme: () => {},
 });
@@ -26,7 +26,7 @@ export function useTheme() {
  *  Reads localStorage / system preference on mount, applies the class,
  *  and returns reactive state + toggle + setTheme for the context value. */
 export function useThemeState(): ThemeContextValue {
-  const [theme, setThemeState] = useState<Theme>("light");
+  const [theme, setThemeState] = useState<Theme>("dark");
 
   useEffect(() => {
     const saved = localStorage.getItem("theme") as Theme | null;

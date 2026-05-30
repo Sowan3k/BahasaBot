@@ -125,8 +125,8 @@ export default function RegisterPage() {
       sessionStorage.removeItem("chatbot_messages");
       sessionStorage.removeItem("chatbot_session_id");
       sessionStorage.removeItem("tip_dismissed");
-      // Force light mode on every sign-in — matches login page behaviour
-      setTheme("light");
+      // Force dark mode on every sign-in — matches login page behaviour
+      setTheme("dark");
       if (data.requires_password_setup) {
         // New Google account — show mandatory set-password modal before dashboard
         setShowSetPassword(true);

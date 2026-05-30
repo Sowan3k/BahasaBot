@@ -91,8 +91,8 @@ export default function LoginPage() {
       sessionStorage.removeItem("chatbot_messages");
       sessionStorage.removeItem("chatbot_session_id");
       sessionStorage.removeItem("tip_dismissed");
-      // Force light mode on every sign-in — updates React context + localStorage + DOM in one call
-      setTheme("light");
+      // Force dark mode on every sign-in — updates React context + localStorage + DOM in one call
+      setTheme("dark");
       setRedirecting(true);
       router.push("/dashboard");
     } catch (err: unknown) {
@@ -131,8 +131,8 @@ export default function LoginPage() {
       sessionStorage.removeItem("chatbot_messages");
       sessionStorage.removeItem("chatbot_session_id");
       sessionStorage.removeItem("tip_dismissed");
-      // Force light mode on every sign-in — updates React context + localStorage + DOM in one call
-      setTheme("light");
+      // Force dark mode on every sign-in — updates React context + localStorage + DOM in one call
+      setTheme("dark");
       if (data.requires_password_setup) {
         // Account has no password yet — show mandatory set-password modal before dashboard
         setShowSetPassword(true);
