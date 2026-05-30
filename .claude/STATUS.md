@@ -33,8 +33,8 @@ _Update this file at the end of every session_
 | Chat History Page (Phase 21) | ✅ Complete + Session Delete | /chatbot/history; ChatHistoryList (paginated, title from first user msg, message count); session detail read-only view; History button in chatbot header; backend ChatSessionResponse extended with title + message_count; DELETE /api/chatbot/sessions/{id} (ownership-verified, cascade messages, preserves vocab/grammar); Trash2 icon + inline confirm strip per row; error banner with 4s auto-dismiss |
 | Image Generation — Nano Banana 2 (Phase 22) | ✅ Complete + Personalised banners + Cover endpoint (Session 36) + Streak milestone cards | image_service.py uses Gemini REST API via httpx; list endpoint returns has_cover bool (no blob); GET /api/courses/{id}/cover serves raw bytes with Cache-Control: immutable (browser caches permanently); course detail page hero banner; journey banners use gender + age_range for personalised subject prompt. generate_streak_milestone_card() added to image_service.py; _generate_and_save_streak_milestone_card() background task added to gamification_service.py — streak_milestone notifications now include image_url, matching the BPS milestone card pattern in quiz_service.py. |
 | Course Deduplication + Clone System (Phase 24) | ✅ Complete + Race condition fix (Session 77) | topic_slug + is_template + cloned_from columns on courses; Alembic migration applied; _make_topic_slug(), _find_template(), _clone_course() in course_service.py; generate_course() checks for template before calling Gemini — clone path completes in milliseconds; frontend/router unchanged; **Session 77**: unique partial index `idx_courses_template_per_slug` added + IntegrityError rollback guard in generate_course(); job status endpoint now validates user ownership; _safe_json_list() guards vocabulary_json/examples_json before DB insert |
-| Spelling Practice Game (Phase 19) | ✅ Complete + v3 difficulty modes (Session 76) | Leitner-box word selection; Levenshtein fuzzy matching; Start screen → 3-2-1 countdown → per-word timer (green→yellow→red pulse) → Time's Up screen with Next/Start Over; combo multiplier; session summary; keyboard shortcuts (Enter/Space/Escape); personal best. **v3**: DifficultySelector added to start screen — Easy (20s/+1XP), Medium (10s/+2XP), Hard (5s/+4XP); timer bar colour thresholds scale with difficulty; difficulty locked during gameplay via difficultyRef. |
-| Word Match Game (Phase 27 / Session 76) | ✅ Complete | MCQ vocabulary recognition game: shows Malay word → user picks English meaning from 4 shuffled options. Min 4 vocab entries required. Leitner-box weighted selection + meaning deduplication for distractors. DifficultySelector (Easy 20s/+1XP, Medium 10s/+1XP, Hard 5s/+2XP). Correct answer auto-plays audio; wrong answer reveals correct option in green. Session summary with accuracy, XP, mastered/review word lists. Separate Redis keys (wordmatch:wrong:{}, wordmatch:seen:{}). Personal best tracked separately from Spelling in spelling_game_scores (game_type='word_match'). |
+| Spelling Practice Game (Phase 19) | ✅ Complete + v3 difficulty modes (Session 76) + Bug fixes (Session 78) | Leitner-box word selection; Levenshtein fuzzy matching; Start screen → 3-2-1 countdown → per-word timer (green→yellow→red pulse) → Time's Up screen with Next/Start Over; combo multiplier; session summary; keyboard shortcuts (Enter/Space/Escape); personal best. **v3**: DifficultySelector added to start screen — Easy (20s/+1XP), Medium (10s/+2XP), Hard (5s/+4XP); timer bar colour thresholds scale with difficulty; difficulty locked during gameplay via difficultyRef. **Session 78 fixes**: stale closure on final question corrected (finalCorrect computed before setState); error phase shown after 3 consecutive network failures (was infinite silent retry); personal best query uses ORDER BY DESC LIMIT 1 (was dual-MAX mixing rows); minimum vocab guard raised from <1 to <3. |
+| Word Match Game (Phase 27 / Session 76) | ✅ Complete + Bug fixes (Session 78) | MCQ vocabulary recognition game: shows Malay word → user picks English meaning from 4 shuffled options. Min 4 vocab entries required. Leitner-box weighted selection + meaning deduplication for distractors. DifficultySelector (Easy 20s/+1XP, Medium 10s/+1XP, Hard 5s/+2XP). Correct answer auto-plays audio; wrong answer reveals correct option in green. Session summary with accuracy, XP, mastered/review word lists. Separate Redis keys (wordmatch:wrong:{}, wordmatch:seen:{}). Personal best tracked separately from Spelling in spelling_game_scores (game_type='word_match'). **Session 78 fixes**: same stale closure + error phase + personal best query fixes applied as Spelling. |
 | Games Hub (Phase 27 / Session 76) | ✅ Complete | /games hub page: two game cards (Spelling Challenge + Word Match), clicking renders game inline; "← Back to Games" returns to card selector. Sidebar link updated /games/spelling → /games. layout.tsx prefetch updated to /games. |
 | Chatbot vocab pipeline fix | ✅ Fixed | _extract_and_save() now opens its own AsyncSessionLocal session — asyncio.create_task with request-scoped session was silently failing after SSE stream ended; vocab/grammar now reliably saved after every chatbot response |
 | Frontend Performance Optimizations | ✅ Complete | Session cache in api.ts (60s TTL, eliminates /api/auth/session round-trip on every API call); profile fetch deduplication via shared useQuery(['profile']) key in AppSidebar + OnboardingChecker; login router.refresh() race condition removed; redirect loading overlay added |
@@ -73,6 +73,35 @@ _Update this file at the end of every session_
 
 ## ✅ Fixed Issues (Session 13)
 - **Course covers not appearing (2026-04-13):** Session 12 correctly fixed `image_service.py` (httpx REST API) and `course_service.py` (retroactive healing + `asyncio.create_task`), but the backend was **never restarted** after those changes were made. Uvicorn started at 08:19, files modified at 14:22–14:28 — old broken code was still running. Fix: killed old uvicorn PIDs (18316, 25012), started fresh process on port 8000. Also manually ran `_generate_and_save_cover()` for all 3 existing courses that had `cover_image_url = NULL`. All verified: Gemini REST API returns JPEG (~1.1 MB base64, ~17s), DB save works, `GET /api/courses/` returns cover correctly. **Important**: after any code change to the backend, the uvicorn process MUST be restarted manually (no `--reload` flag in prod mode).
+
+---
+
+## What Was Done This Session (2026-05-31 Session 78 — Games audit + 7 bug fixes)
+
+### Goals
+Full audit of both games (Spelling Practice + Word Match) — purpose, data flow, first-time UX, long-term behaviour, and any bugs. Fix all issues found.
+
+### Files Modified
+- `frontend/components/games/SpellingGame.tsx` — Bug 1: stale closure fixed (finalCorrect computed before setState); Bug 7: error phase after 3 network retries (was infinite silent retry); Phase type now includes "error"
+- `frontend/components/games/WordMatchGame.tsx` — same Bug 1 + Bug 7 fixes; AlertCircle import added
+- `backend/services/spelling_service.py` — Bug 3: minimum vocab guard raised from <1 to <3; Bug 2: get_personal_best uses ORDER BY DESC LIMIT 1 instead of dual-MAX; remove unused func import
+- `backend/services/word_match_service.py` — Bug 2: get_word_match_best uses ORDER BY DESC LIMIT 1 instead of dual-MAX; remove unused func import
+
+### Bugs Fixed
+| Severity | Bug | Fix |
+|---|---|---|
+| CRITICAL | Stale closure on final question in both games — session saved 1 correct short when 10th answer was right | finalCorrect computed from state before any setState call |
+| MEDIUM | Personal best query mixed rows — MAX(correct) and MAX(attempted) came from different sessions | Replaced with ORDER BY words_correct DESC LIMIT 1 |
+| MEDIUM | Spelling minimum vocab guard was <1, docstring says <3 — 1–2 word pool causes infinite loading | Changed to <3 |
+| MEDIUM | Infinite silent retry on network error — user saw indefinite spinner | Hard stop after 3 attempts → error phase with Try Again button |
+
+### Verified
+- tsc --noEmit: 0 errors
+- py_compile: OK
+- Full E2E API test: login → spelling word → correct submit → session save 8/10 → personal best 8/10 confirmed paired → lower session (7/10) does not overwrite → word match question → correct submit → session 9/10 → word match best 9/10 confirmed paired
+
+### Commits
+- `2c80e57` — fix: games audit — 7 bugs fixed across Spelling + Word Match (4 files)
 
 ---
 
