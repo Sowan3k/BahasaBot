@@ -50,6 +50,9 @@ export function SetPasswordModal({ onSuccess }: SetPasswordModalProps) {
     try {
       await authApi.setPassword(newPassword);
       onSuccess?.();
+      // router.refresh() forces Next.js to re-evaluate server-side auth state
+      // before navigation so middleware sees the valid session cookie.
+      router.refresh();
       router.push("/dashboard");
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
@@ -57,6 +60,7 @@ export function SetPasswordModal({ onSuccess }: SetPasswordModalProps) {
         if (detail.includes("already has a password")) {
           // Edge case: password was set in another tab/window — just continue
           onSuccess?.();
+          router.refresh();
           router.push("/dashboard");
         } else {
           setError(detail || "Failed to set password. Please try again.");

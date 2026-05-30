@@ -22,6 +22,7 @@ from uuid import UUID
 _CONTENT_SEMAPHORE = asyncio.Semaphore(2)
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -37,6 +38,12 @@ logger = get_logger(__name__)
 _JOB_TTL = 3600
 
 
+def _safe_json_list(value: object) -> list:
+    """Return value if it is a list, otherwise return []. Guards against Gemini
+    returning null or an unexpected type for vocabulary_json / examples_json."""
+    return value if isinstance(value, list) else []
+
+
 async def _update_job(
     job_id: str,
     status: str,
@@ -44,18 +51,22 @@ async def _update_job(
     step: str,
     course_id: str | None = None,
     error: str | None = None,
+    user_id: str | None = None,
 ) -> None:
     """
     Write background job state to Redis so the frontend can poll it.
 
     key: course_job:{job_id}
     Falls back silently if Redis is unavailable (course still generates normally).
+    user_id is stored so get_job_status() can verify ownership.
     """
     payload: dict = {"job_id": job_id, "status": status, "progress": progress, "step": step}
     if course_id is not None:
         payload["course_id"] = course_id
     if error is not None:
         payload["error"] = error
+    if user_id is not None:
+        payload["user_id"] = user_id
     await cache_set(f"course_job:{job_id}", payload, ttl=_JOB_TTL)
 
 
@@ -555,8 +566,8 @@ async def save_course(
                 module_id=module.id,
                 title=cls_data["title"],
                 content=content_data.get("content", f"# {cls_data['title']}\n\nLesson content."),
-                vocabulary_json=content_data.get("vocabulary_json", []),
-                examples_json=content_data.get("examples_json", []),
+                vocabulary_json=_safe_json_list(content_data.get("vocabulary_json")),
+                examples_json=_safe_json_list(content_data.get("examples_json")),
                 order_index=cls_idx + 1,
             )
             db.add(cls)
@@ -712,13 +723,12 @@ async def generate_course(
     # Mark as template so future requests for the same topic+level clone this course.
     # Re-check under the same session in case a concurrent request just created one —
     # if so, leave is_template=False on our copy (harmless; the existing template wins).
+    course.topic_slug = slug
     existing_template = await _find_template(slug, db)
     if existing_template is None:
-        course.topic_slug = slug
         course.is_template = True
         logger.info("Course marked as template", slug=slug, course_id=str(course.id))
     else:
-        course.topic_slug = slug
         course.is_template = False
         logger.info(
             "Template already exists — course saved as user copy",
@@ -726,7 +736,20 @@ async def generate_course(
             template_id=str(existing_template.id),
             course_id=str(course.id),
         )
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        # Two concurrent slow-path requests raced — the unique partial index on
+        # (topic_slug) WHERE is_template=true rejected our template claim.
+        # Roll back, re-fetch the winner, and save our course as a plain copy.
+        await db.rollback()
+        course.is_template = False
+        logger.warning(
+            "Template race: IntegrityError — saving as user copy",
+            slug=slug,
+            course_id=str(course.id),
+        )
+        await db.commit()
 
     # Log course generation activity (fire-and-forget — failure must not abort course save)
     try:

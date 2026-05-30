@@ -127,8 +127,9 @@ async def generate_course_endpoint(
     job_id = str(uuid.uuid4())
     level = current_user.proficiency_level or "BPS-1"
 
-    # Write initial "pending" state so the first poll doesn't return 404
-    await _update_job(job_id, "pending", 0, "Queued…")
+    # Write initial "pending" state so the first poll doesn't return 404.
+    # Store user_id so get_job_status() can verify the requester owns this job.
+    await _update_job(job_id, "pending", 0, "Queued…", user_id=str(current_user.id))
 
     background_tasks.add_task(
         _run_generation_task,
@@ -164,7 +165,14 @@ async def get_job_status(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Job not found or expired",
         )
-    return JobStatusResponse(**data)
+    # Verify the requesting user owns this job (user_id written at job creation).
+    # Older jobs (created before this change) have no user_id — allow them through.
+    stored_uid = data.get("user_id")
+    if stored_uid is not None and stored_uid != str(current_user.id):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized")
+    # Strip internal fields not part of the response schema before unpacking.
+    response_data = {k: v for k, v in data.items() if k != "user_id"}
+    return JobStatusResponse(**response_data)
 
 
 # ── List courses ───────────────────────────────────────────────────────────────

@@ -15,9 +15,15 @@ import { User, Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 
 import { AuthCard } from "@/components/ui/auth-card";
 import { SetPasswordModal } from "@/components/auth/SetPasswordModal";
+import { useTheme } from "@/lib/use-theme";
 import type { TokenResponse } from "@/lib/types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+// Guard: if NEXT_PUBLIC_GOOGLE_CLIENT_ID is absent the GIS overlay renders with
+// clientId="" and Google immediately returns "missing client_id". Show a clear
+// disabled state instead.
+const GOOGLE_CLIENT_ID_PRESENT = Boolean(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID);
 
 // ── Zod schema ──────────────────────────────────────────────────────────────
 
@@ -61,8 +67,10 @@ async function storeSession(data: TokenResponse): Promise<boolean> {
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { setTheme } = useTheme();
   const [serverError, setServerError] = useState<string | null>(null);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
@@ -117,10 +125,13 @@ export default function RegisterPage() {
       sessionStorage.removeItem("chatbot_messages");
       sessionStorage.removeItem("chatbot_session_id");
       sessionStorage.removeItem("tip_dismissed");
+      // Force light mode on every sign-in — matches login page behaviour
+      setTheme("light");
       if (data.requires_password_setup) {
         // New Google account — show mandatory set-password modal before dashboard
         setShowSetPassword(true);
       } else {
+        setRedirecting(true);
         router.push("/dashboard");
       }
     } catch {
@@ -137,6 +148,24 @@ export default function RegisterPage() {
   // Mandatory set-password step for new Google sign-ups with no password
   if (showSetPassword) {
     return <SetPasswordModal />;
+  }
+
+  // Full-screen loading overlay shown while navigating to dashboard after sign-up
+  if (redirecting) {
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-background">
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: "spring", duration: 0.5 }}
+          className="relative w-14 h-14 rounded-2xl shadow-lg"
+        >
+          <Image src="/Logo new only box (1).svg" alt="BahasaBot" fill sizes="56px" className="object-contain" />
+        </motion.div>
+        <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm text-muted-foreground">Setting up your account…</p>
+      </div>
+    );
   }
 
   return (
@@ -316,11 +345,12 @@ export default function RegisterPage() {
         <div className="relative h-10">
           <button
             type="button"
-            disabled={isLoading}
+            disabled={isLoading || !GOOGLE_CLIENT_ID_PRESENT}
+            title={!GOOGLE_CLIENT_ID_PRESENT ? "Google sign-up is not configured" : undefined}
             className="w-full flex items-center justify-center gap-3 h-10 rounded-lg
                        border border-white/15 bg-white/[0.06] hover:bg-white/10
                        text-white/75 hover:text-white text-sm font-medium
-                       transition-all duration-200 disabled:opacity-40"
+                       transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -331,8 +361,11 @@ export default function RegisterPage() {
             Continue with Google
           </button>
 
-          {/* Transparent GIS overlay — same pattern as login page */}
-          {!isLoading && (
+          {/* Transparent GIS overlay — positioned over button so the user's click
+              lands on the GIS iframe. opacity:0.001 keeps pointer-events active
+              while staying visually invisible. overflow:hidden clips to our size.
+              Only rendered when the client ID env var is present. */}
+          {GOOGLE_CLIENT_ID_PRESENT && !isLoading && (
             <div
               style={{
                 position: "absolute",
