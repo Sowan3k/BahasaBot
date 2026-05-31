@@ -253,20 +253,20 @@ export function AppSidebar() {
 
         {/* ── Logo area ── */}
         <div
-          className={`flex items-center h-16 shrink-0 ${
+          className={`flex items-center h-[84px] pt-3 shrink-0 ${
             collapsed ? "justify-center px-0" : "justify-start px-3"
           }`}
         >
           {collapsed ? (
             <Link href="/dashboard" className="flex items-center justify-center">
-              <div className="relative w-9 h-9 flex-shrink-0">
-                <Image src="/Logo new only box (1).svg" alt="BahasaBot" fill sizes="36px" className="object-contain" />
+              <div className="relative w-10 h-10 flex-shrink-0">
+                <Image src="/Logo new only box (1).svg" alt="BahasaBot" fill sizes="40px" className="object-contain" />
               </div>
             </Link>
           ) : (
-            /* Full-width logo — fills the space left by the removed ThemeToggle */
+            /* Full-width logo */
             <Link href="/dashboard" className="flex items-center w-full">
-              <Image src="/Logo new (1).svg" width={176} height={52} alt="BahasaBot" className="object-contain" />
+              <Image src="/Logo new (1).svg" width={176} height={60} alt="BahasaBot" className="object-contain" />
             </Link>
           )}
         </div>

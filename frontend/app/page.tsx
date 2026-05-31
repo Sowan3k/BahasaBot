@@ -1,15 +1,11 @@
-// Root page — redirects based on auth state:
-//   authenticated   → /dashboard
-//   unauthenticated → /login
-
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { LandingPage } from "@/components/landing/LandingPage";
 
 export default async function Home() {
   const session = await auth();
   if (session) {
     redirect("/dashboard");
-  } else {
-    redirect("/login");
   }
+  return <LandingPage />;
 }

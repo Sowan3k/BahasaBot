@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- Hanging strings -->
+  <line x1="45" y1="0" x2="45" y2="52" stroke="#a18f5c" stroke-width="1" opacity="0.5"/>
+  <line x1="100" y1="0" x2="100" y2="42" stroke="#a18f5c" stroke-width="1" opacity="0.5"/>
+  <line x1="155" y1="0" x2="155" y2="52" stroke="#a18f5c" stroke-width="1" opacity="0.5"/>
+  <!-- Left lantern -->
+  <ellipse cx="45" cy="68" rx="16" ry="22" fill="#c47a5c" opacity="0.85"/>
+  <ellipse cx="45" cy="68" rx="12" ry="18" fill="#c47a5c"/>
+  <rect x="35" y="50" width="20" height="5" rx="2" fill="#a18f5c"/>
+  <rect x="35" y="85" width="20" height="5" rx="2" fill="#a18f5c"/>
+  <!-- Left lantern glow -->
+  <ellipse cx="45" cy="68" rx="20" ry="27" fill="#c47a5c" opacity="0.12"/>
+  <!-- Left lantern ribs -->
+  <line x1="36" y1="55" x2="36" y2="88" stroke="#a18f5c" stroke-width="0.8" opacity="0.5"/>
+  <line x1="40" y1="52" x2="40" y2="91" stroke="#a18f5c" stroke-width="0.8" opacity="0.5"/>
+  <line x1="45" y1="51" x2="45" y2="92" stroke="#a18f5c" stroke-width="0.8" opacity="0.5"/>
+  <line x1="50" y1="52" x2="50" y2="91" stroke="#a18f5c" stroke-width="0.8" opacity="0.5"/>
+  <line x1="54" y1="55" x2="54" y2="88" stroke="#a18f5c" stroke-width="0.8" opacity="0.5"/>
+  <!-- Left tassel -->
+  <line x1="42" y1="90" x2="40" y2="110" stroke="#c4af7c" stroke-width="1" opacity="0.7"/>
+  <line x1="45" y1="90" x2="45" y2="112" stroke="#c4af7c" stroke-width="1" opacity="0.7"/>
+  <line x1="48" y1="90" x2="50" y2="110" stroke="#c4af7c" stroke-width="1" opacity="0.7"/>
+
+  <!-- Center lantern (bigger) -->
+  <ellipse cx="100" cy="78" rx="20" ry="28" fill="#a18f5c" opacity="0.85"/>
+  <ellipse cx="100" cy="78" rx="16" ry="24" fill="#a18f5c"/>
+  <rect x="87" y="58" width="26" height="6" rx="3" fill="#c4af7c"/>
+  <rect x="87" y="100" width="26" height="6" rx="3" fill="#c4af7c"/>
+  <ellipse cx="100" cy="78" rx="25" ry="33" fill="#a18f5c" opacity="0.1"/>
+  <!-- Center lantern ribs -->
+  <line x1="88" y1="63" x2="88" y2="105" stroke="#c4af7c" stroke-width="0.8" opacity="0.5"/>
+  <line x1="93" y1="60" x2="93" y2="108" stroke="#c4af7c" stroke-width="0.8" opacity="0.5"/>
+  <line x1="100" y1="59" x2="100" y2="109" stroke="#c4af7c" stroke-width="0.8" opacity="0.5"/>
+  <line x1="107" y1="60" x2="107" y2="108" stroke="#c4af7c" stroke-width="0.8" opacity="0.5"/>
+  <line x1="112" y1="63" x2="112" y2="105" stroke="#c4af7c" stroke-width="0.8" opacity="0.5"/>
+  <!-- Center tassel -->
+  <line x1="96" y1="106" x2="93" y2="130" stroke="#a18f5c" stroke-width="1" opacity="0.7"/>
+  <line x1="100" y1="106" x2="100" y2="133" stroke="#a18f5c" stroke-width="1" opacity="0.7"/>
+  <line x1="104" y1="106" x2="107" y2="130" stroke="#a18f5c" stroke-width="1" opacity="0.7"/>
+
+  <!-- Right lantern -->
+  <ellipse cx="155" cy="68" rx="16" ry="22" fill="#2d7d7d" opacity="0.85"/>
+  <ellipse cx="155" cy="68" rx="12" ry="18" fill="#2d7d7d"/>
+  <rect x="145" y="50" width="20" height="5" rx="2" fill="#3d9d9d"/>
+  <rect x="145" y="85" width="20" height="5" rx="2" fill="#3d9d9d"/>
+  <ellipse cx="155" cy="68" rx="20" ry="27" fill="#2d7d7d" opacity="0.1"/>
+  <line x1="146" y1="55" x2="146" y2="88" stroke="#3d9d9d" stroke-width="0.8" opacity="0.5"/>
+  <line x1="150" y1="52" x2="150" y2="91" stroke="#3d9d9d" stroke-width="0.8" opacity="0.5"/>
+  <line x1="155" y1="51" x2="155" y2="92" stroke="#3d9d9d" stroke-width="0.8" opacity="0.5"/>
+  <line x1="160" y1="52" x2="160" y2="91" stroke="#3d9d9d" stroke-width="0.8" opacity="0.5"/>
+  <line x1="164" y1="55" x2="164" y2="88" stroke="#3d9d9d" stroke-width="0.8" opacity="0.5"/>
+  <line x1="152" y1="90" x2="150" y2="110" stroke="#3d9d9d" stroke-width="1" opacity="0.7"/>
+  <line x1="155" y1="90" x2="155" y2="112" stroke="#3d9d9d" stroke-width="1" opacity="0.7"/>
+  <line x1="158" y1="90" x2="160" y2="110" stroke="#3d9d9d" stroke-width="1" opacity="0.7"/>
+
+  <!-- Decorative stars/sparkles -->
+  <circle cx="22" cy="35" r="2" fill="#f5e6d3" opacity="0.6"/>
+  <circle cx="180" cy="28" r="2" fill="#f5e6d3" opacity="0.6"/>
+  <circle cx="70" cy="22" r="1.5" fill="#c4af7c" opacity="0.7"/>
+  <circle cx="130" cy="18" r="1.5" fill="#c4af7c" opacity="0.7"/>
+
+  <!-- Bottom flowers / petals -->
+  <circle cx="40" cy="165" r="10" fill="#c47a5c" opacity="0.3"/>
+  <circle cx="40" cy="155" r="6" fill="#c47a5c" opacity="0.4"/>
+  <circle cx="31" cy="162" r="6" fill="#c47a5c" opacity="0.35"/>
+  <circle cx="49" cy="162" r="6" fill="#c47a5c" opacity="0.35"/>
+  <circle cx="40" cy="165" r="4" fill="#f5e6d3" opacity="0.6"/>
+
+  <circle cx="100" cy="170" r="12" fill="#a18f5c" opacity="0.25"/>
+  <circle cx="100" cy="159" r="7" fill="#a18f5c" opacity="0.4"/>
+  <circle cx="90" cy="167" r="7" fill="#a18f5c" opacity="0.35"/>
+  <circle cx="110" cy="167" r="7" fill="#a18f5c" opacity="0.35"/>
+  <circle cx="100" cy="158" r="5" fill="#f5e6d3" opacity="0.5"/>
+
+  <circle cx="160" cy="165" r="10" fill="#2d7d7d" opacity="0.3"/>
+  <circle cx="160" cy="155" r="6" fill="#2d7d7d" opacity="0.4"/>
+  <circle cx="151" cy="162" r="6" fill="#2d7d7d" opacity="0.35"/>
+  <circle cx="169" cy="162" r="6" fill="#2d7d7d" opacity="0.35"/>
+  <circle cx="160" cy="163" r="4" fill="#f5e6d3" opacity="0.5"/>
+</svg>

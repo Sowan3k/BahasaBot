@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- Open dictionary / vocabulary book -->
+  <!-- Book shadow -->
+  <ellipse cx="100" cy="175" rx="70" ry="12" fill="#000" opacity="0.2"/>
+
+  <!-- Left page -->
+  <path d="M25 40 Q25 35 30 34 L100 28 L100 172 L30 178 Q25 178 25 173 Z" fill="#f5e6d3" opacity="0.88"/>
+  <!-- Right page -->
+  <path d="M175 40 Q175 35 170 34 L100 28 L100 172 L170 178 Q175 178 175 173 Z" fill="white" opacity="0.85"/>
+
+  <!-- Book spine -->
+  <rect x="97" y="28" width="6" height="144" fill="#a18f5c" opacity="0.6" rx="1"/>
+  <!-- Spine shadow -->
+  <rect x="97" y="28" width="3" height="144" fill="#000" opacity="0.1"/>
+
+  <!-- Book cover color (top edge visible) -->
+  <rect x="25" y="34" width="150" height="10" rx="3" fill="#2d7d7d" opacity="0.4"/>
+
+  <!-- LEFT PAGE CONTENT: Bahasa Melayu words -->
+  <!-- Page header -->
+  <rect x="32" y="50" width="55" height="4" rx="2" fill="#2d7d7d" opacity="0.4"/>
+  <line x1="32" y1="58" x2="87" y2="58" stroke="#a18f5c" stroke-width="0.8" opacity="0.4"/>
+
+  <!-- Word entry 1: "Selamat" -->
+  <rect x="32" y="66" width="38" height="5" rx="2.5" fill="#2d7d7d" opacity="0.75"/>
+  <rect x="32" y="74" width="55" height="3" rx="1.5" fill="#5c4b3e" opacity="0.3"/>
+  <rect x="32" y="79" width="48" height="3" rx="1.5" fill="#5c4b3e" opacity="0.25"/>
+
+  <!-- Word entry 2: "Terima kasih" -->
+  <rect x="32" y="90" width="50" height="5" rx="2.5" fill="#c47a5c" opacity="0.65"/>
+  <rect x="32" y="98" width="55" height="3" rx="1.5" fill="#5c4b3e" opacity="0.3"/>
+  <rect x="32" y="103" width="42" height="3" rx="1.5" fill="#5c4b3e" opacity="0.25"/>
+
+  <!-- Word entry 3: "Makan" -->
+  <rect x="32" y="114" width="30" height="5" rx="2.5" fill="#8a9f7b" opacity="0.75"/>
+  <rect x="32" y="122" width="55" height="3" rx="1.5" fill="#5c4b3e" opacity="0.3"/>
+  <rect x="32" y="127" width="50" height="3" rx="1.5" fill="#5c4b3e" opacity="0.25"/>
+
+  <!-- Word entry 4: "Belajar" -->
+  <rect x="32" y="138" width="35" height="5" rx="2.5" fill="#a18f5c" opacity="0.65"/>
+  <rect x="32" y="146" width="55" height="3" rx="1.5" fill="#5c4b3e" opacity="0.3"/>
+  <rect x="32" y="151" width="45" height="3" rx="1.5" fill="#5c4b3e" opacity="0.25"/>
+
+  <!-- Page number left -->
+  <rect x="55" y="162" width="15" height="3" rx="1.5" fill="#5c4b3e" opacity="0.25"/>
+
+  <!-- RIGHT PAGE CONTENT: English translations + speaker icons -->
+  <!-- Page header -->
+  <rect x="110" y="50" width="55" height="4" rx="2" fill="#a18f5c" opacity="0.35"/>
+  <line x1="110" y1="58" x2="165" y2="58" stroke="#a18f5c" stroke-width="0.8" opacity="0.4"/>
+
+  <!-- Translation 1: "Hello / Safe" -->
+  <rect x="110" y="66" width="48" height="4" rx="2" fill="#5c4b3e" opacity="0.4"/>
+  <!-- Speaker icon -->
+  <rect x="160" y="64" width="6" height="8" rx="1" fill="#2d7d7d" opacity="0.5"/>
+  <path d="M163 64 Q168 68 163 72" stroke="#2d7d7d" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.5"/>
+  <rect x="110" y="74" width="38" height="3" rx="1.5" fill="#5c4b3e" opacity="0.2"/>
+
+  <!-- Translation 2: "Thank you" -->
+  <rect x="110" y="90" width="45" height="4" rx="2" fill="#5c4b3e" opacity="0.4"/>
+  <rect x="160" y="88" width="6" height="8" rx="1" fill="#c47a5c" opacity="0.5"/>
+  <path d="M163 88 Q168 92 163 96" stroke="#c47a5c" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.5"/>
+  <rect x="110" y="98" width="52" height="3" rx="1.5" fill="#5c4b3e" opacity="0.2"/>
+
+  <!-- Translation 3: "Eat / Food" -->
+  <rect x="110" y="114" width="35" height="4" rx="2" fill="#5c4b3e" opacity="0.4"/>
+  <rect x="160" y="112" width="6" height="8" rx="1" fill="#8a9f7b" opacity="0.5"/>
+  <path d="M163 112 Q168 116 163 120" stroke="#8a9f7b" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.5"/>
+  <rect x="110" y="122" width="42" height="3" rx="1.5" fill="#5c4b3e" opacity="0.2"/>
+
+  <!-- Translation 4: "To study / Learn" -->
+  <rect x="110" y="138" width="52" height="4" rx="2" fill="#5c4b3e" opacity="0.4"/>
+  <rect x="160" y="136" width="6" height="8" rx="1" fill="#a18f5c" opacity="0.5"/>
+  <path d="M163 136 Q168 140 163 144" stroke="#a18f5c" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.5"/>
+  <rect x="110" y="146" width="44" height="3" rx="1.5" fill="#5c4b3e" opacity="0.2"/>
+
+  <!-- Page number right -->
+  <rect x="128" y="162" width="15" height="3" rx="1.5" fill="#5c4b3e" opacity="0.25"/>
+
+  <!-- Pencil on book -->
+  <line x1="158" y1="158" x2="190" y2="148" stroke="#c4af7c" stroke-width="4" stroke-linecap="round" opacity="0.65"/>
+  <polygon points="190,148 196,144 194,152" fill="#c47a5c" opacity="0.65"/>
+  <line x1="155" y1="159" x2="160" y2="157" stroke="#5c3a1e" stroke-width="3" stroke-linecap="round" opacity="0.5"/>
+
+  <!-- Bookmark ribbon -->
+  <rect x="140" y="28" width="8" height="30" fill="#c47a5c" opacity="0.7" rx="1"/>
+  <polygon points="140,58 144,52 148,58" fill="#a83830" opacity="0.6"/>
+</svg>

@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- Sky gradient hint -->
+  <circle cx="165" cy="32" r="18" fill="#a18f5c" opacity="0.2"/>
+  <circle cx="165" cy="32" r="12" fill="#c4af7c" opacity="0.15"/>
+  <!-- Stars -->
+  <circle cx="20" cy="22" r="1.2" fill="#f5e6d3" opacity="0.6"/>
+  <circle cx="50" cy="12" r="1" fill="#f5e6d3" opacity="0.5"/>
+  <circle cx="85" cy="18" r="1" fill="#f5e6d3" opacity="0.4"/>
+  <circle cx="130" cy="10" r="1.2" fill="#f5e6d3" opacity="0.6"/>
+
+  <!-- Background jungle trees (large blobs) -->
+  <ellipse cx="18" cy="80" rx="22" ry="35" fill="#8a9f7b" opacity="0.2"/>
+  <ellipse cx="182" cy="75" rx="22" ry="30" fill="#8a9f7b" opacity="0.2"/>
+  <ellipse cx="145" cy="90" rx="18" ry="28" fill="#8a9f7b" opacity="0.15"/>
+
+  <!-- House: main body on stilts -->
+  <!-- Stilts -->
+  <rect x="52" y="120" width="7" height="52" rx="3" fill="#c4af7c" opacity="0.7"/>
+  <rect x="73" y="118" width="7" height="54" rx="3" fill="#c4af7c" opacity="0.7"/>
+  <rect x="120" y="118" width="7" height="54" rx="3" fill="#c4af7c" opacity="0.7"/>
+  <rect x="141" y="120" width="7" height="52" rx="3" fill="#c4af7c" opacity="0.7"/>
+  <!-- Stilt braces -->
+  <line x1="52" y1="145" x2="80" y2="140" stroke="#c4af7c" stroke-width="1.5" opacity="0.4"/>
+  <line x1="120" y1="140" x2="148" y2="145" stroke="#c4af7c" stroke-width="1.5" opacity="0.4"/>
+
+  <!-- House floor platform -->
+  <rect x="45" y="112" width="110" height="10" rx="3" fill="#a18f5c" opacity="0.7"/>
+
+  <!-- House walls -->
+  <rect x="48" y="72" width="104" height="42" rx="3" fill="#c4af7c" opacity="0.55"/>
+  <rect x="52" y="76" width="96" height="36" rx="2" fill="#a18f5c" opacity="0.4"/>
+
+  <!-- House windows -->
+  <rect x="60" y="82" width="22" height="18" rx="3" fill="#2d7d7d" opacity="0.6"/>
+  <line x1="71" y1="82" x2="71" y2="100" stroke="#f5e6d3" stroke-width="1" opacity="0.3"/>
+  <line x1="60" y1="91" x2="82" y2="91" stroke="#f5e6d3" stroke-width="1" opacity="0.3"/>
+  <rect x="118" y="82" width="22" height="18" rx="3" fill="#2d7d7d" opacity="0.6"/>
+  <line x1="129" y1="82" x2="129" y2="100" stroke="#f5e6d3" stroke-width="1" opacity="0.3"/>
+  <line x1="118" y1="91" x2="140" y2="91" stroke="#f5e6d3" stroke-width="1" opacity="0.3"/>
+  <!-- Door -->
+  <rect x="91" y="90" width="18" height="22" rx="3" fill="#8a9f7b" opacity="0.5"/>
+  <circle cx="107" cy="101" r="1.5" fill="#f5e6d3" opacity="0.6"/>
+
+  <!-- Roof -->
+  <polygon points="40,74 100,30 160,74" fill="#c47a5c" opacity="0.65"/>
+  <polygon points="45,74 100,35 155,74" fill="#c47a5c" opacity="0.3"/>
+  <!-- Roof ridge -->
+  <line x1="100" y1="30" x2="100" y2="74" stroke="#a18f5c" stroke-width="1" opacity="0.4"/>
+
+  <!-- Palm trees -->
+  <!-- Left palm -->
+  <line x1="28" y1="185" x2="32" y2="155" stroke="#8a9f7b" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
+  <ellipse cx="28" cy="153" rx="16" ry="10" fill="#8a9f7b" opacity="0.5"/>
+  <line x1="20" y1="150" x2="35" y2="148" stroke="#8a9f7b" stroke-width="2" opacity="0.4"/>
+  <line x1="18" y1="157" x2="34" y2="152" stroke="#8a9f7b" stroke-width="2" opacity="0.35"/>
+  <!-- Coconut -->
+  <circle cx="31" cy="156" r="3" fill="#a18f5c" opacity="0.7"/>
+
+  <!-- Right palm -->
+  <line x1="172" y1="185" x2="168" y2="158" stroke="#8a9f7b" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
+  <ellipse cx="172" cy="156" rx="15" ry="9" fill="#8a9f7b" opacity="0.5"/>
+  <line x1="180" y1="153" x2="165" y2="151" stroke="#8a9f7b" stroke-width="2" opacity="0.4"/>
+  <line x1="182" y1="160" x2="166" y2="155" stroke="#8a9f7b" stroke-width="2" opacity="0.35"/>
+
+  <!-- River / reflection -->
+  <ellipse cx="100" cy="188" rx="80" ry="12" fill="#2d7d7d" opacity="0.2"/>
+  <line x1="10" y1="183" x2="190" y2="183" stroke="#2d7d7d" stroke-width="1.5" opacity="0.25"/>
+  <!-- Reflections of stilts -->
+  <rect x="56" y="183" width="4" height="12" rx="2" fill="#2d7d7d" opacity="0.15"/>
+  <rect x="77" y="183" width="4" height="14" rx="2" fill="#2d7d7d" opacity="0.15"/>
+  <rect x="119" y="183" width="4" height="14" rx="2" fill="#2d7d7d" opacity="0.15"/>
+  <rect x="143" y="183" width="4" height="12" rx="2" fill="#2d7d7d" opacity="0.15"/>
+</svg>

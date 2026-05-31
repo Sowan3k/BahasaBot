@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- Banana leaf shape -->
+  <ellipse cx="100" cy="108" rx="88" ry="72" fill="#8a9f7b" opacity="0.18"/>
+  <ellipse cx="100" cy="108" rx="80" ry="64" fill="#8a9f7b" opacity="0.1"/>
+  <!-- Central vein -->
+  <line x1="100" y1="38" x2="100" y2="178" stroke="#8a9f7b" stroke-width="2.5" stroke-linecap="round" opacity="0.4"/>
+  <!-- Side veins -->
+  <line x1="100" y1="75" x2="48" y2="95" stroke="#8a9f7b" stroke-width="1" opacity="0.3"/>
+  <line x1="100" y1="92" x2="42" y2="110" stroke="#8a9f7b" stroke-width="1" opacity="0.3"/>
+  <line x1="100" y1="109" x2="46" y2="126" stroke="#8a9f7b" stroke-width="1" opacity="0.3"/>
+  <line x1="100" y1="75" x2="152" y2="95" stroke="#8a9f7b" stroke-width="1" opacity="0.3"/>
+  <line x1="100" y1="92" x2="158" y2="110" stroke="#8a9f7b" stroke-width="1" opacity="0.3"/>
+  <line x1="100" y1="109" x2="154" y2="126" stroke="#8a9f7b" stroke-width="1" opacity="0.3"/>
+  <!-- Plate shadow -->
+  <ellipse cx="100" cy="132" rx="52" ry="10" fill="#000" opacity="0.2"/>
+  <!-- Rice mound -->
+  <ellipse cx="100" cy="105" rx="30" ry="24" fill="#f5e6d3" opacity="0.88"/>
+  <ellipse cx="100" cy="98" rx="22" ry="15" fill="white" opacity="0.65"/>
+  <!-- Rice grain texture -->
+  <ellipse cx="93" cy="95" rx="2" ry="1.2" fill="#c4af7c" opacity="0.35" transform="rotate(-20,93,95)"/>
+  <ellipse cx="102" cy="92" rx="2" ry="1.2" fill="#c4af7c" opacity="0.35" transform="rotate(10,102,92)"/>
+  <ellipse cx="110" cy="97" rx="2" ry="1.2" fill="#c4af7c" opacity="0.35" transform="rotate(-15,110,97)"/>
+  <ellipse cx="97" cy="101" rx="2" ry="1.2" fill="#c4af7c" opacity="0.35"/>
+  <ellipse cx="106" cy="103" rx="2" ry="1.2" fill="#c4af7c" opacity="0.35" transform="rotate(25,106,103)"/>
+  <!-- Fried egg -->
+  <ellipse cx="66" cy="100" rx="18" ry="14" fill="#a18f5c" opacity="0.65"/>
+  <ellipse cx="66" cy="99" rx="13" ry="10" fill="#f5e6d3" opacity="0.92"/>
+  <circle cx="66" cy="99" r="5" fill="#c47a5c" opacity="0.85"/>
+  <!-- Sambal (red chili paste) -->
+  <ellipse cx="134" cy="100" rx="16" ry="13" fill="#c47a5c" opacity="0.8"/>
+  <ellipse cx="134" cy="99" rx="11" ry="8" fill="#c47a5c"/>
+  <!-- Cucumber slices -->
+  <ellipse cx="73" cy="124" rx="11" ry="8" fill="#8a9f7b" opacity="0.7"/>
+  <ellipse cx="84" cy="126" rx="11" ry="8" fill="#8a9f7b" opacity="0.6"/>
+  <line x1="73" y1="116" x2="73" y2="132" stroke="#5a7f5a" stroke-width="0.8" opacity="0.6"/>
+  <line x1="84" y1="118" x2="84" y2="134" stroke="#5a7f5a" stroke-width="0.8" opacity="0.6"/>
+  <!-- Peanuts -->
+  <ellipse cx="126" cy="122" rx="5" ry="4" fill="#c4af7c" opacity="0.85"/>
+  <ellipse cx="134" cy="125" rx="5" ry="4" fill="#c4af7c" opacity="0.75"/>
+  <ellipse cx="140" cy="120" rx="5" ry="4" fill="#c4af7c" opacity="0.85"/>
+  <ellipse cx="129" cy="130" rx="5" ry="4" fill="#a18f5c" opacity="0.75"/>
+  <!-- Ikan bilis (anchovies) -->
+  <rect x="96" y="122" width="9" height="3" rx="1.5" fill="#c4af7c" opacity="0.6"/>
+  <rect x="92" y="128" width="8" height="3" rx="1.5" fill="#c4af7c" opacity="0.5"/>
+  <rect x="104" y="127" width="7" height="3" rx="1.5" fill="#a18f5c" opacity="0.6"/>
+  <!-- Teh tarik cup (top right) -->
+  <rect x="150" y="68" width="22" height="28" rx="4" fill="#a18f5c" opacity="0.7"/>
+  <rect x="152" y="72" width="18" height="8" rx="2" fill="#c4af7c" opacity="0.4"/>
+  <ellipse cx="161" cy="68" rx="11" ry="4" fill="#a18f5c" opacity="0.5"/>
+  <!-- Steam from cup -->
+  <path d="M155 62 Q153 55 157 50" stroke="#f5e6d3" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.35"/>
+  <path d="M162 60 Q160 53 164 47" stroke="#f5e6d3" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.3"/>
+</svg>

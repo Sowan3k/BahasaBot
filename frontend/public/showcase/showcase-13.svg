@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- Penang Bridge (Jambatan Pulau Pinang) at dusk -->
+  <defs>
+    <linearGradient id="pb-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#0d1830"/>
+      <stop offset="55%"  stop-color="#1e3050"/>
+      <stop offset="100%" stop-color="#2a4870"/>
+    </linearGradient>
+    <linearGradient id="pb-sea" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#1a3a5c"/>
+      <stop offset="100%" stop-color="#0d1e30"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Sky -->
+  <rect width="200" height="115" fill="url(#pb-sky)"/>
+
+  <!-- Stars -->
+  <circle cx="15"  cy="14" r="1"   fill="#f5e6d3" opacity="0.7"/>
+  <circle cx="50"  cy="8"  r="0.8" fill="#f5e6d3" opacity="0.5"/>
+  <circle cx="110" cy="18" r="1.2" fill="#f5e6d3" opacity="0.75"/>
+  <circle cx="165" cy="10" r="1"   fill="#f5e6d3" opacity="0.6"/>
+  <circle cx="185" cy="25" r="0.8" fill="#f5e6d3" opacity="0.5"/>
+  <circle cx="35"  cy="35" r="0.7" fill="#f5e6d3" opacity="0.4"/>
+  <circle cx="180" cy="42" r="0.9" fill="#f5e6d3" opacity="0.45"/>
+  <circle cx="75"  cy="28" r="0.6" fill="#f5e6d3" opacity="0.4"/>
+
+  <!-- Moon -->
+  <circle cx="168" cy="25" r="12" fill="#c4b870" opacity="0.55"/>
+  <circle cx="173" cy="21" r="10" fill="#0d1830" opacity="0.55"/>
+
+  <!-- Distant Penang Island silhouette (left horizon) -->
+  <ellipse cx="30"  cy="110" rx="35" ry="12" fill="#0f2035" opacity="0.8"/>
+  <ellipse cx="10"  cy="113" rx="18" ry="8"  fill="#0f2035" opacity="0.75"/>
+  <!-- Some distant building lights on island -->
+  <circle cx="20"  cy="103" r="1"   fill="#f5e6d3" opacity="0.3"/>
+  <circle cx="30"  cy="101" r="0.8" fill="#f5e6d3" opacity="0.25"/>
+  <circle cx="40"  cy="104" r="1"   fill="#f5e6d3" opacity="0.3"/>
+
+  <!-- Mainland silhouette (right horizon) -->
+  <rect x="155" y="106" width="45" height="15" fill="#0f2035" opacity="0.75"/>
+  <rect x="165" y="100" width="12" height="15" fill="#0f2035" opacity="0.7"/>
+  <rect x="182" y="103" width="8"  height="12" fill="#0f2035" opacity="0.65"/>
+
+  <!-- Sea -->
+  <rect x="0" y="115" width="200" height="85" fill="url(#pb-sea)"/>
+
+  <!-- Sea ripples -->
+  <path d="M0 125 Q50 122 100 125 Q150 128 200 125" stroke="#2d5a7a" stroke-width="0.8" fill="none" opacity="0.4"/>
+  <path d="M0 135 Q50 132 100 135 Q150 138 200 135" stroke="#2d5a7a" stroke-width="0.8" fill="none" opacity="0.3"/>
+  <path d="M0 148 Q50 145 100 148 Q150 151 200 148" stroke="#2d5a7a" stroke-width="0.8" fill="none" opacity="0.25"/>
+  <path d="M0 162 Q60 159 120 162 Q170 165 200 162" stroke="#2d5a7a" stroke-width="0.8" fill="none" opacity="0.2"/>
+
+  <!-- ── BRIDGE DECK ── -->
+  <!-- Approach viaduct (lower section left) -->
+  <rect x="0"   y="112" width="55"  height="8" rx="2" fill="#2a3a50" opacity="0.9"/>
+  <!-- Approach viaduct piers (left) -->
+  <rect x="12"  y="120" width="5" height="40" rx="2" fill="#1e2e42" opacity="0.85"/>
+  <rect x="30"  y="120" width="5" height="55" rx="2" fill="#1e2e42" opacity="0.85"/>
+  <rect x="48"  y="120" width="5" height="65" rx="2" fill="#1e2e42" opacity="0.85"/>
+
+  <!-- Main cable-stayed span deck -->
+  <rect x="55"  y="110" width="90"  height="10" rx="2" fill="#344a62" opacity="0.95"/>
+  <!-- Road divider line -->
+  <rect x="55"  y="114" width="90"  height="2"  rx="1" fill="#c4af7c" opacity="0.3"/>
+
+  <!-- Approach viaduct (lower section right) -->
+  <rect x="145" y="112" width="55"  height="8" rx="2" fill="#2a3a50" opacity="0.9"/>
+  <!-- Approach viaduct piers (right) -->
+  <rect x="152" y="120" width="5" height="65" rx="2" fill="#1e2e42" opacity="0.85"/>
+  <rect x="168" y="120" width="5" height="55" rx="2" fill="#1e2e42" opacity="0.85"/>
+  <rect x="184" y="120" width="5" height="40" rx="2" fill="#1e2e42" opacity="0.85"/>
+
+  <!-- ── LEFT CABLE-STAYED PYLON ── (centered at x=78) -->
+  <!-- Pylon tower (two legs meeting at top) -->
+  <path d="M74 115 L74 40 L82 40 L82 115 Z" fill="#2a4060" opacity="0.95"/>
+  <!-- Pylon crossbeam -->
+  <rect x="70" y="60" width="20" height="5" rx="1" fill="#344a72" opacity="0.9"/>
+  <rect x="72" y="75" width="16" height="4" rx="1" fill="#344a72" opacity="0.8"/>
+  <!-- Pylon peak -->
+  <polygon points="78,32 74,42 82,42" fill="#2a4060" opacity="0.95"/>
+  <!-- Pylon tip light -->
+  <circle cx="78" cy="31" r="2.5" fill="#f5a030" opacity="0.7"/>
+
+  <!-- Left pylon cable stays -->
+  <line x1="78" y1="36" x2="55"  y2="115" stroke="#4a7090" stroke-width="1.2" opacity="0.7"/>
+  <line x1="78" y1="36" x2="62"  y2="115" stroke="#4a7090" stroke-width="1.2" opacity="0.7"/>
+  <line x1="78" y1="36" x2="70"  y2="115" stroke="#4a7090" stroke-width="1.2" opacity="0.7"/>
+  <line x1="78" y1="36" x2="86"  y2="115" stroke="#4a7090" stroke-width="1.2" opacity="0.7"/>
+  <line x1="78" y1="36" x2="95"  y2="115" stroke="#4a7090" stroke-width="1.2" opacity="0.7"/>
+  <line x1="78" y1="36" x2="105" y2="115" stroke="#4a7090" stroke-width="1.0" opacity="0.55"/>
+
+  <!-- ── RIGHT CABLE-STAYED PYLON ── (centered at x=122) -->
+  <path d="M118 115 L118 40 L126 40 L126 115 Z" fill="#2a4060" opacity="0.95"/>
+  <rect x="114" y="60" width="20" height="5" rx="1" fill="#344a72" opacity="0.9"/>
+  <rect x="116" y="75" width="16" height="4" rx="1" fill="#344a72" opacity="0.8"/>
+  <polygon points="122,32 118,42 126,42" fill="#2a4060" opacity="0.95"/>
+  <circle cx="122" cy="31" r="2.5" fill="#f5a030" opacity="0.7"/>
+
+  <!-- Right pylon cable stays -->
+  <line x1="122" y1="36" x2="95"  y2="115" stroke="#4a7090" stroke-width="1.0" opacity="0.55"/>
+  <line x1="122" y1="36" x2="105" y2="115" stroke="#4a7090" stroke-width="1.2" opacity="0.7"/>
+  <line x1="122" y1="36" x2="114" y2="115" stroke="#4a7090" stroke-width="1.2" opacity="0.7"/>
+  <line x1="122" y1="36" x2="130" y2="115" stroke="#4a7090" stroke-width="1.2" opacity="0.7"/>
+  <line x1="122" y1="36" x2="138" y2="115" stroke="#4a7090" stroke-width="1.2" opacity="0.7"/>
+  <line x1="122" y1="36" x2="145" y2="115" stroke="#4a7090" stroke-width="1.2" opacity="0.7"/>
+
+  <!-- Road lights on bridge deck -->
+  <circle cx="60"  cy="111" r="1.5" fill="#f5e030" opacity="0.55"/>
+  <circle cx="75"  cy="111" r="1.5" fill="#f5e030" opacity="0.55"/>
+  <circle cx="90"  cy="111" r="1.5" fill="#f5e030" opacity="0.55"/>
+  <circle cx="105" cy="111" r="1.5" fill="#f5e030" opacity="0.55"/>
+  <circle cx="120" cy="111" r="1.5" fill="#f5e030" opacity="0.55"/>
+  <circle cx="135" cy="111" r="1.5" fill="#f5e030" opacity="0.55"/>
+
+  <!-- Vehicles on bridge (implied small rectangles) -->
+  <rect x="64" y="112" width="6" height="4" rx="1" fill="#f5a030" opacity="0.45"/>
+  <rect x="98"  y="112" width="6" height="4" rx="1" fill="#f5e6d3" opacity="0.4"/>
+  <rect x="132" y="112" width="6" height="4" rx="1" fill="#f5a030" opacity="0.4"/>
+
+  <!-- Bridge reflections in water (ghosted) -->
+  <line x1="78"  y1="120" x2="78"  y2="160" stroke="#4a7090" stroke-width="1.5" opacity="0.12"/>
+  <line x1="122" y1="120" x2="122" y2="170" stroke="#4a7090" stroke-width="1.5" opacity="0.12"/>
+  <rect x="55"  y="120" width="90" height="4" rx="1" fill="#344a62" opacity="0.08"/>
+
+  <!-- Pylon light glow on water -->
+  <ellipse cx="78"  cy="125" rx="10" ry="5" fill="#f5a030" opacity="0.08"/>
+  <ellipse cx="122" cy="125" rx="10" ry="5" fill="#f5a030" opacity="0.08"/>
+</svg>

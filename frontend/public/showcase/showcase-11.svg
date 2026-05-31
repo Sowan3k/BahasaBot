@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- BPS Level up / Achievement card -->
+
+  <!-- Glow background -->
+  <circle cx="100" cy="95" r="70" fill="#a18f5c" opacity="0.06"/>
+  <circle cx="100" cy="95" r="50" fill="#a18f5c" opacity="0.05"/>
+
+  <!-- Achievement card body -->
+  <rect x="25" y="30" width="150" height="130" rx="12" fill="#1a2d30" opacity="0.85"/>
+  <rect x="28" y="33" width="144" height="124" rx="10" fill="#0d1f22" opacity="0.9"/>
+  <!-- Card border glow -->
+  <rect x="25" y="30" width="150" height="130" rx="12" fill="none" stroke="#a18f5c" stroke-width="1.5" opacity="0.5"/>
+
+  <!-- Top banner strip -->
+  <rect x="28" y="33" width="144" height="30" rx="10" fill="#a18f5c" opacity="0.35"/>
+  <rect x="28" y="48" width="144" height="15" fill="#a18f5c" opacity="0.15"/>
+
+  <!-- Star / trophy medal icon -->
+  <circle cx="100" cy="75" r="24" fill="#a18f5c" opacity="0.2"/>
+  <circle cx="100" cy="75" r="20" fill="#1a2d30" opacity="0.9"/>
+  <circle cx="100" cy="75" r="18" fill="#a18f5c" opacity="0.25"/>
+  <!-- Star shape -->
+  <polygon
+    points="100,57 103.8,69.5 117,69.5 106.6,77.3 110.4,89.8 100,82 89.6,89.8 93.4,77.3 83,69.5 96.2,69.5"
+    fill="#c4af7c" opacity="0.9"/>
+  <!-- Inner star -->
+  <polygon
+    points="100,62 102.5,70.5 111.5,70.5 104.5,75.8 107,84.3 100,79 93,84.3 95.5,75.8 88.5,70.5 97.5,70.5"
+    fill="#f5e6d3" opacity="0.5"/>
+
+  <!-- Medal ribbon -->
+  <rect x="95" y="93" width="10" height="16" rx="2" fill="#c47a5c" opacity="0.7"/>
+  <rect x="95" y="93" width="10" height="4" rx="1" fill="#a83830" opacity="0.5"/>
+
+  <!-- BPS Level text area -->
+  <rect x="45" y="120" width="110" height="28" rx="6" fill="#a18f5c" opacity="0.15"/>
+  <!-- "BPS-3" label -->
+  <rect x="68" y="125" width="20" height="7" rx="3.5" fill="#a18f5c" opacity="0.5"/>
+  <rect x="92" y="125" width="5" height="7" rx="2.5" fill="#c4af7c" opacity="0.6"/>
+  <rect x="100" y="125" width="8" height="7" rx="3.5" fill="#c4af7c" opacity="0.7"/>
+  <!-- "Intermediate" label below -->
+  <rect x="58" y="135" width="84" height="5" rx="2.5" fill="#f5e6d3" opacity="0.3"/>
+
+  <!-- Progress bar at bottom of card -->
+  <rect x="38" y="152" width="124" height="5" rx="2.5" fill="#1a4f50" opacity="0.7"/>
+  <rect x="38" y="152" width="86" height="5" rx="2.5" fill="#a18f5c" opacity="0.7"/>
+  <!-- Progress glow -->
+  <rect x="38" y="152" width="86" height="5" rx="2.5" fill="#c4af7c" opacity="0.2"/>
+
+  <!-- Confetti / sparkle elements outside card -->
+  <circle cx="20" cy="40" r="4" fill="#c47a5c" opacity="0.6"/>
+  <circle cx="182" cy="55" r="3.5" fill="#8a9f7b" opacity="0.6"/>
+  <circle cx="15" cy="130" r="3" fill="#a18f5c" opacity="0.5"/>
+  <circle cx="188" cy="145" r="4" fill="#c4af7c" opacity="0.5"/>
+  <!-- Confetti rectangles -->
+  <rect x="14" y="70" width="8" height="4" rx="2" fill="#c4af7c" opacity="0.5" transform="rotate(-25,14,70)"/>
+  <rect x="178" y="90" width="8" height="4" rx="2" fill="#c47a5c" opacity="0.5" transform="rotate(20,178,90)"/>
+  <rect x="10" y="160" width="6" height="3" rx="1.5" fill="#8a9f7b" opacity="0.5" transform="rotate(15,10,160)"/>
+  <rect x="186" y="35" width="6" height="3" rx="1.5" fill="#8a9f7b" opacity="0.4" transform="rotate(-30,186,35)"/>
+
+  <!-- Sparkle lines -->
+  <line x1="25" y1="25" x2="35" y2="18" stroke="#c4af7c" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+  <line x1="30" y1="25" x2="30" y2="15" stroke="#c4af7c" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+  <line x1="35" y1="25" x2="42" y2="20" stroke="#c4af7c" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+
+  <line x1="168" y1="165" x2="175" y2="172" stroke="#a18f5c" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+  <line x1="174" y1="163" x2="180" y2="163" stroke="#a18f5c" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+
+  <!-- XP badge -->
+  <circle cx="160" cy="42" r="14" fill="#2d7d7d" opacity="0.5"/>
+  <circle cx="160" cy="42" r="11" fill="#1a4f50" opacity="0.8"/>
+  <rect x="152" y="39" width="16" height="5" rx="2.5" fill="#f5e6d3" opacity="0.4"/>
+  <!-- "+XP" shape -->
+  <rect x="153" y="40" width="6" height="4" rx="1" fill="#8a9f7b" opacity="0.6"/>
+  <rect x="161" y="39" width="8" height="5" rx="1" fill="#c4af7c" opacity="0.7"/>
+</svg>

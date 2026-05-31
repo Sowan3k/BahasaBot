@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="kl-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#06101e"/>
+      <stop offset="65%" stop-color="#0d2040"/>
+      <stop offset="100%" stop-color="#153055"/>
+    </linearGradient>
+    <linearGradient id="tw" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#1e3a50"/>
+      <stop offset="40%" stop-color="#2a5e70"/>
+      <stop offset="60%" stop-color="#2a5e70"/>
+      <stop offset="100%" stop-color="#1e3a50"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Sky -->
+  <rect width="200" height="200" fill="url(#kl-sky)"/>
+
+  <!-- Stars -->
+  <circle cx="12"  cy="14" r="1"   fill="#f5e6d3" opacity="0.7"/>
+  <circle cx="38"  cy="8"  r="0.8" fill="#f5e6d3" opacity="0.5"/>
+  <circle cx="92"  cy="19" r="1.2" fill="#f5e6d3" opacity="0.8"/>
+  <circle cx="162" cy="11" r="1"   fill="#f5e6d3" opacity="0.6"/>
+  <circle cx="186" cy="24" r="0.8" fill="#f5e6d3" opacity="0.5"/>
+  <circle cx="22"  cy="40" r="0.7" fill="#f5e6d3" opacity="0.4"/>
+  <circle cx="178" cy="46" r="0.9" fill="#f5e6d3" opacity="0.45"/>
+
+  <!-- Moon (crescent) -->
+  <circle cx="168" cy="28" r="13" fill="#c4b870" opacity="0.6"/>
+  <circle cx="174" cy="23" r="11" fill="#06101e" opacity="0.6"/>
+
+  <!-- Background city silhouette -->
+  <rect x="0"   y="155" width="48" height="45" fill="#08192a" opacity="0.95"/>
+  <rect x="6"   y="144" width="18" height="56" fill="#08192a" opacity="0.95"/>
+  <rect x="150" y="157" width="18" height="43" fill="#08192a" opacity="0.95"/>
+  <rect x="164" y="148" width="22" height="52" fill="#08192a" opacity="0.95"/>
+  <rect x="184" y="154" width="16" height="46" fill="#08192a" opacity="0.95"/>
+
+  <!-- KL Tower (Menara KL) — left background -->
+  <rect    x="29"    y="80" width="5"  height="88" rx="1"   fill="#1a3a50" opacity="0.9"/>
+  <ellipse cx="31.5" cy="75" rx="11"  ry="14"              fill="#1a3a50" opacity="0.9"/>
+  <rect    x="30.5"  y="34" width="2"  height="46" rx="0.5" fill="#1a3a50" opacity="0.9"/>
+  <ellipse cx="29"   cy="72" rx="4"   ry="6"               fill="#2a6a80" opacity="0.28"/>
+
+  <!-- LEFT PETRONAS TOWER -->
+  <!-- Spire -->
+  <rect x="71"  y="5"  width="2"  height="30" rx="1"   fill="#c4af7c" opacity="0.9"/>
+  <!-- Crown ring -->
+  <rect x="67"  y="35" width="10" height="5"  rx="1.5" fill="#c4af7c" opacity="0.7"/>
+  <!-- Tier A -->
+  <rect x="64"  y="40" width="16" height="12" rx="1.5" fill="url(#tw)"/>
+  <!-- Tier B -->
+  <rect x="60"  y="52" width="24" height="13" rx="1.5" fill="url(#tw)"/>
+  <!-- Tier C -->
+  <rect x="57"  y="65" width="30" height="13" rx="1.5" fill="url(#tw)"/>
+  <!-- Tier D -->
+  <rect x="55"  y="78" width="34" height="9"  rx="1.5" fill="url(#tw)"/>
+  <!-- Main body -->
+  <rect x="56"  y="87" width="32" height="76" rx="2"   fill="url(#tw)"/>
+
+  <!-- Left tower windows -->
+  <rect x="60" y="91"  width="5" height="4" rx="0.5" fill="#4a8090" opacity="0.35"/>
+  <rect x="68" y="91"  width="5" height="4" rx="0.5" fill="#4a8090" opacity="0.3"/>
+  <rect x="76" y="91"  width="5" height="4" rx="0.5" fill="#4a8090" opacity="0.35"/>
+  <rect x="60" y="100" width="5" height="4" rx="0.5" fill="#4a8090" opacity="0.28"/>
+  <rect x="68" y="100" width="5" height="4" rx="0.5" fill="#4a8090" opacity="0.22"/>
+  <rect x="76" y="100" width="5" height="4" rx="0.5" fill="#4a8090" opacity="0.28"/>
+  <rect x="60" y="109" width="5" height="4" rx="0.5" fill="#4a8090" opacity="0.22"/>
+  <rect x="68" y="109" width="5" height="4" rx="0.5" fill="#4a8090" opacity="0.18"/>
+  <rect x="76" y="109" width="5" height="4" rx="0.5" fill="#4a8090" opacity="0.22"/>
+  <rect x="60" y="118" width="5" height="4" rx="0.5" fill="#4a8090" opacity="0.16"/>
+  <rect x="76" y="118" width="5" height="4" rx="0.5" fill="#4a8090" opacity="0.16"/>
+  <rect x="60" y="127" width="5" height="4" rx="0.5" fill="#4a8090" opacity="0.12"/>
+  <rect x="76" y="127" width="5" height="4" rx="0.5" fill="#4a8090" opacity="0.12"/>
+  <rect x="63" y="55"  width="5" height="4" rx="0.5" fill="#4a8090" opacity="0.22"/>
+  <rect x="72" y="55"  width="5" height="4" rx="0.5" fill="#4a8090" opacity="0.18"/>
+  <rect x="61" y="68"  width="5" height="4" rx="0.5" fill="#4a8090" opacity="0.18"/>
+  <rect x="70" y="68"  width="5" height="4" rx="0.5" fill="#4a8090" opacity="0.14"/>
+
+  <!-- RIGHT PETRONAS TOWER (mirror at centre x=128) -->
+  <rect x="127" y="5"  width="2"  height="30" rx="1"   fill="#c4af7c" opacity="0.9"/>
+  <rect x="123" y="35" width="10" height="5"  rx="1.5" fill="#c4af7c" opacity="0.7"/>
+  <rect x="120" y="40" width="16" height="12" rx="1.5" fill="url(#tw)"/>
+  <rect x="116" y="52" width="24" height="13" rx="1.5" fill="url(#tw)"/>
+  <rect x="113" y="65" width="30" height="13" rx="1.5" fill="url(#tw)"/>
+  <rect x="111" y="78" width="34" height="9"  rx="1.5" fill="url(#tw)"/>
+  <rect x="112" y="87" width="32" height="76" rx="2"   fill="url(#tw)"/>
+
+  <!-- Right tower windows -->
+  <rect x="116" y="91"  width="5" height="4" rx="0.5" fill="#4a8090" opacity="0.3"/>
+  <rect x="124" y="91"  width="5" height="4" rx="0.5" fill="#4a8090" opacity="0.35"/>
+  <rect x="132" y="91"  width="5" height="4" rx="0.5" fill="#4a8090" opacity="0.3"/>
+  <rect x="116" y="100" width="5" height="4" rx="0.5" fill="#4a8090" opacity="0.22"/>
+  <rect x="124" y="100" width="5" height="4" rx="0.5" fill="#4a8090" opacity="0.28"/>
+  <rect x="132" y="100" width="5" height="4" rx="0.5" fill="#4a8090" opacity="0.22"/>
+  <rect x="116" y="109" width="5" height="4" rx="0.5" fill="#4a8090" opacity="0.18"/>
+  <rect x="124" y="109" width="5" height="4" rx="0.5" fill="#4a8090" opacity="0.22"/>
+  <rect x="132" y="109" width="5" height="4" rx="0.5" fill="#4a8090" opacity="0.18"/>
+  <rect x="116" y="118" width="5" height="4" rx="0.5" fill="#4a8090" opacity="0.14"/>
+  <rect x="132" y="118" width="5" height="4" rx="0.5" fill="#4a8090" opacity="0.14"/>
+  <rect x="116" y="127" width="5" height="4" rx="0.5" fill="#4a8090" opacity="0.1"/>
+  <rect x="132" y="127" width="5" height="4" rx="0.5" fill="#4a8090" opacity="0.1"/>
+  <rect x="119" y="55"  width="5" height="4" rx="0.5" fill="#4a8090" opacity="0.18"/>
+  <rect x="128" y="55"  width="5" height="4" rx="0.5" fill="#4a8090" opacity="0.22"/>
+  <rect x="126" y="68"  width="5" height="4" rx="0.5" fill="#4a8090" opacity="0.18"/>
+  <rect x="135" y="68"  width="4" height="4" rx="0.5" fill="#4a8090" opacity="0.14"/>
+
+  <!-- SKYBRIDGE (floors 41-42 ≈ 40% up the main body) -->
+  <rect x="88"  y="119" width="24" height="9" rx="2.5" fill="#c4af7c" opacity="0.85"/>
+  <rect x="89"  y="120.5" width="22" height="6" rx="1.5" fill="#a18f5c" opacity="0.6"/>
+  <line x1="93"  y1="111" x2="93"  y2="119" stroke="#c4af7c" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+  <line x1="100" y1="111" x2="100" y2="119" stroke="#c4af7c" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+  <line x1="107" y1="111" x2="107" y2="119" stroke="#c4af7c" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+
+  <!-- Ground / KLCC park -->
+  <rect x="0" y="162" width="200" height="38" fill="#060e1c"/>
+  <ellipse cx="100" cy="166" rx="52" ry="5" fill="#1a3020" opacity="0.35"/>
+  <ellipse cx="72"  cy="164" rx="22" ry="4" fill="#1a809a" opacity="0.12"/>
+  <ellipse cx="128" cy="164" rx="22" ry="4" fill="#1a809a" opacity="0.12"/>
+</svg>

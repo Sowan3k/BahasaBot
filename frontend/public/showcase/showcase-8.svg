@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- Heritage shophouse facade - 2 storey -->
+  <!-- Main building body -->
+  <rect x="20" y="55" width="160" height="130" rx="4" fill="#a18f5c" opacity="0.35"/>
+  <rect x="24" y="59" width="152" height="122" rx="3" fill="#c4af7c" opacity="0.18"/>
+
+  <!-- Ground floor arched openings (5-foot way) -->
+  <rect x="20" y="148" width="160" height="37" rx="2" fill="#a18f5c" opacity="0.3"/>
+  <!-- Arch pillars -->
+  <rect x="20" y="140" width="10" height="45" rx="2" fill="#c4af7c" opacity="0.5"/>
+  <rect x="60" y="140" width="10" height="45" rx="2" fill="#c4af7c" opacity="0.5"/>
+  <rect x="100" y="140" width="10" height="45" rx="2" fill="#c4af7c" opacity="0.5"/>
+  <rect x="140" y="140" width="10" height="45" rx="2" fill="#c4af7c" opacity="0.5"/>
+  <rect x="170" y="140" width="10" height="45" rx="2" fill="#c4af7c" opacity="0.5"/>
+  <!-- Arches between pillars -->
+  <path d="M30 148 Q45 135 60 148" fill="#c47a5c" opacity="0.3"/>
+  <path d="M70 148 Q85 135 100 148" fill="#c47a5c" opacity="0.3"/>
+  <path d="M110 148 Q125 135 140 148" fill="#c47a5c" opacity="0.3"/>
+  <path d="M150 148 Q160 135 170 148" fill="#c47a5c" opacity="0.3"/>
+
+  <!-- Ground floor shop doors/windows -->
+  <rect x="32" y="152" width="22" height="28" rx="2" fill="#2d7d7d" opacity="0.55"/>
+  <rect x="76" y="154" width="18" height="20" rx="2" fill="#2d7d7d" opacity="0.4"/>
+  <rect x="112" y="152" width="22" height="28" rx="2" fill="#2d7d7d" opacity="0.55"/>
+  <rect x="152" y="154" width="16" height="20" rx="2" fill="#2d7d7d" opacity="0.4"/>
+
+  <!-- Coloured stripe awnings -->
+  <rect x="28" y="142" width="32" height="6" rx="1" fill="#c47a5c" opacity="0.7"/>
+  <line x1="32" y1="142" x2="32" y2="148" stroke="#f5e6d3" stroke-width="2" opacity="0.4"/>
+  <line x1="38" y1="142" x2="38" y2="148" stroke="#f5e6d3" stroke-width="2" opacity="0.4"/>
+  <line x1="44" y1="142" x2="44" y2="148" stroke="#f5e6d3" stroke-width="2" opacity="0.4"/>
+  <line x1="50" y1="142" x2="50" y2="148" stroke="#f5e6d3" stroke-width="2" opacity="0.4"/>
+  <rect x="108" y="142" width="32" height="6" rx="1" fill="#8a9f7b" opacity="0.7"/>
+  <line x1="112" y1="142" x2="112" y2="148" stroke="#f5e6d3" stroke-width="2" opacity="0.4"/>
+  <line x1="118" y1="142" x2="118" y2="148" stroke="#f5e6d3" stroke-width="2" opacity="0.4"/>
+  <line x1="124" y1="142" x2="124" y2="148" stroke="#f5e6d3" stroke-width="2" opacity="0.4"/>
+  <line x1="130" y1="142" x2="130" y2="148" stroke="#f5e6d3" stroke-width="2" opacity="0.4"/>
+
+  <!-- Second floor windows with shutters -->
+  <rect x="28" y="72" width="32" height="42" rx="3" fill="#2d7d7d" opacity="0.55"/>
+  <line x1="44" y1="72" x2="44" y2="114" stroke="#f5e6d3" stroke-width="1.5" opacity="0.3"/>
+  <line x1="28" y1="93" x2="60" y2="93" stroke="#f5e6d3" stroke-width="1.5" opacity="0.3"/>
+  <!-- Arch top window detail -->
+  <path d="M28 72 Q44 62 60 72" fill="#3d9d9d" opacity="0.4"/>
+
+  <rect x="84" y="72" width="32" height="42" rx="3" fill="#2d7d7d" opacity="0.55"/>
+  <line x1="100" y1="72" x2="100" y2="114" stroke="#f5e6d3" stroke-width="1.5" opacity="0.3"/>
+  <line x1="84" y1="93" x2="116" y2="93" stroke="#f5e6d3" stroke-width="1.5" opacity="0.3"/>
+  <path d="M84 72 Q100 62 116 72" fill="#3d9d9d" opacity="0.4"/>
+
+  <rect x="140" y="72" width="32" height="42" rx="3" fill="#2d7d7d" opacity="0.55"/>
+  <line x1="156" y1="72" x2="156" y2="114" stroke="#f5e6d3" stroke-width="1.5" opacity="0.3"/>
+  <line x1="140" y1="93" x2="172" y2="93" stroke="#f5e6d3" stroke-width="1.5" opacity="0.3"/>
+  <path d="M140 72 Q156 62 172 72" fill="#3d9d9d" opacity="0.4"/>
+
+  <!-- Roofline with decorative detail -->
+  <rect x="16" y="52" width="168" height="8" rx="2" fill="#c47a5c" opacity="0.5"/>
+  <rect x="20" y="48" width="160" height="8" rx="3" fill="#a18f5c" opacity="0.4"/>
+
+  <!-- Decorative facade details -->
+  <rect x="16" y="118" width="168" height="4" rx="2" fill="#c4af7c" opacity="0.35"/>
+  <rect x="16" y="124" width="168" height="4" rx="2" fill="#a18f5c" opacity="0.3"/>
+
+  <!-- Street art mural on wall (left side) -->
+  <circle cx="52" cy="105" r="8" fill="#c47a5c" opacity="0.3"/>
+  <circle cx="52" cy="105" r="5" fill="#c47a5c" opacity="0.2"/>
+  <ellipse cx="52" cy="98" rx="4" ry="6" fill="#8a9f7b" opacity="0.3"/>
+  <ellipse cx="46" cy="108" rx="3" ry="5" fill="#8a9f7b" opacity="0.25"/>
+  <ellipse cx="58" cy="108" rx="3" ry="5" fill="#8a9f7b" opacity="0.25"/>
+
+  <!-- Bicycle (bottom right corner) -->
+  <circle cx="168" cy="183" r="12" fill="none" stroke="#a18f5c" stroke-width="2.5" opacity="0.8"/>
+  <circle cx="140" cy="183" r="12" fill="none" stroke="#a18f5c" stroke-width="2.5" opacity="0.8"/>
+  <!-- Bike frame -->
+  <line x1="168" y1="183" x2="154" y2="170" stroke="#a18f5c" stroke-width="2" opacity="0.7"/>
+  <line x1="140" y1="183" x2="154" y2="170" stroke="#a18f5c" stroke-width="2" opacity="0.7"/>
+  <line x1="154" y1="170" x2="148" y2="183" stroke="#a18f5c" stroke-width="2" opacity="0.7"/>
+  <line x1="154" y1="170" x2="154" y2="162" stroke="#a18f5c" stroke-width="2" opacity="0.6"/>
+  <!-- Handlebars -->
+  <line x1="150" y1="162" x2="160" y2="162" stroke="#a18f5c" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+  <!-- Wheel spokes -->
+  <line x1="168" y1="171" x2="168" y2="195" stroke="#a18f5c" stroke-width="1" opacity="0.4"/>
+  <line x1="156" y1="183" x2="180" y2="183" stroke="#a18f5c" stroke-width="1" opacity="0.4"/>
+  <line x1="140" y1="171" x2="140" y2="195" stroke="#a18f5c" stroke-width="1" opacity="0.4"/>
+  <line x1="128" y1="183" x2="152" y2="183" stroke="#a18f5c" stroke-width="1" opacity="0.4"/>
+
+  <!-- Ground line -->
+  <line x1="0" y1="193" x2="200" y2="193" stroke="#c4af7c" stroke-width="1" opacity="0.2"/>
+</svg>

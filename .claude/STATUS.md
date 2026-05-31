@@ -1,12 +1,12 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-05-31 (Session 77 — Bug audit: Google OAuth register parity + course pipeline fixes + dark mode default)
+## Last Updated: 2026-05-31 (Session 79 — Auth page full UI overhaul + showcase SVGs + mobile layout + SVG polish fixes)
 
 ## Feature Status
 | Feature | Status | Notes |
 |---|---|---|
-| Auth | ✅ Complete + Google password setup + Auth page feature slideshow (Session 73) + Bug fixes + Dark mode default (Session 77) | Email + Google OAuth, JWT, token refresh, 30-min sessions; mandatory SetPasswordModal for Google users with NULL password_hash; POST /api/auth/set-password; has_password in profile API; settings/password page now routes to SetPassword vs ChangePassword form based on has_password; **Session 73**: `auth-card.tsx` left panel now shows auto-cycling feature cards; **Session 77**: register page now has GOOGLE_CLIENT_ID_PRESENT guard matching login page; SetPasswordModal adds router.refresh() before push; all login flows force dark mode on sign-in |
+| Auth | ✅ Complete + Google password setup + Auth page full overhaul (Session 79) + Bug fixes + Dark mode default (Session 77) | Email + Google OAuth, JWT, token refresh, 30-min sessions; mandatory SetPasswordModal for Google users with NULL password_hash; POST /api/auth/set-password; has_password in profile API; settings/password page now routes to SetPassword vs ChangePassword form based on has_password; **Session 79**: `auth-card.tsx` full left-panel overhaul — AetherFlowHero particle background, stats row (12 courses/2 quiz modes/2 mini-games), CourseShowcase scrolling image grid (14 SVGs × 2 rows), FeatureCarousel (Chat/Course/Quiz mini-app mockups); mobile → centered floating glass card (particles visible); "Welcome back" heading text-2xl on mobile; stat corrected to "2 Quiz Modes"; **Session 77**: register page GOOGLE_CLIENT_ID_PRESENT guard; SetPasswordModal router.refresh(); dark mode default on all sign-ins |
 | AI Chatbot Tutor | ✅ Complete + App-awareness (Session 40) + Language rule (Session 51) + Latency optimizations (Session 59) | SSE streaming, LangChain, RAG — Malaysian Malay + IPA in prompt; markdown rendering; session persistence; native_language injected into system prompt; RAG context Redis-cached (5 min) saving ~1.3s on repeat queries; ping SSE event for early frontend feedback; **ThinkingIndicator**: 3 bouncing dots + "Thinking…" label replaces the invisible 2px audio bars — shows immediately when user sends message; user profile Redis-cached (5 min TTL, invalidated on PATCH /profile); history cache updated in-place after each message (no more DB re-read on next turn); gamification XP awarded as asyncio.create_task with own session (no longer blocks SSE startup); GET /api/chatbot/prewarm warms profile cache on page load; ChatMessage wrapped in React.memo (previous messages never re-render during streaming); token batching via requestAnimationFrame (cuts setState calls from ~100/s to ≤60/s during streaming); **language detection rule**: if student writes in English → full English response; if Malay → full Malay; if mixed → English (overrides all other rules); dialect rule demoted to secondary; **Session 59 latency**: three Redis cache_get calls now run via asyncio.gather() (parallel) before any DB fallback — saves ~10–15ms per message on warm paths; RAG k reduced 5→3 (faster embedding query + smaller context fed to Gemini) |
 | Course Generator | ✅ Complete + English-medium fix | Lesson content in English; Malay words taught inline; Malaysian BM only |
 | Quiz | ✅ Complete + English-medium fix | Question text explicitly English; Malay vocabulary uses Malaysian BM; IPA in explanations |
@@ -73,6 +73,63 @@ _Update this file at the end of every session_
 
 ## ✅ Fixed Issues (Session 13)
 - **Course covers not appearing (2026-04-13):** Session 12 correctly fixed `image_service.py` (httpx REST API) and `course_service.py` (retroactive healing + `asyncio.create_task`), but the backend was **never restarted** after those changes were made. Uvicorn started at 08:19, files modified at 14:22–14:28 — old broken code was still running. Fix: killed old uvicorn PIDs (18316, 25012), started fresh process on port 8000. Also manually ran `_generate_and_save_cover()` for all 3 existing courses that had `cover_image_url = NULL`. All verified: Gemini REST API returns JPEG (~1.1 MB base64, ~17s), DB save works, `GET /api/courses/` returns cover correctly. **Important**: after any code change to the backend, the uvicorn process MUST be restarted manually (no `--reload` flag in prod mode).
+
+---
+
+## What Was Done This Session (2026-05-31 Session 79 — Auth page full UI overhaul + showcase SVGs + mobile layout + SVG polish)
+
+### Goals
+Complete redesign of the auth page left panel: replace basic illustrations with a rich animated showcase; fix mobile view; create 14 Malay-themed SVG illustrations; polish SVG color consistency; fix "Welcome back" heading proportion on mobile.
+
+### Files Created
+- `frontend/components/ui/aether-flow-hero.tsx` — WebGL particle/flow background (replaces static gradient)
+- `frontend/components/ui/course-showcase.tsx` — Two-row horizontally scrolling image grid (14 SVGs, CSS-only infinite scroll, alternating direction)
+- `frontend/components/ui/card.tsx` — shadcn card primitive
+- `frontend/components/ui/features.tsx` — Feature card primitives
+- `frontend/components/ui/toggle.tsx` / `toggle-group.tsx` — UI toggle components
+- `frontend/components/landing/` — Landing component directory
+- `frontend/public/showcase/showcase-1.svg` through `showcase-14.svg` — 14 Malay-themed SVG illustrations:
+  - KL Skyline (Petronas Towers + KL Tower + skybridge)
+  - Malaysian Cuisine (nasi lemak with teh tarik)
+  - Cultural Festivals
+  - Student Life
+  - Classroom Malay
+  - Night Market
+  - Kampung Village
+  - Georgetown
+  - Vocabulary
+  - AI Tutor Chat
+  - BPS Achievement
+  - Learning Journey (roadmap)
+  - Penang Bridge (cable-stayed)
+  - Graduation Day (Malaysian graduate + flag)
+
+### Files Modified
+- `frontend/components/ui/auth-card.tsx` — Complete left-panel redesign: AetherFlowHero particle bg; stats row (courses/quiz modes/games); CourseShowcase; FeatureCarousel (ChatIllustration / CourseIllustration / ProgressIllustration as rich mini-app mockups); mobile restructured to single centered floating glass card (`w-[calc(100%-2.5rem)] max-w-[380px] max-h-[90dvh] rounded-2xl`) with particles visible; desktop → full-height right sidebar unchanged
+- `frontend/app/globals.css` — Added `@keyframes showcaseScrollLeft` and `showcaseScrollRight` for infinite horizontal scroll
+- `frontend/app/page.tsx` — Landing page updates
+- `frontend/components/nav/AppSidebar.tsx` — Sidebar updates
+- `frontend/app/(auth)/login/page.tsx` — "Welcome back" heading changed `text-3xl` → `text-2xl lg:text-3xl` (proportional with mobile logo)
+- `frontend/package.json` / `package-lock.json` — New dependencies for auth page components
+
+### Bugs / Issues Fixed This Session
+| Issue | Fix |
+|---|---|
+| Penang Bridge SVG broken (blank image) | Malformed `<rect cy="112" x="64" x="64">` on line 117 — duplicate `x` + invalid `cy` broke SVG parser. Removed duplicate attrs. |
+| "Welcome back" larger than BahasaBot logo on mobile | Changed `text-3xl` → `text-2xl lg:text-3xl` in login/page.tsx |
+| KL Skyline SVG color inconsistency | Tower gradient shifted from bright cyan (`#1a809a`) → warm muted teal (`#2a5e70`); windows `#7ecce8` → `#4a8090` |
+| Graduation Day SVG color inconsistency | Flag red `#cc0001` → `#8a3535`; flag yellow `#ffd700` → `#c4af7c` (project wheat accent); flag blue `#003580` → `#1a2f55` |
+| "3 Quiz Types" stat inaccurate | Changed to "2 Quiz Modes" (Module Quiz + Adaptive Quiz) — the 3 referred to question formats, not distinct quiz experiences |
+| Mobile view shows two BahasaBot logos | Removed hero section; restructured to single glass panel with responsive CSS (no duplicate DOM) |
+
+### Verified
+- tsc --noEmit: 0 errors (confirmed at end of session)
+- All 14 SVGs parse and display correctly in browser
+- Mobile: floating glass card with particles visible; single logo; proportional heading
+- Desktop: full-height right sidebar unchanged
+
+### Commits
+- Pending (this push)
 
 ---
 

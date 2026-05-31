@@ -189,7 +189,7 @@ export default function LoginPage() {
         <motion.h2
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-2xl font-bold text-white tracking-tight"
+          className="text-2xl lg:text-3xl font-bold text-white"
         >
           Welcome back
         </motion.h2>
@@ -197,7 +197,7 @@ export default function LoginPage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.1 }}
-          className="text-white/45 text-sm mt-1.5"
+          className="text-white/55 text-sm mt-1.5"
         >
           Sign in to continue your Malay journey
         </motion.p>
@@ -222,7 +222,7 @@ export default function LoginPage() {
                   autoComplete="email"
                   onFocus={() => setFocusedInput("email")}
                   onBlur={(e) => { emailOnBlur(e); setFocusedInput(null); }}
-                  className="w-full bg-white/5 border border-white/10 focus:border-white/25 focus:bg-white/10 text-white placeholder:text-white/30 h-10 rounded-lg pl-10 pr-3 text-sm outline-none transition-all duration-300"
+                  className="w-full bg-white/5 border border-white/10 focus:border-white/25 focus:bg-white/10 text-white placeholder:text-white/30 h-10 rounded-lg pl-10 pr-3 text-[16px] outline-none transition-all duration-300"
                   {...emailRest}
                 />
               </div>
@@ -248,7 +248,7 @@ export default function LoginPage() {
                   autoComplete="current-password"
                   onFocus={() => setFocusedInput("password")}
                   onBlur={(e) => { passwordOnBlur(e); setFocusedInput(null); }}
-                  className="w-full bg-white/5 border border-white/10 focus:border-white/25 focus:bg-white/10 text-white placeholder:text-white/30 h-10 rounded-lg pl-10 pr-10 text-sm outline-none transition-all duration-300"
+                  className="w-full bg-white/5 border border-white/10 focus:border-white/25 focus:bg-white/10 text-white placeholder:text-white/30 h-10 rounded-lg pl-10 pr-10 text-[16px] outline-none transition-all duration-300"
                   {...passwordRest}
                 />
                 <button

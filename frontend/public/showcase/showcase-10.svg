@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- Phone body -->
+  <rect x="52" y="18" width="96" height="164" rx="16" fill="#1a2d30" opacity="0.9"/>
+  <rect x="55" y="21" width="90" height="158" rx="14" fill="#0d1f22" opacity="0.95"/>
+  <!-- Phone screen bezel glow -->
+  <rect x="52" y="18" width="96" height="164" rx="16" fill="none" stroke="#2d7d7d" stroke-width="1.5" opacity="0.5"/>
+
+  <!-- Status bar -->
+  <rect x="55" y="21" width="90" height="10" rx="14" fill="#1a3d4f" opacity="0.7"/>
+  <!-- Camera notch -->
+  <rect x="90" y="22" width="20" height="6" rx="3" fill="#0d1f22" opacity="0.8"/>
+  <!-- Signal dots -->
+  <circle cx="65" cy="26" r="1.5" fill="#8a9f7b" opacity="0.6"/>
+  <circle cx="70" cy="26" r="1.5" fill="#8a9f7b" opacity="0.4"/>
+  <circle cx="75" cy="26" r="1.5" fill="#8a9f7b" opacity="0.25"/>
+  <!-- Battery -->
+  <rect x="128" y="23" width="12" height="6" rx="2" fill="#8a9f7b" opacity="0.3"/>
+  <rect x="128" y="23" width="8" height="6" rx="2" fill="#8a9f7b" opacity="0.5"/>
+
+  <!-- App header bar -->
+  <rect x="55" y="31" width="90" height="18" fill="#1a4f50" opacity="0.8"/>
+  <!-- Bot avatar in header -->
+  <circle cx="68" cy="40" r="6" fill="#2d7d7d" opacity="0.9"/>
+  <circle cx="68" cy="38" r="3" fill="#f5e6d3" opacity="0.5"/>
+  <ellipse cx="68" cy="44" rx="4" ry="2" fill="#f5e6d3" opacity="0.4"/>
+  <!-- Header title -->
+  <rect x="78" y="37" width="30" height="4" rx="2" fill="#f5e6d3" opacity="0.6"/>
+  <rect x="78" y="43" width="22" height="3" rx="1.5" fill="#8a9f7b" opacity="0.4"/>
+  <!-- Online indicator -->
+  <circle cx="130" cy="37" r="3" fill="#8a9f7b" opacity="0.8"/>
+
+  <!-- Chat messages -->
+  <!-- User message 1 -->
+  <rect x="95" y="55" width="46" height="14" rx="6" fill="#8a9f7b" opacity="0.55"/>
+  <polygon points="141,63 148,60 141,67" fill="#8a9f7b" opacity="0.55"/>
+  <rect x="99" y="60" width="36" height="4" rx="2" fill="#f5e6d3" opacity="0.5"/>
+
+  <!-- AI response 1 -->
+  <rect x="59" y="75" width="70" height="18" rx="6" fill="#2d7d7d" opacity="0.5"/>
+  <polygon points="59,84 52,81 59,87" fill="#2d7d7d" opacity="0.5"/>
+  <!-- "Selamat datang!" in bubble - styled text blocks -->
+  <rect x="63" y="79" width="24" height="4" rx="2" fill="#c4af7c" opacity="0.7"/>
+  <rect x="89" y="79" width="10" height="4" rx="2" fill="#f5e6d3" opacity="0.5"/>
+  <rect x="63" y="85" width="55" height="3" rx="1.5" fill="#f5e6d3" opacity="0.3"/>
+
+  <!-- User message 2 -->
+  <rect x="105" y="100" width="36" height="14" rx="6" fill="#8a9f7b" opacity="0.5"/>
+  <polygon points="141,109 148,106 141,112" fill="#8a9f7b" opacity="0.5"/>
+  <rect x="109" y="105" width="26" height="4" rx="2" fill="#f5e6d3" opacity="0.45"/>
+
+  <!-- AI response 2 (longer) -->
+  <rect x="59" y="120" width="78" height="22" rx="6" fill="#2d7d7d" opacity="0.5"/>
+  <polygon points="59,131 52,128 59,134" fill="#2d7d7d" opacity="0.5"/>
+  <rect x="63" y="125" width="40" height="4" rx="2" fill="#c4af7c" opacity="0.6"/>
+  <rect x="63" y="131" width="65" height="3" rx="1.5" fill="#f5e6d3" opacity="0.3"/>
+  <rect x="63" y="136" width="50" height="3" rx="1.5" fill="#f5e6d3" opacity="0.25"/>
+
+  <!-- Vocabulary pill highlight -->
+  <rect x="63" y="125" width="40" height="4" rx="2" fill="#a18f5c" opacity="0.4"/>
+  <!-- Speaker icon on vocab word -->
+  <circle cx="107" cy="127" r="3" fill="#a18f5c" opacity="0.7"/>
+  <path d="M107 125 Q110 127 107 129" stroke="#f5e6d3" stroke-width="1" fill="none" opacity="0.7"/>
+
+  <!-- Typing indicator / AI thinking -->
+  <rect x="59" y="149" width="36" height="14" rx="6" fill="#1a4f50" opacity="0.5"/>
+  <circle cx="70" cy="156" r="2.5" fill="#8a9f7b" opacity="0.7"/>
+  <circle cx="78" cy="156" r="2.5" fill="#8a9f7b" opacity="0.5"/>
+  <circle cx="86" cy="156" r="2.5" fill="#8a9f7b" opacity="0.3"/>
+
+  <!-- Input bar at bottom -->
+  <rect x="55" y="168" width="90" height="11" fill="#1a3d4f" opacity="0.8"/>
+  <rect x="59" y="170" width="68" height="7" rx="3.5" fill="#1a2d30" opacity="0.7"/>
+  <!-- Placeholder text -->
+  <rect x="63" y="173" width="30" height="3" rx="1.5" fill="#f5e6d3" opacity="0.2"/>
+  <!-- Send button -->
+  <circle cx="136" cy="174" r="6" fill="#2d7d7d" opacity="0.8"/>
+  <polygon points="131,174 137,171 137,177" fill="#f5e6d3" opacity="0.6"/>
+
+  <!-- Home indicator -->
+  <rect x="85" y="181" width="30" height="3" rx="1.5" fill="#f5e6d3" opacity="0.2"/>
+
+  <!-- Floating sparkle effects -->
+  <circle cx="30" cy="60" r="3" fill="#c4af7c" opacity="0.3"/>
+  <circle cx="175" cy="80" r="2.5" fill="#8a9f7b" opacity="0.3"/>
+  <circle cx="22" cy="130" r="2" fill="#a18f5c" opacity="0.25"/>
+</svg>

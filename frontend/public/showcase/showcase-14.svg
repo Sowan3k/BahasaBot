@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- Malaysian graduate celebration -->
+
+  <!-- Background -->
+  <rect width="200" height="200" fill="#0d1f35"/>
+
+  <!-- Confetti dots -->
+  <circle cx="22"  cy="28"  r="3"   fill="#8a3535" opacity="0.6"/>
+  <circle cx="42"  cy="16"  r="2"   fill="#c4af7c" opacity="0.55"/>
+  <circle cx="174" cy="20"  r="3"   fill="#8a3535" opacity="0.55"/>
+  <circle cx="158" cy="42"  r="2"   fill="#c4af7c" opacity="0.5"/>
+  <circle cx="188" cy="58"  r="2.5" fill="#f5e6d3" opacity="0.5"/>
+  <circle cx="12"  cy="68"  r="2"   fill="#c4af7c" opacity="0.5"/>
+  <circle cx="185" cy="100" r="1.5" fill="#8a3535" opacity="0.4"/>
+  <circle cx="14"  cy="105" r="1.5" fill="#c4af7c" opacity="0.4"/>
+
+  <!-- Confetti streaks -->
+  <rect x="30"  y="18" width="2.5" height="9" rx="1" fill="#c4af7c" opacity="0.5"  transform="rotate(25,31,23)"/>
+  <rect x="165" y="30" width="2.5" height="8" rx="1" fill="#8a3535" opacity="0.45" transform="rotate(-18,166,34)"/>
+  <rect x="182" y="65" width="2.5" height="8" rx="1" fill="#c4af7c" opacity="0.4"  transform="rotate(12,183,69)"/>
+  <rect x="14"  y="82" width="2.5" height="7" rx="1" fill="#f5e6d3" opacity="0.35" transform="rotate(-22,15,85)"/>
+  <rect x="150" y="16" width="2"   height="8" rx="1" fill="#f5e6d3" opacity="0.4"  transform="rotate(8,151,20)"/>
+
+  <!-- ── MALAYSIAN FLAG (large, centred, top half) ── -->
+  <!-- Flag pole -->
+  <line x1="44" y1="12" x2="44" y2="105" stroke="#c4af7c" stroke-width="2.5" stroke-linecap="round" opacity="0.8"/>
+
+  <!-- Stripes — 7 pairs approximating 14 (waving path for each stripe) -->
+  <path d="M44 14 Q110 10 162 14 Q110 20 44 20 Z" fill="#8a3535" opacity="0.9"/>
+  <path d="M44 20 Q110 16 162 20 Q110 26 44 26 Z" fill="#f5e6d3" opacity="0.92"/>
+  <path d="M44 26 Q110 22 162 26 Q110 32 44 32 Z" fill="#8a3535" opacity="0.9"/>
+  <path d="M44 32 Q110 28 162 32 Q110 38 44 38 Z" fill="#f5e6d3" opacity="0.92"/>
+  <path d="M44 38 Q110 34 162 38 Q110 44 44 44 Z" fill="#8a3535" opacity="0.9"/>
+  <path d="M44 44 Q110 40 162 44 Q110 50 44 50 Z" fill="#f5e6d3" opacity="0.92"/>
+  <path d="M44 50 Q110 46 162 50 Q110 56 44 56 Z" fill="#8a3535" opacity="0.9"/>
+
+  <!-- Blue canton (top-left, covers first 4 stripes) -->
+  <path d="M44 14 Q88 11 104 14 Q88 38 44 38 Z" fill="#1a2f55" opacity="0.95"/>
+
+  <!-- Yellow crescent -->
+  <circle cx="68"  cy="27" r="9.5" fill="#c4af7c" opacity="0.95"/>
+  <circle cx="71.5" cy="25" r="7.5" fill="#1a2f55" opacity="0.98"/>
+
+  <!-- 14-pointed star (two overlapping 7-point shapes, simplified) -->
+  <g transform="translate(87,25)">
+    <polygon points="0,-6 1.4,-1.9 5.7,-1.9 2.3,1.1 3.5,5.4 0,2.8 -3.5,5.4 -2.3,1.1 -5.7,-1.9 -1.4,-1.9"
+             fill="#c4af7c" opacity="0.95"/>
+    <polygon points="0,-6 1.4,-1.9 5.7,-1.9 2.3,1.1 3.5,5.4 0,2.8 -3.5,5.4 -2.3,1.1 -5.7,-1.9 -1.4,-1.9"
+             fill="#c4af7c" opacity="0.95" transform="rotate(26)"/>
+  </g>
+
+  <!-- ── GRADUATE FIGURE (centred, lower portion) ── -->
+
+  <!-- Gown — clean bell/trapezoid shape -->
+  <path d="M78 124 L62 195 L138 195 L122 124 Z" fill="#1c2840" opacity="0.95"/>
+
+  <!-- Hood drape on shoulders (academic colour — olive green) -->
+  <path d="M78 126 Q68 145 67 165" stroke="#8a9f7b" stroke-width="9"  stroke-linecap="round" fill="none" opacity="0.85"/>
+  <path d="M122 126 Q132 145 133 165" stroke="#8a9f7b" stroke-width="9" stroke-linecap="round" fill="none" opacity="0.85"/>
+
+  <!-- White collar -->
+  <rect x="93" y="120" width="14" height="10" rx="2" fill="#f5e6d3" opacity="0.5"/>
+
+  <!-- Head (skin tone circle) -->
+  <circle cx="100" cy="106" r="18" fill="#c4a07a" opacity="0.95"/>
+
+  <!-- Smile -->
+  <path d="M92 112 Q100 119 108 112" stroke="#8a6a4a" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.55"/>
+
+  <!-- ── MORTAR BOARD ── -->
+  <!-- Brim (ellipse — the wide flat part sitting on head) -->
+  <ellipse cx="100" cy="90" rx="22" ry="6" fill="#111820" opacity="0.98"/>
+  <!-- Crown (slightly raised square board shape above brim) -->
+  <rect x="84" y="78" width="32" height="12" rx="2" fill="#1a2030" opacity="0.98"/>
+  <!-- Gold button on top -->
+  <circle cx="100" cy="78" r="3" fill="#c4af7c" opacity="0.7"/>
+  <!-- Tassel line + end -->
+  <line x1="116" y1="80" x2="124" y2="106" stroke="#c4af7c" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/>
+  <circle cx="124" cy="108" r="4" fill="#c4af7c" opacity="0.8"/>
+
+  <!-- ── DIPLOMA SCROLL (held at waist, centred) ── -->
+  <!-- Left arm implied by scroll position -->
+  <path d="M78 138 Q65 148 56 156" stroke="#1c2840" stroke-width="10" stroke-linecap="round" fill="none"/>
+  <circle cx="55" cy="158" r="6" fill="#c4a07a" opacity="0.9"/>
+
+  <!-- Scroll body -->
+  <rect x="28" y="150" width="30" height="20" rx="5" fill="#f5e6d3" opacity="0.92"/>
+  <!-- Rolled ends (top + bottom cap lines) -->
+  <ellipse cx="43" cy="150" rx="15" ry="4" fill="#e8d8b8" opacity="0.85"/>
+  <ellipse cx="43" cy="170" rx="15" ry="4" fill="#e8d8b8" opacity="0.85"/>
+  <!-- Red ribbon band -->
+  <rect x="40" y="149" width="6" height="22" rx="3" fill="#8a3535" opacity="0.75"/>
+  <!-- Text lines on scroll -->
+  <line x1="33" y1="157" x2="54" y2="157" stroke="#a18f5c" stroke-width="1" opacity="0.45"/>
+  <line x1="33" y1="162" x2="54" y2="162" stroke="#a18f5c" stroke-width="1" opacity="0.35"/>
+
+  <!-- Right arm (naturally at side) -->
+  <path d="M122 138 Q136 148 142 158" stroke="#1c2840" stroke-width="10" stroke-linecap="round" fill="none"/>
+  <circle cx="143" cy="160" r="6" fill="#c4a07a" opacity="0.9"/>
+
+  <!-- Ground shadow -->
+  <ellipse cx="100" cy="197" rx="42" ry="4" fill="#000000" opacity="0.2"/>
+</svg>
