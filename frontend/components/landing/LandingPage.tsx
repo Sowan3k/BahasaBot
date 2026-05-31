@@ -34,7 +34,7 @@ function ChatCard() {
       <div className="flex justify-start">
         <div className="bg-gray-50 border border-gray-100 rounded-xl rounded-tl-sm px-3 py-2.5 text-sm text-gray-700 max-w-[95%] leading-relaxed">
           <span className="font-semibold text-[#5e7a4e]">&ldquo;Di mana perpustakaan?&rdquo;</span>
-          {" — "}
+          {" · "}
           <span className="text-[#8a9f7b] font-medium">di mana</span>
           {" means “where”, "}
           <span className="text-[#8a9f7b] font-medium">perpustakaan</span>

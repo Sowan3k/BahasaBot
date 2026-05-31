@@ -16,7 +16,7 @@ export function PlanBadge({ collapsed = false }: PlanBadgeProps) {
         <Link
           href="/pricing"
           className="w-10 h-10 flex items-center justify-center rounded-lg text-muted-foreground hover:text-primary hover:bg-muted transition-colors"
-          title="Free Plan — view plans"
+          title="Free Plan - view plans"
         >
           <CreditCard size={15} />
         </Link>

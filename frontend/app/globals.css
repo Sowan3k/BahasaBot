@@ -8,87 +8,91 @@
    Accent:      #dbc894  — warm wheat
    Background:  #e4d7b0  — cream parchment
    Foreground:  #5c4b3e  — dark walnut
+
+   All Tailwind color variables use RGB channel format (e.g. "138 159 123")
+   so that Tailwind's opacity modifier syntax rgb(var(--X) / alpha) works.
+   Direct CSS consumers must wrap in rgb(): rgb(var(--primary)).
 ─────────────────────────────────────────────────────────────────────────── */
 
 @layer base {
   :root {
     --button-ripple-color: rgba(0, 0, 0, 0.12);
-    --card: #e7dbbf;
-    --ring: #9db18c;
-    --input: #dbc894;
-    --muted: #decea0;
-    --accent: #dbc894;
-    --border: #b19681;
+    --card: 231 219 191;
+    --ring: 157 177 140;
+    --input: 219 200 148;
+    --muted: 222 206 160;
+    --accent: 219 200 148;
+    --border: 177 150 129;
     --radius: 0.425rem;
-    --chart-1: #9db18c;
-    --chart-2: #8a9f7b;
-    --chart-3: #bac9b4;
-    --chart-4: #71856a;
-    --chart-5: #5e6e58;
-    --popover: #f3ead2;
-    --primary: #8d9d4f;
-    --sidebar: #e2d1a2;
-    --secondary: #decea0;
-    --background: #e4d7b0;
-    --foreground: #5c4b3e;
-    --destructive: #d98b7e;
+    --chart-1: 157 177 140;
+    --chart-2: 138 159 123;
+    --chart-3: 186 201 180;
+    --chart-4: 113 133 106;
+    --chart-5: 94 110 88;
+    --popover: 243 234 210;
+    --primary: 141 157 79;
+    --sidebar: 226 209 162;
+    --secondary: 222 206 160;
+    --background: 228 215 176;
+    --foreground: 92 75 62;
+    --destructive: 217 139 126;
     --shadow-blur: 2px;
     --shadow-color: hsl(88 22% 35% / 0.15);
-    --sidebar-ring: #9db18c;
+    --sidebar-ring: 157 177 140;
     --shadow-spread: 0px;
     --shadow-opacity: 0.15;
-    --sidebar-accent: #eae5d9;
-    --sidebar-border: #e5e0d4;
-    --card-foreground: #5c4b3e;
+    --sidebar-accent: 234 229 217;
+    --sidebar-border: 229 224 212;
+    --card-foreground: 92 75 62;
     --shadow-offset-x: 3px;
     --shadow-offset-y: 3px;
-    --sidebar-primary: #9db18c;
-    --muted-foreground: #85766a;
-    --accent-foreground: #5c4b3e;
-    --popover-foreground: #5c4b3e;
-    --primary-foreground: #fdfbf6;
-    --sidebar-foreground: #5c4b3e;
-    --secondary-foreground: #5c4b3e;
-    --destructive-foreground: #faf8f2;
-    --sidebar-accent-foreground: #5c4b3e;
-    --sidebar-primary-foreground: #fdfbf6;
+    --sidebar-primary: 157 177 140;
+    --muted-foreground: 133 118 106;
+    --accent-foreground: 92 75 62;
+    --popover-foreground: 92 75 62;
+    --primary-foreground: 253 251 246;
+    --sidebar-foreground: 92 75 62;
+    --secondary-foreground: 92 75 62;
+    --destructive-foreground: 250 248 242;
+    --sidebar-accent-foreground: 92 75 62;
+    --sidebar-primary-foreground: 253 251 246;
   }
 
   .dark {
     /* ── Library dark mode — near-black neutral reading surface ── */
     --button-ripple-color: rgba(255, 255, 255, 0.18);
-    --background: #111110;
-    --foreground: #e6e1d8;
-    --card: #1c1b1a;
-    --card-foreground: #e6e1d8;
-    --popover: #1c1b1a;
-    --popover-foreground: #e6e1d8;
-    --primary: #8a9f7b;
-    --primary-foreground: #0c1008;
-    --secondary: #252422;
-    --secondary-foreground: #e6e1d8;
-    --muted: #252422;
-    --muted-foreground: #888480;
-    --accent: #a18f5c;
-    --accent-foreground: #0c1008;
-    --destructive: #b5766a;
-    --destructive-foreground: #f0e9db;
-    --border: #2e2c2a;
-    --input: #252422;
-    --ring: #8a9f7b;
-    --chart-1: #8a9f7b;
-    --chart-2: #9db18c;
-    --chart-3: #71856a;
-    --chart-4: #a18f5c;
-    --chart-5: #5e6e58;
-    --sidebar: #0b0b0a;
-    --sidebar-foreground: #e6e1d8;
-    --sidebar-primary: #8a9f7b;
-    --sidebar-primary-foreground: #0c1008;
-    --sidebar-accent: #a18f5c;
-    --sidebar-accent-foreground: #0c1008;
-    --sidebar-border: #1c1b1a;
-    --sidebar-ring: #8a9f7b;
+    --background: 17 17 16;
+    --foreground: 230 225 216;
+    --card: 28 27 26;
+    --card-foreground: 230 225 216;
+    --popover: 28 27 26;
+    --popover-foreground: 230 225 216;
+    --primary: 138 159 123;
+    --primary-foreground: 12 16 8;
+    --secondary: 37 36 34;
+    --secondary-foreground: 230 225 216;
+    --muted: 37 36 34;
+    --muted-foreground: 136 132 128;
+    --accent: 161 143 92;
+    --accent-foreground: 12 16 8;
+    --destructive: 181 118 106;
+    --destructive-foreground: 240 233 219;
+    --border: 46 44 42;
+    --input: 37 36 34;
+    --ring: 138 159 123;
+    --chart-1: 138 159 123;
+    --chart-2: 157 177 140;
+    --chart-3: 113 133 106;
+    --chart-4: 161 143 92;
+    --chart-5: 94 110 88;
+    --sidebar: 11 11 10;
+    --sidebar-foreground: 230 225 216;
+    --sidebar-primary: 138 159 123;
+    --sidebar-primary-foreground: 12 16 8;
+    --sidebar-accent: 161 143 92;
+    --sidebar-accent-foreground: 12 16 8;
+    --sidebar-border: 28 27 26;
+    --sidebar-ring: 138 159 123;
   }
 }
 

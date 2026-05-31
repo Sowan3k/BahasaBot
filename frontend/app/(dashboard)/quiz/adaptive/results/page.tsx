@@ -18,10 +18,10 @@ import type { StandaloneQuizResult } from "@/lib/types";
 // ── BPS display helpers ───────────────────────────────────────────────────────
 
 const BPS_LABEL: Record<string, string> = {
-  "BPS-1": "BPS-1 — Beginner",
-  "BPS-2": "BPS-2 — Elementary",
-  "BPS-3": "BPS-3 — Intermediate",
-  "BPS-4": "BPS-4 — Upper Intermediate",
+  "BPS-1": "BPS-1: Beginner",
+  "BPS-2": "BPS-2: Elementary",
+  "BPS-3": "BPS-3: Intermediate",
+  "BPS-4": "BPS-4: Upper Intermediate",
 };
 
 const BPS_COLOR: Record<string, string> = {
@@ -43,7 +43,7 @@ function ScoreRing({ percent }: { percent: number }) {
       ? "#22c55e"
       : percent >= 40
       ? "#f59e0b"
-      : "hsl(var(--destructive))";
+      : "rgb(var(--destructive))";
 
   return (
     <div className="relative w-36 h-36 mx-auto flex-shrink-0">

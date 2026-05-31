@@ -613,7 +613,7 @@ export default function AdminUserDetailPage() {
                 }))}
                 margin={{ top: 4, right: 8, left: -16, bottom: 0 }}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--border))" />
                 <XAxis dataKey="date" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
                 <YAxis tick={{ fontSize: 10 }} domain={[0, 1]} tickFormatter={(v) => `${Math.round(v * 100)}%`} />
                 <Tooltip
@@ -714,7 +714,7 @@ export default function AdminUserDetailPage() {
                   ) : (
                     <ResponsiveContainer width="100%" height={180}>
                       <LineChart data={tokenChartData} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--border))" />
                         <XAxis dataKey="date" tick={{ fontSize: 10 }} interval={tickInterval} />
                         <YAxis tick={{ fontSize: 10 }} />
                         <Tooltip content={<ChartTooltip />} />
@@ -734,7 +734,7 @@ export default function AdminUserDetailPage() {
                   ) : (
                     <ResponsiveContainer width="100%" height={180}>
                       <BarChart data={activityChartData} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--border))" />
                         <XAxis dataKey="date" tick={{ fontSize: 10 }} interval={tickInterval} />
                         <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
                         <Tooltip content={<ChartTooltip />} />

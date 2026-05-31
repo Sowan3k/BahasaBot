@@ -172,7 +172,7 @@ export interface GlassCardProps {
 export const GlassCard = ({ children, featured = false, className }: GlassCardProps) => (
   <div
     className={cn(
-      "backdrop-blur-[32px] bg-gradient-to-br rounded-2xl shadow-xl transition-all duration-300",
+      "backdrop-blur-sm bg-gradient-to-br rounded-2xl shadow-lg transition-all duration-300",
       "from-white/65 to-white/45 border border-black/14",
       "dark:from-white/[0.13] dark:to-white/[0.07] dark:border-white/[0.14] dark:shadow-black/60",
       featured && "ring-2 ring-primary/50 from-white/78 to-white/58 dark:from-white/[0.20] dark:to-white/[0.11] dark:border-primary/40 shadow-2xl",

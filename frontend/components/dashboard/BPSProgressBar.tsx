@@ -25,7 +25,7 @@ export default function BPSProgressBar({ level }: Props) {
           BahasaBot Proficiency Scale (BPS)
         </h3>
         <span className="text-xs sm:text-sm font-medium text-muted-foreground whitespace-nowrap">
-          {level} — {LEVEL_LABELS[level]}
+          {level}: {LEVEL_LABELS[level]}
         </span>
       </div>
 
@@ -55,7 +55,7 @@ export default function BPSProgressBar({ level }: Props) {
       <p className="text-sm text-muted-foreground leading-relaxed">
         {level === "BPS-4"
           ? "You have reached the highest tracked level. Keep practising!"
-          : `Next level: ${LEVELS[currentIndex + 1]} — ${LEVEL_LABELS[LEVELS[currentIndex + 1]]}. Take the adaptive quiz to improve.`}
+          : `Next level: ${LEVELS[currentIndex + 1]}: ${LEVEL_LABELS[LEVELS[currentIndex + 1]]}. Take the adaptive quiz to improve.`}
       </p>
     </div>
   );

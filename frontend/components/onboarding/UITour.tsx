@@ -47,7 +47,7 @@ const TOUR_STEPS: TourStep[] = [
     color: "#d4a843",
     title: "Navigation Menu",
     description:
-      'Tap the ☰ button (top-left) to open the menu. Every feature is one tap away — AI Tutor, Courses, Quiz, Journey, and more.',
+      'Tap the ☰ button (top-left) to open the menu. Every feature is one tap away: AI Tutor, Courses, Quiz, Journey, and more.',
   },
   {
     icon: LayoutDashboard,
@@ -61,7 +61,7 @@ const TOUR_STEPS: TourStep[] = [
     color: "#c85a3c",
     title: "AI Tutor",
     description:
-      "Chat freely with your personal Malay tutor powered by Google Gemini. Ask anything — grammar, pronunciation, vocabulary.",
+      "Chat freely with your personal Malay tutor powered by Google Gemini. Ask anything: grammar, pronunciation, vocabulary.",
   },
   {
     icon: BookOpen,
@@ -128,7 +128,7 @@ const DESKTOP_STEPS = [
     popover: {
       title: "AI Tutor",
       description:
-        "Chat freely with your personal Malay tutor powered by Google Gemini. Ask anything — grammar, pronunciation, vocabulary.",
+        "Chat freely with your personal Malay tutor powered by Google Gemini. Ask anything: grammar, pronunciation, vocabulary.",
       side: "right" as const,
       align: "start" as const,
     },
@@ -308,7 +308,7 @@ function MobileTour({ onDone }: MobileTourProps) {
                       ? "#8d9d4f"
                       : i < step
                       ? "#8d9d4f66"
-                      : "var(--border)",
+                      : "rgb(var(--border))",
                 }}
               />
             ))}

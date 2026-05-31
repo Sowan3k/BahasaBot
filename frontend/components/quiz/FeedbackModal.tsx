@@ -99,7 +99,7 @@ export function FeedbackModal({ isOpen, onClose, quizType }: FeedbackModalProps)
           <div>
             <h3 className="text-base font-semibold">Quick Feedback</h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Optional — takes less than a minute
+              Optional, takes less than a minute
             </p>
           </div>
           <button

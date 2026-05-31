@@ -373,7 +373,7 @@ export const NotificationPopover = ({
           unreadCount > 0 ? "animate-bell-glow" : "",
           buttonClassName
         )}
-        aria-label={`Notifications${unreadCount > 0 ? ` — ${unreadCount} unread` : ""}`}
+        aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
       >
         <Bell
           size={17}

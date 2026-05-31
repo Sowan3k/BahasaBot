@@ -194,7 +194,7 @@ export default function BillingPage() {
         {/* ── Notice ── */}
         <GlassCard className="p-4">
           <p className="text-xs text-foreground/45 text-center leading-relaxed">
-            Payment integration is in development — all features are free of charge until launch.
+            Payment integration is in development. All features are free of charge until launch.
           </p>
         </GlassCard>
 

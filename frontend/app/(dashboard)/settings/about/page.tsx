@@ -80,7 +80,7 @@ export default function AboutPage() {
 
         {/* Footer note */}
         <p className="text-center text-xs text-muted-foreground">
-          BahasaBot &copy; {new Date().getFullYear()} — FYP submission
+          BahasaBot &copy; {new Date().getFullYear()} | FYP submission
         </p>
       </div>
     </div>

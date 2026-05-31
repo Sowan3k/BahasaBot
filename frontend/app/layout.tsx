@@ -30,7 +30,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "BahasaBot — Learn Bahasa Melayu",
+  title: "BahasaBot: Learn Bahasa Melayu",
   description: "AI-powered Bahasa Melayu language learning platform",
   icons: {
     icon: [{ url: "/Logo new only box (1).svg", type: "image/svg+xml" }],

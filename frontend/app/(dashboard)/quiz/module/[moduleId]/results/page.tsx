@@ -37,7 +37,7 @@ function ScoreRing({
   const stroke = 8;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (percent / 100) * circumference;
-  const color = passed ? "#22c55e" : "hsl(var(--destructive))";
+  const color = passed ? "#22c55e" : "rgb(var(--destructive))";
 
   return (
     <div className="relative w-36 h-36 mx-auto flex-shrink-0">

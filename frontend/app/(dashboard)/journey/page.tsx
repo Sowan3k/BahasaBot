@@ -141,7 +141,7 @@ function SetupModal({ onGenerated, onDismiss }: SetupModalProps) {
             <button
               onClick={onDismiss}
               className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-lg hover:bg-muted/30"
-              aria-label="Dismiss — create roadmap later"
+              aria-label="Dismiss, create roadmap later"
             >
               <X className="h-4 w-4" />
             </button>
@@ -150,7 +150,7 @@ function SetupModal({ onGenerated, onDismiss }: SetupModalProps) {
             Let&apos;s build your roadmap
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Step {step} of 3 — {step === 1 ? "Your intent" : step === 2 ? "Your goal" : "Your timeline"}
+            Step {step} of 3: {step === 1 ? "Your intent" : step === 2 ? "Your goal" : "Your timeline"}
           </p>
           {/* Progress dots */}
           <div className="flex gap-2 mt-3">
@@ -980,7 +980,7 @@ export default function JourneyPage() {
             {roadmap.status === "overdue" ? (
               <span className="text-amber-500 font-medium">Deadline passed ({formatDate(roadmap.deadline)})</span>
             ) : (
-              <>Target: {formatDate(roadmap.deadline)} — {roadmap.days_remaining}d remaining</>
+              <>Target: {formatDate(roadmap.deadline)}, {roadmap.days_remaining}d remaining</>
             )}
           </span>
         </div>
@@ -995,7 +995,7 @@ export default function JourneyPage() {
           </div>
           <p className="text-xs text-muted-foreground">
             {roadmap.extended
-              ? "You've already extended this journey once. Keep going — you can do it!"
+              ? "You've already extended this journey once. Keep going! You can do it!"
               : "You can extend your journey by up to 3 months, or keep going at your own pace."}
           </p>
           {!roadmap.extended && (
@@ -1065,7 +1065,7 @@ export default function JourneyPage() {
                 elem.completed
                   ? "bg-emerald-500 border-emerald-500"
                   : getElementState(elem, i, elements) === "current"
-                  ? "bg-primary border-primary shadow-[0_0_8px_rgba(var(--primary),0.6)]"
+                  ? "bg-primary border-primary shadow-[0_0_8px_rgb(var(--primary)/0.6)]"
                   : "bg-background border-border/40"
               }`}
             />

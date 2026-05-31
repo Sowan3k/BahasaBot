@@ -520,7 +520,7 @@ export function SpellingGame() {
               <div className="flex items-center gap-2.5">
                 <Volume2 className="w-4 h-4 text-primary flex-shrink-0" />
                 <span>
-                  Audio plays automatically —{" "}
+                  Audio plays automatically.{" "}
                   <kbd className="px-1.5 py-0.5 rounded border bg-muted font-mono text-[11px] text-foreground">Space</kbd>{" "}
                   to replay
                 </span>
@@ -545,7 +545,7 @@ export function SpellingGame() {
             ) : (
               <div className="flex items-center justify-center gap-2 py-2 rounded-xl bg-muted/50 border border-border">
                 <Trophy className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">No record yet — set your first score!</span>
+                <span className="text-sm text-muted-foreground">No record yet. Set your first score!</span>
               </div>
             )}
 
@@ -658,7 +658,7 @@ export function SpellingGame() {
         <button
           onClick={resetSession}
           className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-destructive transition-colors px-2 py-1 rounded-lg hover:bg-muted"
-          title="Exit game — stats will not be saved"
+          title="Exit game (stats will not be saved)"
         >
           <X className="w-3.5 h-3.5" /> Exit game
         </button>
@@ -763,7 +763,7 @@ export function SpellingGame() {
                     </>
                   ) : (
                     <>
-                      <p className="text-red-700 dark:text-red-400 font-semibold text-sm">Incorrect — correct spelling:</p>
+                      <p className="text-red-700 dark:text-red-400 font-semibold text-sm">Incorrect. Correct spelling:</p>
                       <p className="text-red-800 dark:text-red-300 font-bold mt-0.5">
                         {result.correct_word}
                         {result.ipa && <span className="font-normal font-mono text-xs ml-1 opacity-70">{result.ipa}</span>}

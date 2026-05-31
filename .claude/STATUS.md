@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-05-31 (Session 79 — Auth page full UI overhaul + showcase SVGs + mobile layout + SVG polish fixes)
+## Last Updated: 2026-05-31 (Session 80 — Ring/opacity bug root-cause fix + em-dash removal + pricing page perf)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -127,6 +127,55 @@ Complete redesign of the auth page left panel: replace basic illustrations with 
 - All 14 SVGs parse and display correctly in browser
 - Mobile: floating glass card with particles visible; single logo; proportional heading
 - Desktop: full-height right sidebar unchanged
+
+### Commits
+- 522f287 feat: auth page full UI overhaul - showcase SVGs, mobile layout, polish fixes
+
+---
+
+## What Was Done This Session (2026-05-31 Session 80 — Ring/opacity bug root-cause fix + em-dash removal + pricing page perf)
+
+### Goals
+Fix the blue ring/border appearing on quiz icons and throughout the app (root-cause CSS variable format issue); remove em-dashes from all user-visible UI strings; fix pricing page lag + visual issues.
+
+### Root Cause: Tailwind Opacity Modifier + Hex CSS Variables
+`--primary: #8a9f7b` (hex) caused `ring-primary/20` → `rgb(#8a9f7b / 0.2)` (invalid CSS) → browser fell back to Tailwind's default blue ring `rgb(59 130 246 / 0.5)`. Fix: converted ALL Tailwind color CSS variables to RGB channel format (`138 159 123`) and updated `tailwind.config.ts` to use `rgb(var(--X) / <alpha-value>)` for every color. All ring/opacity modifiers now generate valid CSS.
+
+### Files Modified
+- `frontend/app/globals.css` — All Tailwind color CSS vars converted from hex to RGB channel format (`:root` and `.dark` blocks); comment added explaining the format requirement
+- `frontend/tailwind.config.ts` — All color definitions changed from `"var(--X)"` to `"rgb(var(--X) / <alpha-value>)"` for opacity-modifier support; typography `color` values changed to `"rgb(var(--X))"`
+- `frontend/app/(dashboard)/journey/page.tsx` — `rgba(var(--primary),0.6)` → `rgb(var(--primary)/0.6)` (shadow on current obstacle dot); `Step X of 3 —` → `Step X of 3:`; two other em-dash fixes
+- `frontend/app/(dashboard)/admin/page.tsx` — `stroke="var(--border)"` → `stroke="rgb(var(--border))"` (Recharts CartesianGrid)
+- `frontend/app/(dashboard)/admin/users/[userId]/page.tsx` — All 3 `stroke="var(--border)"` → `stroke="rgb(var(--border))"`
+- `frontend/components/onboarding/UITour.tsx` — `"var(--border)"` → `"rgb(var(--border))"` (progress pip background); two em-dash fixes
+- `frontend/app/(dashboard)/quiz/adaptive/results/page.tsx` — `"hsl(var(--destructive))"` → `"rgb(var(--destructive))"` (score ring color)
+- `frontend/app/(dashboard)/quiz/module/[moduleId]/results/page.tsx` — Same `hsl` → `rgb` fix
+- `frontend/components/ui/animated-glassy-pricing.tsx` — `backdrop-blur-[32px]` → `backdrop-blur-sm` (pricing page GPU perf)
+- `frontend/app/pricing/page.tsx` — ShaderCanvas (WebGL 60fps shader) replaced with zero-cost CSS radial gradient; hero font size responsive (`text-4xl sm:text-5xl lg:text-6xl`); back link `href` fixed `/dashboard` → `/login`; 5 em-dash fixes in FAQ + hero text
+- `frontend/app/layout.tsx` — Page title em-dash removed: `"BahasaBot — ..."` → `"BahasaBot: ..."`
+- `frontend/components/dashboard/BPSProgressBar.tsx` — 2 em-dash replacements (`—` → `:`)
+- `frontend/components/games/SpellingGame.tsx` — 4 em-dash fixes
+- `frontend/components/games/WordMatchGame.tsx` — 3 em-dash fixes
+- `frontend/components/landing/LandingPage.tsx` — `" — "` separator → `" · "` (middle dot)
+- `frontend/components/quiz/FeedbackModal.tsx` — `Optional — ...` → `Optional, ...`
+- `frontend/components/subscription/ComingSoonModal.tsx` — 2 em-dash fixes
+- `frontend/components/subscription/PlanBadge.tsx` — Tooltip title em-dash removed
+- `frontend/components/courses/CourseGenerationModal.tsx` — Em-dash removed from info text
+- `frontend/components/ui/notification-popover.tsx` — Aria-label em-dash → parentheses
+- `frontend/app/(dashboard)/settings/about/page.tsx` — `— FYP submission` → `| FYP submission`
+- `frontend/app/(dashboard)/settings/billing/page.tsx` — Em-dash removed from notice text
+
+### Bugs / Issues Fixed This Session
+| Issue | Fix |
+|---|---|
+| Blue ring on quiz icon + all `ring-primary/X` usages | Root cause: hex CSS vars incompatible with Tailwind opacity modifiers. Converted all vars to RGB channel format in globals.css + updated tailwind.config.ts |
+| `stroke="var(--border)"` in Recharts charts (admin) | Changed to `stroke="rgb(var(--border))"` — SVG stroke attribute needs full CSS color after var conversion |
+| `hsl(var(--destructive))` in quiz result score rings | Changed to `rgb(var(--destructive))` — was using HSL function with wrong var format |
+| Pricing page WebGL lag (60fps shader on scrolling page) | Replaced ShaderCanvas with zero-cost CSS radial gradient; GlassCard blur reduced from 32px to sm |
+| Em-dashes in user-visible UI text (~14 files) | Replaced with `:`, `,`, `.`, `|`, `·` or `()` depending on context |
+
+### Verified
+- tsc --noEmit: 0 errors
 
 ### Commits
 - Pending (this push)

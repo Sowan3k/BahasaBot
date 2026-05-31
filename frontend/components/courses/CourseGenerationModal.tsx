@@ -105,7 +105,7 @@ export function CourseGenerationModal({ onClose, initialTopic }: CourseGeneratio
 
         {/* Info: generation runs in background */}
         <p className="text-xs text-muted-foreground rounded-md bg-muted px-3 py-2">
-          Generation runs in the background — you can freely navigate while it works.
+          Generation runs in the background. You can freely navigate while it works.
           A progress card will appear in the bottom-right corner.
         </p>
 

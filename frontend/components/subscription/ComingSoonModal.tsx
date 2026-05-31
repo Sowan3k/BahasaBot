@@ -56,7 +56,7 @@ export function ComingSoonModal({ open, onClose }: ComingSoonModalProps) {
         <div className="space-y-3 text-sm text-muted-foreground leading-relaxed">
           <p>
             We&apos;re currently finalizing our payment gateway setup with Stripe. The pricing
-            model and features above are locked and ready — payment processing will be live
+            model and features above are locked and ready; payment processing will be live
             shortly after launch.
           </p>
           <p>
@@ -83,7 +83,7 @@ export function ComingSoonModal({ open, onClose }: ComingSoonModalProps) {
             </li>
             <li className="flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
-              Cancel anytime — no hidden fees
+              Cancel anytime, no hidden fees
             </li>
           </ul>
         </div>

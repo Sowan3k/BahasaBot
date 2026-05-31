@@ -482,7 +482,7 @@ export function WordMatchGame() {
             ) : (
               <div className="flex items-center justify-center gap-2 py-2 rounded-xl bg-muted/50 border border-border">
                 <Trophy className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">No record yet — set your first score!</span>
+                <span className="text-sm text-muted-foreground">No record yet. Set your first score!</span>
               </div>
             )}
 
@@ -588,7 +588,7 @@ export function WordMatchGame() {
         <button
           onClick={resetSession}
           className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-destructive transition-colors px-2 py-1 rounded-lg hover:bg-muted"
-          title="Exit game — stats will not be saved"
+          title="Exit game (stats will not be saved)"
         >
           <X className="w-3.5 h-3.5" /> Exit game
         </button>
@@ -706,7 +706,7 @@ export function WordMatchGame() {
           <div className={`text-sm font-medium text-center ${result.correct ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
             {result.correct
               ? `Correct! +${result.xp_awarded} XP`
-              : `Incorrect — correct: "${result.correct_meaning}"`}
+              : `Incorrect. Correct: "${result.correct_meaning}"`}
           </div>
           {wordsAttempted < SESSION_SIZE && (
             <Button onClick={fetchNextQuestion} className="w-full" variant="outline">

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Check, X, ChevronDown, ChevronUp, ArrowLeft } from "lucide-react";
-import { ShaderCanvas, GlassCard } from "@/components/ui/animated-glassy-pricing";
+import { GlassCard } from "@/components/ui/animated-glassy-pricing";
 import { RippleButton } from "@/components/ui/multi-type-ripple-buttons";
 import { PricingCard } from "@/components/subscription/PricingCard";
 import { ComingSoonModal } from "@/components/subscription/ComingSoonModal";
@@ -84,11 +84,11 @@ const FAQ_ITEMS = [
   },
   {
     q: "Is the Free plan really free?",
-    a: "Yes — the Free plan is completely free, forever. No credit card required. You get 30 chat messages and 1 course generation per day with no time limit.",
+    a: "Yes, the Free plan is completely free, forever. No credit card required. You get 30 chat messages and 1 course generation per day with no time limit.",
   },
   {
     q: "Why does the 7-Day Pass have more course generations than Monthly Pro?",
-    a: "Exam crammers need to generate multiple topic-specific courses in a single sitting. The 7-Day Power Pass is designed for this use case — 10 courses per day lets you cover every topic before your exam.",
+    a: "Exam crammers need to generate multiple topic-specific courses in a single sitting. The 7-Day Power Pass is designed for this use case: 10 courses per day lets you cover every topic before your exam.",
   },
 ];
 
@@ -135,13 +135,16 @@ export default function PricingPage() {
 
   return (
     <div className="relative min-h-screen bg-background text-foreground overflow-x-hidden">
-      {/* Animated WebGL background */}
-      <ShaderCanvas />
+      {/* Static CSS background — replaces WebGL ShaderCanvas (perf) */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_90%_60%_at_50%_0%,rgba(138,159,123,0.12),transparent_70%)]" />
+        <div className="absolute bottom-0 inset-x-0 h-1/2 bg-[radial-gradient(ellipse_60%_50%_at_50%_100%,rgba(161,143,92,0.07),transparent)]" />
+      </div>
 
       {/* Floating back button — fixed so it stays visible while scrolling */}
       <div className="fixed top-5 left-5 z-30">
         <Link
-          href="/dashboard"
+          href="/login"
           className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium
             text-foreground/70 hover:text-foreground transition-all
             backdrop-blur-[24px]
@@ -157,16 +160,16 @@ export default function PricingPage() {
 
         {/* ── Hero ── */}
         <section className="text-center space-y-6 max-w-3xl mx-auto">
-          <h1 className="font-heading text-5xl sm:text-6xl font-extralight leading-tight tracking-[-0.03em] bg-clip-text text-transparent bg-gradient-to-r from-foreground via-primary to-accent">
-            Choose Your Path to<br />Bahasa Mastery
+          <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-extralight leading-tight tracking-[-0.03em] bg-clip-text text-transparent bg-gradient-to-r from-foreground via-primary to-accent">
+            Choose Your Path to Bahasa Mastery
           </h1>
           <p className="text-base sm:text-lg text-foreground/70 leading-relaxed max-w-xl mx-auto">
             BahasaBot helps international students at Malaysian universities ace their mandatory
-            Bahasa Malaysia subject — from beginner greetings to conversational fluency.
+            Bahasa Malaysia subject, from beginner greetings to conversational fluency.
             Start free, upgrade when exam season hits.
           </p>
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-sm text-primary font-medium">
-            ✨ 7-day free trial available — card required, cancel anytime
+            ✨ 7-day free trial available, card required, cancel anytime
           </div>
         </section>
 
@@ -291,7 +294,7 @@ export default function PricingPage() {
             Ready to master Bahasa Malaysia?
           </h2>
           <p className="text-sm text-foreground/50">
-            Join students already learning with BahasaBot — start free today.
+            Join students already learning with BahasaBot. Start free today.
           </p>
           <RippleButton
             onClick={() => setModalOpen(true)}

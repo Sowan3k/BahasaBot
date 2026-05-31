@@ -691,7 +691,7 @@ function ScoreDistributionPanel() {
               </div>
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={data.buckets} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--border))" />
                   <XAxis dataKey="range" tick={{ fontSize: 10 }} />
                   <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
                   <Tooltip
