@@ -178,7 +178,7 @@ Fix the blue ring/border appearing on quiz icons and throughout the app (root-ca
 - tsc --noEmit: 0 errors
 
 ### Commits
-- Pending (this push)
+- 432469c fix: CSS var opacity modifiers + em-dash cleanup + pricing page perf
 
 ---
 
