@@ -229,11 +229,8 @@ async def google_auth(body: GoogleAuthRequest, db: AsyncSession = Depends(get_db
         await db.refresh(user)
         logger.info("Google user created", user_id=str(user.id), email=email)
     else:
-        # Existing email/password account — link to Google on first OAuth sign-in
-        if user.provider == "email":
-            user.provider = "google"
-            await db.commit()
-            await db.refresh(user)
+        # Existing account — allow Google sign-in regardless of original provider.
+        # provider tracks original sign-up method only and is never changed.
         logger.info("Google user logged in", user_id=str(user.id), email=email)
 
     if not user.is_active:
@@ -374,8 +371,8 @@ async def forgot_password(body: ForgotPasswordRequest, db: AsyncSession = Depend
     if user is None:
         return ForgotPasswordResponse(message="If that email is registered, you'll receive a code shortly.")
 
-    # Google-only account — no password to reset
-    if user.provider == "google" or user.password_hash is None:
+    # Account has no password — was created via Google OAuth
+    if user.password_hash is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="google_account_no_password",
