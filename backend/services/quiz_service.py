@@ -479,6 +479,55 @@ async def _check_course_completion_for_journey(
 # ── Weak points helper ─────────────────────────────────────────────────────────
 
 
+def _extract_topic_label(q: dict) -> str:
+    """
+    Derive a short, readable topic label from a question dict.
+
+    Priority order:
+    1. Explicit 'topic' key (set by newer Gemini responses)
+    2. The correct answer itself (for vocabulary/translation questions)
+    3. A truncated form of the question text (fallback)
+
+    Keeps the weak_points dashboard readable — shows "makan (eat)" instead
+    of the full question string.
+    """
+    if q.get("topic"):
+        return str(q["topic"])[:200]
+
+    correct = q.get("correct_answer", "").strip()
+    question = q.get("question", "").strip()
+    q_type = q.get("type", "")
+
+    # For vocab/fill-in-blank, the answer IS the concept being tested
+    if correct and q_type in ("fill_in_blank", "mcq") and len(correct) <= 60:
+        # Include a hint from the question for context
+        # e.g. "makan" + "(eat)" extracted from "I ___ rice"
+        if "(I " in question or "translate" in question.lower():
+            return correct[:100]
+        # Strip common question prefixes to get the topic phrase
+        for prefix in (
+            "What is the Malaysian Malay word for ",
+            "What does '",
+            "Choose the correct Malay word for ",
+            "Select the correct translation for ",
+        ):
+            if question.startswith(prefix):
+                # e.g. "What is the Malaysian Malay word for 'food'?" → "food"
+                remainder = question[len(prefix):].strip(" '\"?")
+                if remainder:
+                    return f"{correct} ({remainder})"[:200]
+        return correct[:100]
+
+    # Translation: truncate to a reasonable label
+    if correct and q_type == "translation":
+        # Use first 5 words of the correct Malay answer
+        words = correct.split()[:5]
+        return " ".join(words)[:200]
+
+    # Fallback: truncate question text
+    return question[:200] or "Unknown topic"
+
+
 async def _update_weak_points(
     user_id: UUID,
     wrong_questions: list[dict],
@@ -491,8 +540,7 @@ async def _update_weak_points(
     - New topic: inserted with initial strength_score of 0.4
     """
     for q in wrong_questions:
-        # Use the question text as the topic label (truncated to column limit)
-        topic = q.get("question", "Unknown topic")[:200]
+        topic = _extract_topic_label(q)
         # Both MCQ and fill-in-blank can test vocabulary or grammar.
         # Default to "vocab" since most Malay quiz questions at this level target vocabulary.
         q_type = "vocab"
@@ -529,7 +577,7 @@ async def _improve_weak_points(
     strength_score increases by 0.1 per correct answer (ceiling 1.0).
     """
     for q in correct_questions:
-        topic = q.get("question", "")[:200]
+        topic = _extract_topic_label(q)
         existing = await db.execute(
             select(WeakPoint).where(
                 WeakPoint.user_id == user_id,
@@ -687,6 +735,8 @@ Rules:
 - Fill-in-blank and translation must have exactly one accepted correct answer
 - Vary difficulty slightly — mostly easy/medium since this is a language learner
 - Each question needs a brief, helpful explanation of the correct answer
+- Each question must include a short "topic" field (2–5 words) describing the concept being tested,
+  e.g. "food vocabulary", "tinggal (live/stay)", "greeting phrases", "mahu sentence structure"
 - For translation questions, the question should be the English sentence and correct_answer the Malay translation
 - For vocabulary questions, include the IPA pronunciation in the explanation, e.g.: \
 "'Air' /aɪr/ means water in Malaysian Malay."
@@ -697,6 +747,7 @@ Return ONLY valid JSON — no markdown, no prose:
     {{
       "id": "q1",
       "type": "mcq",
+      "topic": "water vocabulary",
       "question": "What is the Malaysian Malay word for 'water'?",
       "options": ["air", "api", "tanah", "angin"],
       "correct_answer": "air",
@@ -705,6 +756,7 @@ Return ONLY valid JSON — no markdown, no prose:
     {{
       "id": "q7",
       "type": "fill_in_blank",
+      "topic": "tinggal (live/stay)",
       "question": "Complete: 'Saya _____ di rumah.' (I ___ at home)",
       "options": null,
       "correct_answer": "tinggal",
@@ -713,6 +765,7 @@ Return ONLY valid JSON — no markdown, no prose:
     {{
       "id": "q13",
       "type": "translation",
+      "topic": "eating sentence",
       "question": "Translate to Malaysian Malay: 'I want to eat rice.'",
       "options": null,
       "correct_answer": "Saya mahu makan nasi.",
