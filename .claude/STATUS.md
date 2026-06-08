@@ -77,6 +77,38 @@ _Update this file at the end of every session_
 
 ---
 
+## What Was Done This Session (2026-06-09 Session 82 — Google OAuth production fix + CORS regex)
+
+### Goals
+Diagnose and fix Google sign-in / sign-up failing on the production Vercel deployment (`bahasabot-main3.vercel.app`). After pressing the Google button, the account picker appeared but authentication failed after account selection.
+
+### Root Cause Analysis
+Two compounding issues identified:
+
+**Issue 1 — CORS regex mismatch (code bug):**
+The backend CORS regex `r"https://bahasa-.*\.vercel\.app"` requires the URL to start with `bahasa-` (with a hyphen). The production URL `bahasabot-main3.vercel.app` starts with `bahasabot-` (no hyphen after "bahasa") so it did NOT match. All API calls from the production Vercel URL to the backend were CORS-blocked.
+
+**Issue 2 — Google Cloud Console not configured for production URL:**
+`https://bahasabot-main3.vercel.app` was missing from **Authorized JavaScript Origins** in Google Cloud Console. After the user selects a Google account in the popup, Google validates the requesting origin. If the origin is not registered, the credential token is never sent back — `onError` fires and the user sees "Google sign-in failed." This was the `⚠️ Manual Action Required` flagged in STATUS.md since Session 77 but never actioned.
+
+### Files Modified
+- `backend/main.py` — CORS `allow_origin_regex` updated from `r"https://bahasa-.*\.vercel\.app"` to `r"https://bahasa(bot)?[-].*\.vercel\.app"`. Now covers `bahasa-<hash>.vercel.app` (auto-generated previews) AND `bahasabot-<name>.vercel.app` (named deployments like bahasabot-main3)
+
+### Manual Actions Completed by Developer
+- Added `https://bahasabot-main3.vercel.app` to **Authorized JavaScript origins** in Google Cloud Console (OAuth Client `1053180935290-...`)
+- Confirmed `NEXT_PUBLIC_GOOGLE_CLIENT_ID` set in Vercel env vars, matches backend `GOOGLE_CLIENT_ID`
+- Confirmed `ALLOWED_ORIGINS` in Railway/Render includes the production Vercel URL
+
+### Verified
+- Google sign-in on `https://bahasabot-main3.vercel.app` ✓
+- Google sign-up on `https://bahasabot-main3.vercel.app` ✓
+
+### Commits
+- `b1ac097` — fix: CORS regex now covers bahasabot-main3.vercel.app (production URL)
+- `99a2ef3` — docs: mark Google OAuth production fix resolved (session 81)
+
+---
+
 ## What Was Done This Session (2026-06-09 Session 81 — Pricing page back-button logout bug fix)
 
 ### Problem
