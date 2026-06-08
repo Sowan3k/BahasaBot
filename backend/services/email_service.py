@@ -7,7 +7,6 @@ Uses the Resend Python SDK (resend==2.6.0).
 Environment variables required:
   RESEND_API_KEY      — Resend API key (starts with re_...)
   RESEND_FROM_EMAIL   — Sender address (e.g. onboarding@resend.dev for testing)
-  FRONTEND_URL        — Base URL of the frontend (for building reset links)
 """
 
 import asyncio
@@ -19,7 +18,6 @@ logger = get_logger(__name__)
 
 RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
 RESEND_FROM_EMAIL = os.getenv("RESEND_FROM_EMAIL", "onboarding@resend.dev")
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 
 def _send_code_email_sync(to_email: str, code: str) -> bool:

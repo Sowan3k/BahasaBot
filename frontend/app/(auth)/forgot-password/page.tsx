@@ -206,17 +206,28 @@ function CodeStep({
   const [resendCooldown, setResendCooldown] = useState(0);
   const [resendMessage, setResendMessage] = useState<string | null>(null);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Start cooldown on mount so user can't immediately re-send
-  useEffect(() => {
+  function startCooldown() {
+    if (cooldownRef.current) clearInterval(cooldownRef.current);
     setResendCooldown(60);
-    const interval = setInterval(() => {
+    cooldownRef.current = setInterval(() => {
       setResendCooldown((c) => {
-        if (c <= 1) { clearInterval(interval); return 0; }
+        if (c <= 1) {
+          clearInterval(cooldownRef.current!);
+          cooldownRef.current = null;
+          return 0;
+        }
         return c - 1;
       });
     }, 1000);
-    return () => clearInterval(interval);
+  }
+
+  // Start cooldown on mount so user can't immediately re-send
+  useEffect(() => {
+    startCooldown();
+    return () => { if (cooldownRef.current) clearInterval(cooldownRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function handleDigitChange(index: number, value: string) {
@@ -278,13 +289,7 @@ function CodeStep({
       setResendMessage("New code sent! Check your inbox.");
       setDigits(["", "", "", "", "", ""]);
       inputRefs.current[0]?.focus();
-      setResendCooldown(60);
-      const interval = setInterval(() => {
-        setResendCooldown((c) => {
-          if (c <= 1) { clearInterval(interval); return 0; }
-          return c - 1;
-        });
-      }, 1000);
+      startCooldown();
     } catch {
       setApiError("Could not resend code. Please try again.");
     }
