@@ -119,6 +119,8 @@ Rules:
 - For fill-in-blank: provide enough context so there is exactly one correct answer
 - Vary difficulty (mix easy recall and applied usage questions)
 - Each question must have a brief, helpful explanation of the correct answer
+- Each question must include a short "topic" field (2–5 words) naming the concept tested,
+  e.g. "makanan (food)", "greeting phrases", "mahu sentence structure"
 - For vocabulary questions, include the IPA pronunciation in the explanation, e.g.: \
 "'Makanan' /ma.ka.nan/ means food."
 
@@ -128,6 +130,7 @@ Return ONLY valid JSON — no markdown, no prose:
     {{
       "id": "q1",
       "type": "mcq",
+      "topic": "makanan (food)",
       "question": "What is the Malaysian Malay word for 'food'?",
       "options": ["makanan", "minuman", "pakaian", "buku"],
       "correct_answer": "makanan",
@@ -136,6 +139,7 @@ Return ONLY valid JSON — no markdown, no prose:
     {{
       "id": "q2",
       "type": "fill_in_blank",
+      "topic": "makan (eat)",
       "question": "Complete: 'Saya _____ nasi goreng.' (I ___ fried rice)",
       "options": null,
       "correct_answer": "makan",
@@ -298,6 +302,7 @@ async def submit_module_quiz(
     question_results: list[dict] = []
     correct_count = 0
     wrong_questions: list[dict] = []
+    correct_questions: list[dict] = []
 
     for q in questions_full:
         qid = q["id"]
@@ -309,6 +314,7 @@ async def submit_module_quiz(
 
         if is_correct:
             correct_count += 1
+            correct_questions.append(q)
         else:
             wrong_questions.append(q)
 
@@ -348,9 +354,11 @@ async def submit_module_quiz(
         )
     )
 
-    # Update weak points for incorrect answers
+    # Update weak points based on performance (mirrors standalone quiz behaviour)
     if wrong_questions:
         await _update_weak_points(user_id, wrong_questions, db)
+    if correct_questions:
+        await _improve_weak_points(user_id, correct_questions, db)
 
     # Mark module complete if passed
     module_unlocked = False
