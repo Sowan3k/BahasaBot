@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-06-09 (Session 82 — Google OAuth production fix + CORS regex + first-login Journey handoff)
+## Last Updated: 2026-06-09 (Session 82 — Google OAuth fix + Journey handoff + auth bug fixes + forgot-password cleanup)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -20,7 +20,7 @@ _Update this file at the end of every session_
 | Background Course Generation | ✅ Complete + Animation upgrade (Session 60) | Non-blocking modal; floating progress card; BackgroundTasks + Redis job state; React Query polling; Desktop: spinning pinwheel (botanical palette, overflow-clipped flower, no stick); Mobile: compact 220px bottom-center pill with domino-falling bars — non-blocking |
 | BPS Migration | ✅ Complete | CEFR labels fully retired; BPS-1/2/3/4 across DB, backend, frontend; Alembic migration written |
 | DB Schema (Phase 11) | ✅ Complete + Applied | 6 new tables + 8 new columns; ORM models written; migration applied successfully |
-| Forgot Password (Phase 12) | ✅ Rebuilt — 6-digit code flow | 3-endpoint backend (forgot/verify/reset); 4-step frontend (email→code→password→success); OTP boxes + resend cooldown; old link page deprecated; full E2E verified |
+| Forgot Password (Phase 12) | ✅ Rebuilt — 6-digit code flow + Session 82 fixes | 3-endpoint backend (forgot/verify/reset); 4-step frontend (email→code→password→success); OTP boxes + resend cooldown; old link page deprecated; full E2E verified. **Session 82 fixes**: (1) `provider == "google"` guard in forgot-password replaced with `password_hash IS NULL` — users who linked Google to an email account were incorrectly blocked; (2) resend cooldown interval in `CodeStep` now stored in `cooldownRef` and cleared on unmount — was leaking on component unmount; (3) dead `FRONTEND_URL` env var removed from `email_service.py` |
 | User Profile + Settings (Phase 13) | ✅ Complete | GET + PATCH /api/profile/, change-password endpoint; /settings hub + /profile + /password + /about pages; Settings in sidebar |
 | Onboarding Flow (Phase 14) | ✅ Complete + Enhanced (Session 26) + Journey handoff (Session 82) | 8-step questionnaire (Welcome → Gender/Age → NativeLang → WhyLearning → CurrentLevel → Goal → Timeline → DailyStudy); gender + age_range collected for personalised roadmap banner; roadmap auto-generated on finish; loading screen during generation; skip at any step saves partial data; **Session 82**: sonner toast on roadmap_ready removed — replaced by tour-end Journey navigation (see First-Login UI Tour) |
 | First-Login UI Tour | ✅ Complete + Mobile tour (Session 68) + Journey handoff (Session 82) | driver.js spotlight tour (desktop); mobile card-slide tour (<768px); **Session 82**: "My Journey" moved to final tour step (was step 6, now step 8); Settings moved to step 7; last step title → "Your Journey Is Ready!"; desktop `doneBtnText` → "View My Journey →"; mobile "Done" button → "View My Journey →"; `layout.tsx` `handleTourDone` navigates to `/journey` when `hasJustOnboarded` ref is true (set in `handleOnboardingComplete`). Race condition safe: roadmap is fully in DB before tour starts (generation is awaited inside OnboardingModal). |
