@@ -59,10 +59,11 @@ _Update this file at the end of every session_
 ## Missing / Broken
 *(no known missing items)*
 
-## ⚠️ Manual Action Required (Google OAuth Production)
-- Add the production Vercel URL to **Authorized JavaScript origins** in Google Cloud Console (OAuth Client → your client ID)
-- Add `NEXT_PUBLIC_GOOGLE_CLIENT_ID` to Vercel environment variables (must match `backend/.env` `GOOGLE_CLIENT_ID`)
-- Redeploy after adding the Vercel env var — it is not hot-reloaded
+## ✅ Google OAuth Production — Resolved (2026-06-09)
+- Added `https://bahasabot-main3.vercel.app` to **Authorized JavaScript origins** in Google Cloud Console ✓
+- `NEXT_PUBLIC_GOOGLE_CLIENT_ID` confirmed set in Vercel env vars ✓
+- CORS regex in `backend/main.py` updated: `https://bahasa(bot)?[-].*\.vercel\.app` — now covers both `bahasa-<hash>.vercel.app` preview URLs and `bahasabot-<name>.vercel.app` named deployments (was `https://bahasa-.*\.vercel\.app`, which did not match the production URL) ✓
+- Commit: `b1ac097`
 
 ## Known Pre-existing Issue (not caused by recent changes)
 - Module quiz cache-vs-submission misalignment: if a quiz attempt fails (0%) the cache clears and Gemini regenerates new questions. If the user re-submits using answers from the *first* GET, they score 0% again. Mitigation: frontend should re-fetch GET before showing quiz form if previous submission failed. This is a UI flow issue, not a backend bug.
