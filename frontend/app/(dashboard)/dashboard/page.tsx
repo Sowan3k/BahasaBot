@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useSession } from "next-auth/react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 
 import { dashboardApi } from "@/lib/api";
@@ -158,70 +158,49 @@ export default function DashboardPage() {
     ? "Failed to load dashboard. Please refresh the page."
     : null;
 
-  // Vocabulary tab
-  const [vocabData, setVocabData] = useState<VocabularyListResponse | null>(null);
+  const queryClient = useQueryClient();
+
+  // Vocabulary tab — cached per page; background-refetches when tab activates
+  // (global staleTime: 0 means data is immediately stale, so returning to this
+  // tab always gets fresh data while showing the previous result instantly).
   const [vocabPage, setVocabPage] = useState(1);
-  const [vocabLoading, setVocabLoading] = useState(false);
+  const { data: vocabData, isLoading: vocabLoading } = useQuery({
+    queryKey: ["dashboard", "vocabulary", vocabPage],
+    queryFn: () => dashboardApi.getVocabulary(vocabPage, 20).then((r) => r.data),
+    enabled: status === "authenticated" && activeTab === "vocabulary",
+    placeholderData: (prev) => prev,
+  });
 
   // Grammar tab
-  const [grammarData, setGrammarData] = useState<GrammarListResponse | null>(null);
   const [grammarPage, setGrammarPage] = useState(1);
-  const [grammarLoading, setGrammarLoading] = useState(false);
+  const { data: grammarData, isLoading: grammarLoading } = useQuery({
+    queryKey: ["dashboard", "grammar", grammarPage],
+    queryFn: () => dashboardApi.getGrammar(grammarPage, 20).then((r) => r.data),
+    enabled: status === "authenticated" && activeTab === "grammar",
+    placeholderData: (prev) => prev,
+  });
 
   // Quiz history tab
-  const [quizData, setQuizData] = useState<QuizHistoryResponse | null>(null);
   const [quizPage, setQuizPage] = useState(1);
-  const [quizLoading, setQuizLoading] = useState(false);
-
-  // Load vocabulary when tab activates or page changes
-  useEffect(() => {
-    if (activeTab !== "vocabulary") return;
-    setVocabLoading(true);
-    dashboardApi
-      .getVocabulary(vocabPage, 20)
-      .then((res) => setVocabData(res.data))
-      .catch(() => {})
-      .finally(() => setVocabLoading(false));
-  }, [activeTab, vocabPage]);
+  const { data: quizData, isLoading: quizLoading } = useQuery({
+    queryKey: ["dashboard", "quiz-history", quizPage],
+    queryFn: () => dashboardApi.getQuizHistory(quizPage, 20).then((r) => r.data),
+    enabled: status === "authenticated" && activeTab === "quiz-history",
+    placeholderData: (prev) => prev,
+  });
 
   async function handleVocabDelete(ids: string[]) {
     await dashboardApi.deleteVocabulary(ids);
-    // Refresh the current page; if it's now empty go back one page
     const remaining = (vocabData?.total ?? 0) - ids.length;
     const newPage = Math.min(vocabPage, Math.max(1, Math.ceil(remaining / 20)));
     if (newPage !== vocabPage) {
       setVocabPage(newPage);
     } else {
-      setVocabLoading(true);
-      dashboardApi
-        .getVocabulary(vocabPage, 20)
-        .then((res) => setVocabData(res.data))
-        .catch(() => {})
-        .finally(() => setVocabLoading(false));
+      queryClient.invalidateQueries({ queryKey: ["dashboard", "vocabulary", vocabPage] });
     }
+    // Vocab count in summary changes too
+    queryClient.invalidateQueries({ queryKey: ["dashboard", "summary"] });
   }
-
-  // Load grammar when tab activates or page changes
-  useEffect(() => {
-    if (activeTab !== "grammar") return;
-    setGrammarLoading(true);
-    dashboardApi
-      .getGrammar(grammarPage, 20)
-      .then((res) => setGrammarData(res.data))
-      .catch(() => {})
-      .finally(() => setGrammarLoading(false));
-  }, [activeTab, grammarPage]);
-
-  // Load quiz history when tab activates or page changes
-  useEffect(() => {
-    if (activeTab !== "quiz-history") return;
-    setQuizLoading(true);
-    dashboardApi
-      .getQuizHistory(quizPage, 20)
-      .then((res) => setQuizData(res.data))
-      .catch(() => {})
-      .finally(() => setQuizLoading(false));
-  }, [activeTab, quizPage]);
 
   // Leaderboard — loaded when tab activates, cached 5 min
   const {

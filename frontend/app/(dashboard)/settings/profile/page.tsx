@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { ArrowLeft, Save, Trash2, User, AlertTriangle, Loader2 } from "lucide-react";
@@ -180,9 +181,15 @@ function DeleteAccountModal({
 
 export default function ProfileSettingsPage() {
   const router = useRouter();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+
+  // Reuse the shared ["profile"] cache — AppSidebar already fetched this,
+  // so the page renders instantly with no extra network request.
+  const { data: profile, isLoading: loading, isError } = useQuery({
+    queryKey: ["profile"],
+    queryFn: () => profileApi.getProfile().then((r) => r.data),
+  });
+  const loadError = isError ? "Failed to load profile. Please refresh." : null;
 
   // Form state
   const [name, setName] = useState("");
@@ -198,28 +205,23 @@ export default function ProfileSettingsPage() {
 
   // Track original values to compute isDirty
   const origRef = useRef({ name: "", nativeLang: "", learningGoal: "" });
+  const formInitialized = useRef(false);
 
-  // ── Fetch profile ───────────────────────────────────────────────────────────
-
+  // Initialize form fields once when profile data first arrives
   useEffect(() => {
-    profileApi
-      .getProfile()
-      .then((res) => {
-        const p = res.data;
-        setProfile(p);
-        const orig = {
-          name: p.name ?? "",
-          nativeLang: p.native_language ?? "",
-          learningGoal: p.learning_goal ?? "",
-        };
-        origRef.current = orig;
-        setName(orig.name);
-        setNativeLang(orig.nativeLang);
-        setLearningGoal(orig.learningGoal);
-      })
-      .catch(() => setLoadError("Failed to load profile. Please refresh."))
-      .finally(() => setLoading(false));
-  }, []);
+    if (profile && !formInitialized.current) {
+      formInitialized.current = true;
+      const orig = {
+        name: profile.name ?? "",
+        nativeLang: profile.native_language ?? "",
+        learningGoal: profile.learning_goal ?? "",
+      };
+      origRef.current = orig;
+      setName(orig.name);
+      setNativeLang(orig.nativeLang);
+      setLearningGoal(orig.learningGoal);
+    }
+  }, [profile]);
 
   // Recompute isDirty whenever controlled fields change
   useEffect(() => {
@@ -246,7 +248,7 @@ export default function ProfileSettingsPage() {
         learning_goal: learningGoal.trim() || null,
       });
       const p = res.data;
-      setProfile(p);
+      queryClient.setQueryData(["profile"], p);
       const updated = {
         name: p.name ?? "",
         nativeLang: p.native_language ?? "",

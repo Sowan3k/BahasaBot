@@ -46,11 +46,15 @@ interface GameCardProps {
   description: string;
   hint: string;
   onPlay: () => void;
+  onMouseEnter?: () => void;
 }
 
-function GameCard({ icon, title, description, hint, onPlay }: GameCardProps) {
+function GameCard({ icon, title, description, hint, onPlay, onMouseEnter }: GameCardProps) {
   return (
-    <div className="flex flex-col gap-4 rounded-2xl border bg-card p-6 shadow-sm hover:border-primary/30 transition-colors">
+    <div
+      className="flex flex-col gap-4 rounded-2xl border bg-card p-6 shadow-sm hover:border-primary/30 transition-colors"
+      onMouseEnter={onMouseEnter}
+    >
       <div className="flex items-start gap-4">
         <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
           {icon}
@@ -126,6 +130,7 @@ export default function GamesPage() {
           description="Hear a Malay word and type its correct spelling. Tests recall and production."
           hint="Easy: 20s · Medium: 10s · Hard: 5s per word"
           onPlay={() => setActiveGame("spelling")}
+          onMouseEnter={() => import("@/components/games/SpellingGame")}
         />
         <GameCard
           icon={<Shuffle className="w-6 h-6 text-primary" />}
@@ -133,6 +138,7 @@ export default function GamesPage() {
           description="See a Malay word and pick its English meaning from 4 choices. Tests recognition."
           hint="Easy: 20s · Medium: 10s · Hard: 5s per question"
           onPlay={() => setActiveGame("word-match")}
+          onMouseEnter={() => import("@/components/games/WordMatchGame")}
         />
       </div>
     </div>

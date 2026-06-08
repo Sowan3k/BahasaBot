@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { Check, X, ChevronDown, ChevronUp, ArrowLeft } from "lucide-react";
 import { GlassCard } from "@/components/ui/animated-glassy-pricing";
 import { RippleButton } from "@/components/ui/multi-type-ripple-buttons";
@@ -119,6 +120,8 @@ function FaqItem({ q, a }: { q: string; a: string }) {
 
 export default function PricingPage() {
   const [modalOpen, setModalOpen] = useState(false);
+  const { status } = useSession();
+  const backHref = status === "authenticated" ? "/dashboard" : "/login";
 
   const getCtaLabel = (plan: SubscriptionPlan) => {
     if (plan.id === "free") return "Get Started Free";
@@ -144,7 +147,7 @@ export default function PricingPage() {
       {/* Floating back button — fixed so it stays visible while scrolling */}
       <div className="fixed top-5 left-5 z-30">
         <Link
-          href="/login"
+          href={backHref}
           className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium
             text-foreground/70 hover:text-foreground transition-all
             backdrop-blur-[24px]
@@ -303,8 +306,16 @@ export default function PricingPage() {
             Start your free trial
           </RippleButton>
           <p className="text-xs text-foreground/40">
-            Already have an account?{" "}
-            <Link href="/login" className="text-primary hover:underline">Sign in</Link>
+            {status === "authenticated" ? (
+              <>
+                <Link href="/dashboard" className="text-primary hover:underline">Go to Dashboard</Link>
+              </>
+            ) : (
+              <>
+                Already have an account?{" "}
+                <Link href="/login" className="text-primary hover:underline">Sign in</Link>
+              </>
+            )}
           </p>
         </section>
       </main>

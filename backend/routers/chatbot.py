@@ -13,7 +13,7 @@ import json
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, status
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sse_starlette.sse import EventSourceResponse
 
@@ -197,42 +197,87 @@ async def list_sessions(
     )
     sessions = sessions_result.scalars().all()
 
-    # For each session: fetch last message, first user message (title), and message count
-    session_responses: list[ChatSessionResponse] = []
-    for session in sessions:
-        # Last message preview
-        last_msg_result = await db.execute(
-            select(ChatMessage)
-            .where(ChatMessage.session_id == session.id)
-            .order_by(ChatMessage.created_at.desc())
-            .limit(1)
-        )
-        last_msg = last_msg_result.scalar_one_or_none()
+    # Bulk-fetch all per-session data in 3 queries instead of 3 per session (N+1 fix).
+    session_ids = [s.id for s in sessions]
 
-        # First user message — used as the session title
-        first_user_msg_result = await db.execute(
-            select(ChatMessage)
+    if session_ids:
+        # Last message for each session (join on max created_at per session_id)
+        last_msg_sq = (
+            select(
+                ChatMessage.session_id,
+                func.max(ChatMessage.created_at).label("max_ts"),
+            )
+            .where(ChatMessage.session_id.in_(session_ids))
+            .group_by(ChatMessage.session_id)
+            .subquery()
+        )
+        last_msgs_res = await db.execute(
+            select(ChatMessage).join(
+                last_msg_sq,
+                and_(
+                    ChatMessage.session_id == last_msg_sq.c.session_id,
+                    ChatMessage.created_at == last_msg_sq.c.max_ts,
+                ),
+            )
+        )
+        last_msgs_map: dict[str, ChatMessage] = {
+            str(m.session_id): m for m in last_msgs_res.scalars().all()
+        }
+
+        # First user message for each session (used as the session title)
+        first_user_sq = (
+            select(
+                ChatMessage.session_id,
+                func.min(ChatMessage.created_at).label("min_ts"),
+            )
             .where(
-                ChatMessage.session_id == session.id,
+                ChatMessage.session_id.in_(session_ids),
                 ChatMessage.role == "user",
             )
-            .order_by(ChatMessage.created_at.asc())
-            .limit(1)
+            .group_by(ChatMessage.session_id)
+            .subquery()
         )
-        first_user_msg = first_user_msg_result.scalar_one_or_none()
-        title = first_user_msg.content[:60] if first_user_msg else None
+        first_user_res = await db.execute(
+            select(ChatMessage).join(
+                first_user_sq,
+                and_(
+                    ChatMessage.session_id == first_user_sq.c.session_id,
+                    ChatMessage.created_at == first_user_sq.c.min_ts,
+                ),
+            )
+        )
+        first_user_map: dict[str, ChatMessage] = {
+            str(m.session_id): m for m in first_user_res.scalars().all()
+        }
 
-        # Total message count for the session
-        count_result = await db.execute(
-            select(func.count())
-            .select_from(ChatMessage)
-            .where(ChatMessage.session_id == session.id)
+        # Total message count per session
+        count_rows = await db.execute(
+            select(
+                ChatMessage.session_id,
+                func.count().label("cnt"),
+            )
+            .where(ChatMessage.session_id.in_(session_ids))
+            .group_by(ChatMessage.session_id)
         )
-        message_count = count_result.scalar_one()
+        msg_count_map: dict[str, int] = {
+            str(row.session_id): row.cnt for row in count_rows.all()
+        }
+    else:
+        last_msgs_map = {}
+        first_user_map = {}
+        msg_count_map = {}
+
+    session_responses: list[ChatSessionResponse] = []
+    for session in sessions:
+        sid = str(session.id)
+        last_msg = last_msgs_map.get(sid)
+        first_user_msg = first_user_map.get(sid)
+        message_count = msg_count_map.get(sid, 0)
+        title = first_user_msg.content[:60] if first_user_msg else None
 
         session_responses.append(
             ChatSessionResponse(
-                id=str(session.id),
+                id=sid,
                 created_at=session.created_at,
                 last_message=last_msg.content[:100] if last_msg else None,
                 title=title,

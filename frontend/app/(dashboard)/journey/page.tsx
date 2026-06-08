@@ -15,7 +15,7 @@
  *  - Identity-verified delete (password for email, confirm for Google)
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -652,13 +652,7 @@ function CelebrationPage({ roadmap, userName, provider, userEmail, onStartNew }:
 export default function JourneyPage() {
   const router = useRouter();
 
-  const [roadmap, setRoadmap]       = useState<UserRoadmap | null | undefined>(undefined);
   const [showSetupModal, setShowSetupModal] = useState(true);
-  const [fetchError, setFetchError] = useState<string | null>(null);
-  const [userName, setUserName] = useState("Learner");
-  const [userEmail, setUserEmail] = useState("");
-  const [provider, setProvider] = useState<"email" | "google">("email");
-  const [history, setHistory]   = useState<PastJourneyItem[]>([]);
 
   const [showDelete, setShowDelete]     = useState(false);
   const [isDeleting, setIsDeleting]     = useState(false);
@@ -698,31 +692,16 @@ export default function JourneyPage() {
     queryFn: () => journeyApi.getHistory().then((r) => r.data),
   });
 
-  // Sync query results to local state
-  useEffect(() => {
-    if (!roadmapLoading && roadmapQueryData !== undefined) {
-      setRoadmap(roadmapQueryData ?? null);
-    }
-  }, [roadmapQueryData, roadmapLoading]);
-
-  useEffect(() => {
-    if (roadmapQueryError) {
-      setFetchError("Could not load your journey. Please refresh the page.");
-      setRoadmap(null);
-    }
-  }, [roadmapQueryError]);
-
-  useEffect(() => {
-    if (profileQueryData) {
-      setUserName(profileQueryData.name || "Learner");
-      setUserEmail(profileQueryData.email || "");
-      setProvider(profileQueryData.provider ?? "email");
-    }
-  }, [profileQueryData]);
-
-  useEffect(() => {
-    if (historyQueryData) setHistory(historyQueryData);
-  }, [historyQueryData]);
+  // Derive directly from query data — no redundant local state copies
+  const roadmap = roadmapLoading ? undefined : (roadmapQueryData ?? null);
+  const fetchError = roadmapQueryError
+    ? "Could not load your journey. Please refresh the page."
+    : null;
+  const userName = profileQueryData?.name || "Learner";
+  const userEmail = profileQueryData?.email || "";
+  const provider: "email" | "google" =
+    (profileQueryData?.provider as "email" | "google") ?? "email";
+  const history: PastJourneyItem[] = (historyQueryData as PastJourneyItem[]) ?? [];
 
   // ── Delete handler ──────────────────────────────────────────────────────
 
@@ -734,7 +713,6 @@ export default function JourneyPage() {
         password,
         oauth_confirmed: provider === "google",
       });
-      setRoadmap(null);
       queryClient.setQueryData(["journey", "roadmap"], null);
       setShowDelete(false);
     } catch (err: unknown) {
@@ -752,7 +730,6 @@ export default function JourneyPage() {
     setIsExtending(true);
     try {
       const res = await journeyApi.extendDeadline(months);
-      setRoadmap(res.data);
       queryClient.setQueryData(["journey", "roadmap"], res.data);
       setShowExtend(false);
     } catch (err: unknown) {
@@ -771,7 +748,6 @@ export default function JourneyPage() {
     setIsRegenerating(true);
     try {
       const res = await journeyApi.regenerate();
-      setRoadmap(res.data);
       queryClient.setQueryData(["journey", "roadmap"], res.data);
     } catch (err: unknown) {
       const msg =
@@ -785,7 +761,6 @@ export default function JourneyPage() {
 
   async function handleDismissUpgrade() {
     await journeyApi.dismissUpgrade();
-    setRoadmap((prev) => prev ? { ...prev, bps_upgraded: false } : prev);
     queryClient.setQueryData<UserRoadmap | null>(["journey", "roadmap"], (prev) =>
       prev ? { ...prev, bps_upgraded: false } : prev
     );
@@ -878,7 +853,6 @@ export default function JourneyPage() {
         {showSetupModal && (
           <SetupModal
             onGenerated={(rm) => {
-              setRoadmap(rm);
               queryClient.setQueryData(["journey", "roadmap"], rm);
             }}
             onDismiss={() => setShowSetupModal(false)}
@@ -898,7 +872,6 @@ export default function JourneyPage() {
         provider={provider}
         userEmail={userEmail}
         onStartNew={() => {
-          setRoadmap(null);
           queryClient.setQueryData(["journey", "roadmap"], null);
         }}
       />
