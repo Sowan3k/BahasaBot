@@ -78,13 +78,6 @@ const TOUR_STEPS: TourStep[] = [
       "Adaptive quizzes that zero in on your weak areas. Every attempt updates your BPS proficiency score.",
   },
   {
-    icon: Map,
-    color: "#8d9d4f",
-    title: "My Journey",
-    description:
-      "Your personalised learning roadmap. Complete course obstacles, track your deadline, and advance your BPS level.",
-  },
-  {
     icon: Gamepad2,
     color: "#c85a3c",
     title: "Spelling Game",
@@ -96,7 +89,14 @@ const TOUR_STEPS: TourStep[] = [
     color: "#7d8f6b",
     title: "Settings",
     description:
-      "Update your profile, change your password, send feedback, and learn more about BahasaBot. You're all set! 🎉",
+      "Update your profile, change your password, send feedback, and learn more about BahasaBot.",
+  },
+  {
+    icon: Map,
+    color: "#8d9d4f",
+    title: "Your Journey Is Ready!",
+    description:
+      "We built a personalised learning roadmap just for you based on your goals. Tap \"View My Journey\" to see your first obstacles and start learning.",
   },
 ];
 
@@ -154,16 +154,6 @@ const DESKTOP_STEPS = [
     },
   },
   {
-    element: '[data-tour="nav-journey"]',
-    popover: {
-      title: "My Journey",
-      description:
-        "Your personalised week-by-week learning roadmap. Complete obstacles, track your deadline, and level up your BPS score.",
-      side: "right" as const,
-      align: "start" as const,
-    },
-  },
-  {
     element: '[data-tour="nav-games"]',
     popover: {
       title: "Spelling Game",
@@ -179,6 +169,16 @@ const DESKTOP_STEPS = [
       title: "Settings",
       description:
         "Update your profile, change your password, send feedback, and learn more about BahasaBot.",
+      side: "right" as const,
+      align: "start" as const,
+    },
+  },
+  {
+    element: '[data-tour="nav-journey"]',
+    popover: {
+      title: "Your Journey Is Ready! 🗺️",
+      description:
+        "We built a personalised learning roadmap just for you. Click \"View My Journey\" to see your first obstacles and start learning!",
       side: "right" as const,
       align: "start" as const,
     },
@@ -321,7 +321,7 @@ function MobileTour({ onDone }: MobileTourProps) {
             style={{ color: "#8d9d4f" }}
             aria-label={isLast ? "Finish tour" : "Next step"}
           >
-            {isLast ? "Done" : "Next"}
+            {isLast ? "View My Journey →" : "Next"}
             {!isLast && <ChevronRight size={16} />}
           </button>
         </div>
@@ -367,7 +367,7 @@ export function UITour({ active, onDone }: UITourProps) {
         progressText: "{{current}} of {{total}}",
         nextBtnText: "Next →",
         prevBtnText: "← Back",
-        doneBtnText: "Done",
+        doneBtnText: "View My Journey →",
         onDestroyStarted: () => {
           driverRef.current?.destroy();
           onDone();

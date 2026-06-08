@@ -7,7 +7,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { toast } from "sonner";
 
 // Routes to prefetch as soon as the layout mounts (runs once per session).
 // Next.js will download the JS chunk for each route in the background so
@@ -124,6 +123,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showTour, setShowTour] = useState(false);
+  // Tracks whether the user just completed onboarding this session.
+  // Used by handleTourDone to navigate to Journey after the tour ends.
+  const hasJustOnboarded = useRef(false);
 
   // Prefetch all main sidebar routes on layout mount so their JS chunks
   // are already cached when the user clicks a nav link.
@@ -136,23 +138,13 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   // when MainLayout re-renders for unrelated reasons.
   const handleShowOnboarding = useCallback(() => setShowOnboarding(true), []);
 
-  /**
-   * Called by OnboardingModal when it finishes or is skipped.
-   *   "roadmap_ready" — roadmap was generated; show a toast pointing user to My Journey.
-   *   "done"          — skipped or generation failed; just dismiss silently.
-   */
+  /** Called by OnboardingModal when it finishes or is skipped. */
   const handleOnboardingComplete = useCallback(
     (result: OnboardingResult) => {
       setShowOnboarding(false);
+      hasJustOnboarded.current = true;
       // Invalidate profile cache so UITourChecker sees the updated has_seen_tour value
       queryClient.invalidateQueries({ queryKey: ["profile"] });
-
-      if (result === "roadmap_ready") {
-        toast.success("Your learning roadmap is ready!", {
-          description: "Head to My Journey in the sidebar to see your personalised plan.",
-          duration: 6000,
-        });
-      }
     },
     [queryClient],
   );
@@ -167,9 +159,13 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       queryClient.invalidateQueries({ queryKey: ["profile"] });
     } catch {
       // Non-critical — if the PATCH fails the tour will just show again next time.
-      // Acceptable trade-off; no user-visible error needed.
     }
-  }, [queryClient]);
+    // If the user just finished onboarding this session, take them directly to
+    // My Journey so they see the roadmap we built for them.
+    if (hasJustOnboarded.current) {
+      router.push("/journey");
+    }
+  }, [queryClient, router]);
 
   return (
     <CourseGenerationProvider>
