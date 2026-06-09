@@ -10,7 +10,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Flame, ShieldCheck, Trophy } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, Flame, ShieldCheck, Trophy } from "lucide-react";
 
 import { adminApi, profileApi } from "@/lib/api";
 import type { LeaderboardEntry } from "@/lib/types";
@@ -61,6 +62,12 @@ export default function AdminLeaderboardPage() {
     <div className="max-w-4xl mx-auto py-8 px-4 space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
+        <Link
+          href="/admin"
+          className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft size={18} />
+        </Link>
         <div className="w-10 h-10 rounded-xl bg-amber-400/10 flex items-center justify-center">
           <Trophy size={22} className="text-amber-400" />
         </div>

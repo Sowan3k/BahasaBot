@@ -9,7 +9,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronUp, Map, ShieldCheck } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, ChevronDown, ChevronUp, Map, ShieldCheck } from "lucide-react";
 
 import { journeyApi, profileApi } from "@/lib/api";
 import type { AdminRoadmapRow, RoadmapElement } from "@/lib/types";
@@ -180,8 +181,13 @@ export default function AdminJourneysPage() {
   return (
     <div className="w-full p-4 sm:p-6 space-y-6 max-w-6xl">
       {/* Header */}
-      <div className="flex items-center gap-2">
-        <ShieldCheck className="h-5 w-5 text-primary" />
+      <div className="flex items-center gap-3">
+        <Link
+          href="/admin"
+          className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft size={18} />
+        </Link>
         <div>
           <h1 className="text-2xl font-bold text-foreground">User Journeys</h1>
           <p className="text-sm text-muted-foreground">
