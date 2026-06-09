@@ -30,7 +30,7 @@ from backend.models.course import Class, Course, Module
 from backend.models.progress import UserProgress, VocabularyLearned, GrammarLearned, WeakPoint
 from backend.models.quiz import ModuleQuizAttempt, StandaloneQuizAttempt
 from backend.models.user import User
-from backend.services.gemini_service import generate_json, generate_json_with_usage, generate_text
+from backend.services.gemini_service import generate_json, generate_json_with_usage
 from backend.utils.cache import cache_delete, cache_get, cache_set
 from backend.utils.logger import get_logger
 
@@ -41,25 +41,6 @@ _QUIZ_CACHE_TTL = 7200
 
 # Score required to pass and unlock the next module
 PASS_THRESHOLD = 0.70
-
-
-async def _judge_translation(english: str, user_answer: str, gold_answer: str) -> bool:
-    """Ask Gemini whether user_answer is a valid Malaysian Malay translation of english.
-
-    Used to accept legitimate synonym variants (e.g. kamu/awak, Adakah/Apakah)
-    that a strict exact-match would incorrectly reject.
-    Returns True if the answer is valid, False on rejection or API error.
-    """
-    prompt = (
-        f"English sentence: {english}\n"
-        f"Student's Malay answer: {user_answer}\n"
-        f"Reference answer: {gold_answer}\n\n"
-        "Is the student's answer a correct and natural Malaysian Malay translation "
-        "of the English sentence? Minor synonym differences (e.g. 'kamu' vs 'awak', "
-        "'Adakah' vs 'Apakah') should be accepted. Answer only 'yes' or 'no'."
-    )
-    result = await generate_text(prompt, max_retries=2)
-    return result.strip().lower().startswith("yes")
 
 
 def _quiz_cache_key(module_id: UUID, user_id: UUID) -> str:
@@ -759,12 +740,9 @@ Rules:
 - Prioritise the user's weak areas above
 - Use vocabulary and grammar from the user's learning history where possible
 - MCQ distractors must be plausible Malaysian Malay words (not random noise)
-- Fill-in-blank must have exactly one accepted correct answer
-- For translation questions, correct_answer should be a common natural Malaysian Malay form;
-  note that other valid phrasings (e.g. kamu/awak synonyms) are also accepted at scoring time
+- Fill-in-blank and translation must have exactly one accepted correct answer
 - Vary difficulty slightly — mostly easy/medium since this is a language learner
-- Each question needs a brief, helpful explanation of the correct answer; for translation
-  questions phrase it as "One accepted answer is …" not "The correct answer is …"
+- Each question needs a brief, helpful explanation of the correct answer
 - Each question must include a short "topic" field (2–5 words) describing the concept being tested,
   e.g. "food vocabulary", "tinggal (live/stay)", "greeting phrases", "mahu sentence structure"
 - For translation questions, the question should be the English sentence and correct_answer the Malay translation
@@ -917,28 +895,6 @@ async def submit_standalone_quiz(
     # Build answer lookup by question_id
     answer_map = {a["question_id"]: a["answer"].strip() for a in user_answers}
 
-    # For translation questions where the answer doesn't exactly match the gold,
-    # call Gemini in parallel to accept valid synonym variants (e.g. kamu/awak).
-    judge_tasks: dict[str, asyncio.Task] = {}
-    for q in questions_full:
-        qid = q["id"]
-        user_ans = answer_map.get(qid, "").strip()
-        correct_ans = q.get("correct_answer", "").strip()
-        if (
-            q.get("type") == "translation"
-            and user_ans
-            and user_ans.lower() != correct_ans.lower()
-        ):
-            judge_tasks[qid] = asyncio.create_task(
-                _judge_translation(q["question"], user_ans, correct_ans)
-            )
-
-    judge_results: dict[str, bool] = {}
-    if judge_tasks:
-        settled = await asyncio.gather(*judge_tasks.values(), return_exceptions=True)
-        for qid, outcome in zip(judge_tasks.keys(), settled):
-            judge_results[qid] = outcome if isinstance(outcome, bool) else False
-
     question_results: list[dict] = []
     correct_count = 0
     wrong_questions: list[dict] = []
@@ -948,20 +904,9 @@ async def submit_standalone_quiz(
         qid = q["id"]
         user_ans = answer_map.get(qid, "").strip()
         correct_ans = q.get("correct_answer", "").strip()
-        explanation = q.get("explanation", "")
 
-        if qid in judge_results:
-            # Translation judged by Gemini
-            is_correct = judge_results[qid]
-            if is_correct:
-                # User's phrasing is valid — clarify the explanation avoids implying it was wrong
-                explanation = (
-                    f"Your answer is a valid translation! "
-                    f"One accepted answer: \"{correct_ans}\". {explanation}"
-                )
-        else:
-            # MCQ, fill-in-blank, or exact-match translation
-            is_correct = user_ans.lower() == correct_ans.lower()
+        # Case-insensitive match for all question types
+        is_correct = user_ans.lower() == correct_ans.lower()
 
         if is_correct:
             correct_count += 1
@@ -975,7 +920,7 @@ async def submit_standalone_quiz(
             "your_answer": user_ans,
             "correct_answer": correct_ans,
             "is_correct": is_correct,
-            "explanation": explanation,
+            "explanation": q.get("explanation", ""),
         })
 
     total = len(questions_full)
