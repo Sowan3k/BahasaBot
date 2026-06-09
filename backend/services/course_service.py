@@ -17,6 +17,8 @@ import re
 import uuid
 from uuid import UUID
 
+from fuzzywuzzy import fuzz
+
 # Limit concurrent Gemini content-generation calls to respect free-tier rate limits.
 # gemini-2.5-flash free tier: 5 RPM. Keep concurrency low to avoid 429s.
 _CONTENT_SEMAPHORE = asyncio.Semaphore(2)
@@ -112,14 +114,56 @@ async def _find_template(slug: str, db: AsyncSession) -> "Course | None":
     """
     Return the template Course for this slug, with all modules and classes
     eagerly loaded (needed for cloning). Returns None if no template exists yet.
+
+    First tries an exact slug match. If that misses, falls back to fuzzy
+    matching (token_sort_ratio >= 85) against all templates for the same
+    BPS level — catches minor wording differences and typos.
     """
+    # 1. Exact match
     result = await db.execute(
         select(Course)
         .where(Course.topic_slug == slug, Course.is_template.is_(True))
         .options(selectinload(Course.modules).selectinload(Module.classes))
         .limit(1)
     )
-    return result.scalar_one_or_none()
+    exact = result.scalar_one_or_none()
+    if exact is not None:
+        return exact
+
+    # 2. Fuzzy match — compare against all templates for the same BPS level
+    level_suffix = slug.rsplit(":", 1)[-1]  # e.g. "bps1"
+    candidates_result = await db.execute(
+        select(Course.id, Course.topic_slug).where(
+            Course.is_template.is_(True),
+            Course.topic_slug.like(f"%:{level_suffix}"),
+        )
+    )
+    candidates = candidates_result.fetchall()
+
+    best_id = None
+    best_score = 0
+    for row in candidates:
+        score = fuzz.token_sort_ratio(slug, row.topic_slug)
+        if score > best_score:
+            best_score = score
+            best_id = row.id
+
+    if best_id is None or best_score < 85:
+        return None
+
+    logger.info(
+        "Fuzzy template match found",
+        slug=slug,
+        matched_template_id=str(best_id),
+        score=best_score,
+    )
+    match_result = await db.execute(
+        select(Course)
+        .where(Course.id == best_id)
+        .options(selectinload(Course.modules).selectinload(Module.classes))
+        .limit(1)
+    )
+    return match_result.scalar_one_or_none()
 
 
 async def _clone_course(template: "Course", user_id: UUID, db: AsyncSession) -> "Course":
