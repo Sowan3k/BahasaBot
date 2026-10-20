@@ -142,7 +142,7 @@ _Status: ✅ Complete — deployment pending_
 - [x] Pagination on all list endpoints — courses, chatbot sessions, chatbot history
 - [x] Python logging — structlog JSON in production, colored dev output; get_logger used in all routers
 - [x] Sentry integration — backend: sentry_sdk.init() in main.py; frontend: @sentry/nextjs + sentry.*.config.ts + instrumentation.ts
-- [x] Health endpoint — /health returns Redis status; UptimeRobot can target this
+- [x] Health endpoint — /health returns {"status": "ok"} without touching Redis, the database or Gemini; UptimeRobot can target this
 - [x] CORS locked to env var — ALLOWED_ORIGINS reads from .env (set to Vercel domain in production)
 - [x] JWT expiry verified — access token 15 min default (`ACCESS_TOKEN_EXPIRE_MINUTES` env var, default 15 in auth.py), refresh token 7 days; frontend auth.ts refreshes 60s before expiry
 - [x] Deployment config — backend/Procfile + backend/railway.toml; frontend/vercel.json updated

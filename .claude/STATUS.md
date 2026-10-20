@@ -1,7 +1,7 @@
 # BahasaBot — Project Status
 _Update this file at the end of every session_
 
-## Last Updated: 2026-06-09 (Session 83 — Page loading performance + backend N+1 fix)
+## Last Updated: 2026-10-20 (Session 84 — Portfolio wake-up: health endpoint + CORS origin)
 
 ## Feature Status
 | Feature | Status | Notes |
@@ -74,6 +74,25 @@ _Update this file at the end of every session_
 
 ## ✅ Fixed Issues (Session 13)
 - **Course covers not appearing (2026-04-13):** Session 12 correctly fixed `image_service.py` (httpx REST API) and `course_service.py` (retroactive healing + `asyncio.create_task`), but the backend was **never restarted** after those changes were made. Uvicorn started at 08:19, files modified at 14:22–14:28 — old broken code was still running. Fix: killed old uvicorn PIDs (18316, 25012), started fresh process on port 8000. Also manually ran `_generate_and_save_cover()` for all 3 existing courses that had `cover_image_url = NULL`. All verified: Gemini REST API returns JPEG (~1.1 MB base64, ~17s), DB save works, `GET /api/courses/` returns cover correctly. **Important**: after any code change to the backend, the uvicorn process MUST be restarted manually (no `--reload` flag in prod mode).
+
+---
+
+## What Was Done This Session (2026-10-20 Session 84 — Portfolio wake-up: health endpoint + CORS origin)
+
+### Goals
+Sowan's portfolio at `https://sowan-portfolio.vercel.app` will call the backend's health endpoint when a visitor reaches its BahasaBot section, so the Render free instance starts before they open the demo.
+
+### Files Modified
+- `backend/main.py` — `GET /health` now returns `{"status": "ok"}` with HTTP 200 and touches no database, Redis or Gemini (the Redis ping and the `redis` field are gone). It has no auth dependency and carries `@limiter.exempt`. `https://sowan-portfolio.vercel.app` is appended to `ALLOWED_ORIGINS` in code (no wildcard), so it holds whatever the `ALLOWED_ORIGINS` env var says. No other CORS setting changed.
+- `CLAUDE.md`, `project_truth.md`, `DEPLOYMENT.md`, `.claude/PHASES.md` — health response wording updated.
+
+### Verified
+- No automated backend tests exist (`.claude/TESTING.md` is a manual checklist). Checked with FastAPI TestClient on Python 3.11 (the Dockerfile version), lifespan not run and no database or Redis reachable: `/health` 200 `{"status": "ok"}`, 81 calls in a row all 200.
+- CORS: the portfolio origin, `http://localhost:3000` and `https://bahasa-bot.vercel.app` get `Access-Control-Allow-Origin`; an unknown origin does not, and its preflight is refused (400) as before.
+- The route table (83 routes) is identical before and after; the only CORS difference is the added origin.
+
+### Manual Action
+- None required once this reaches `main`: Render auto-deploys the `BahasaBot` service from `main`. Public health URL: `https://bahasabot.onrender.com/health`.
 
 ---
 

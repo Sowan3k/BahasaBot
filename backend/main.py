@@ -49,6 +49,11 @@ logger = get_logger(__name__)
 
 APP_ENV = os.getenv("APP_ENV", "development")
 ALLOWED_ORIGINS = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")]
+# The portfolio at this origin wakes the demo when a visitor reaches its BahasaBot
+# section, so the Render free instance starts before they open the demo.
+PORTFOLIO_ORIGIN = "https://sowan-portfolio.vercel.app"
+if PORTFOLIO_ORIGIN not in ALLOWED_ORIGINS:
+    ALLOWED_ORIGINS.append(PORTFOLIO_ORIGIN)
 
 # ── Sentry ─────────────────────────────────────────────────────────────────────
 
@@ -178,14 +183,11 @@ app.include_router(tips.router, prefix="/api/tips", tags=["tips"])
 
 
 @app.get("/health", tags=["health"])
+@limiter.exempt
 async def health() -> dict:
-    """Health check — returns Redis status alongside app status."""
-    from backend.utils.cache import _client
-    redis_ok = False
-    if _client() is not None:
-        try:
-            await _client().ping()
-            redis_ok = True
-        except Exception:
-            pass
-    return {"status": "ok", "redis": "ok" if redis_ok else "unavailable"}
+    """Liveness check for Render and the portfolio's wake-up call.
+
+    Touches no database, cache or model, needs no token and is exempt from
+    rate limiting, so a cold start answers as soon as the app is up.
+    """
+    return {"status": "ok"}

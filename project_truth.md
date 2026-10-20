@@ -674,7 +674,7 @@ All require `role === 'admin'` — `require_admin` dependency raises HTTP 403 ot
 
 | Method | Path | Description |
 |---|---|---|
-| GET | /health | Returns `{status: "ok", redis: "ok" | "unavailable"}` |
+| GET | /health | Returns `{status: "ok"}`; touches no database, cache or model; no auth; exempt from rate limiting |
 
 ---
 

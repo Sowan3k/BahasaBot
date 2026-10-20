@@ -658,7 +658,7 @@ POST   /api/evaluation/feedback      # Submit survey (quiz_type: module|standalo
 GET    /api/tips/random              # Random active tip (suppressed during onboarding)
 POST   /api/tips/generate            # Admin only: bulk-generate tips via Gemini
 
-GET    /health                       # Health check: app status + Redis ping
+GET    /health                       # Liveness: {"status": "ok"}; no DB, Redis or Gemini; no auth; rate-limit exempt
 ```
 
 ---

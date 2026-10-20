@@ -190,7 +190,7 @@ http://localhost:3000/api/auth/callback/google  (for local dev)
 
 ## Step 6 — Post-Deployment Checklist
 
-- [ ] `GET /health` returns `{"status": "ok", "redis": "ok"}`
+- [ ] `GET /health` returns `{"status": "ok"}`
 - [ ] RAG corpus seeded (`documents` table has rows in Neon)
 - [ ] Admin account registered and role confirmed in DB
 - [ ] Google OAuth sign-in works end-to-end
@@ -279,7 +279,7 @@ docker run -p 8000:8000 --env-file backend/.env bahasabot-backend
 ## Troubleshooting
 
 ### Backend won't start
-- Check `GET /health` — if Redis shows `"unavailable"`, check `REDIS_URL`
+- `GET /health` no longer reports Redis; if Redis-backed features fail, check `REDIS_URL` and the "Rate limiter Redis unavailable" startup log
 - Check Railway logs for `GOOGLE_API_KEY is not set` warning
 - Alembic migration errors: ensure `SYNC_DATABASE_URL` uses psycopg2, not asyncpg
 
